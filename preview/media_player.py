@@ -22,6 +22,7 @@ the widget is realized again.
 from __future__ import annotations
 
 import os
+import sys
 import threading
 
 import gi
@@ -103,14 +104,23 @@ def init_gst() -> bool:
     except Exception:  # noqa: BLE001
         _gst_state = False
         return False
-    hw = os.environ.get("PREVIEW_VIDEO_HW", "1") != "0"
+    windows = sys.platform == "win32"
+    hw_env = os.environ.get("PREVIEW_VIDEO_HW")
+    hw = hw_env == "1" if windows else hw_env != "0"
     reg = Gst.Registry.get()
     for f in reg.get_feature_list(Gst.ElementFactory):
         klass = f.get_metadata("klass") or ""
         if "Decoder" not in klass or "Video" not in klass:
             continue
         name = f.get_name()
-        if name.startswith("va") and "Hardware" in klass:
+        if windows and ("Hardware" in klass or
+                        name.startswith(("d3d11", "d3d12", "nv", "qsv", "mf"))):
+            # Direct3D 11/12, NVDEC and Quick Sync decoders don't negotiate
+            # with gtk4paintablesink here: decodebin3 recreates the same
+            # failing decoder over and over and a 10 s clip never starts.
+            # The software decoders (FFmpeg, dav1d, libvpx) open it at once.
+            f.set_rank(Gst.Rank.PRIMARY + 3 if hw else Gst.Rank.NONE)
+        elif name.startswith("va") and "Hardware" in klass:
             # VA-API on the iGPU that drives the panel: DMABuf zero-copy.
             f.set_rank(Gst.Rank.PRIMARY + 1 if hw else Gst.Rank.NONE)
         elif name.startswith(("nv", "cuda")) or (name.startswith("vulkan") and

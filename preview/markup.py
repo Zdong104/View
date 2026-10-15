@@ -1413,7 +1413,8 @@ class MarkupToolbar(Gtk.Box):
         k = "shape" if t in SHAPES else t
         if k in self.buttons:
             self.buttons[k].set_active(True)
-        self.pad_btn.set_visible(t in INK_KINDS and sys.platform.startswith("linux"))
+        self.pad_btn.set_visible(t in INK_KINDS and (sys.platform.startswith("linux")
+                                                     or sys.platform == "win32"))
         self._syncing = False
 
     def _sync_style(self):

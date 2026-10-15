@@ -537,6 +537,8 @@ class PreviewApp(Adw.Application):
         prov.load_from_string(CSS)
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), prov,
                                                   Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        from . import icons
+        icons.install()
         for name, cb in (("new-window", self._new_window), ("quit", self._quit),
                          ("about", self._about), ("shortcuts", self._shortcuts),
                          ("combine-images", self._combine_images),

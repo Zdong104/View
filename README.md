@@ -36,10 +36,16 @@
 
 ### Ubuntu / Debian (.deb)
 
-Download `view_0.1.0_all.deb` from the [Releases page](https://github.com/Zdong104/View/releases), then:
+Download [`view_0.1.0_all.deb`](https://github.com/Zdong104/View/releases/download/v0.1.0/view_0.1.0_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
 
 ```bash
 sudo apt install ./view_0.1.0_all.deb
+```
+
+Or in one go:
+
+```bash
+wget https://github.com/Zdong104/View/releases/download/v0.1.0/view_0.1.0_all.deb && sudo apt install ./view_0.1.0_all.deb
 ```
 
 `apt` is recommended because it also installs the dependencies. If you prefer `dpkg`:
@@ -59,7 +65,7 @@ From a terminal, start it with `snap run view` (plain `view` is usually Vim's re
 
 ### Windows (**experimental**)
 
-`View-Setup-0.1.0.exe` (or `View-0.1.0-windows-portable.zip`) on the Releases page. It builds and passes its self-test in CI, but has not yet been tried on a real PC, so feedback is wanted. Touchpad signing is Linux only (draw with the mouse or a pen instead), and text recognition (OCR) is not included on Windows yet.
+Download [`View-Setup-0.1.0.exe`](https://github.com/Zdong104/View/releases/download/v0.1.0/View-Setup-0.1.0.exe) (installer) or [`View-0.1.0-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.1.0/View-0.1.0-windows-portable.zip) (no install). Windows may show a SmartScreen warning because the installer isn't code-signed yet: click **More info → Run anyway**. It builds and passes its self-test in CI, but has not yet been tried on a real PC, so feedback is wanted. Touchpad signing is Linux only (draw with the mouse or a pen instead), and text recognition (OCR) is not included on Windows yet.
 
 ### From source
 

@@ -8,7 +8,7 @@ DEB      := dist/view_$(VERSION)_all.deb
 IMAGE    ?= ubuntu:26.04
 ARGS     ?=
 
-.PHONY: help run selftest selftest-headless venv ocr deb docker-test install uninstall check clean
+.PHONY: help run selftest selftest-headless venv ocr deb docker-test install uninstall purge check clean
 
 help:
 	@echo "make run [ARGS='file.pdf']   run View from the working tree"
@@ -17,7 +17,8 @@ help:
 	@echo "make ocr                     add the optional OCR engine to $(VENV)"
 	@echo "make deb                     build $(DEB)"
 	@echo "make docker-test [IMAGE=…]   apt-install the .deb in a clean container + selftest"
-	@echo "make install / uninstall     per-user install from this checkout (install.sh)"
+	@echo "make install / uninstall     per-user \"View (Dev)\" install from this checkout (install.sh)"
+	@echo "make purge                   uninstall and delete its venv"
 	@echo "make check                   byte-compile everything"
 	@echo "make clean"
 
@@ -53,6 +54,9 @@ install:
 
 uninstall:
 	./install.sh --uninstall
+
+purge:
+	./install.sh --purge
 
 check:
 	$(PYTHON) -m compileall -q preview

@@ -65,7 +65,11 @@ From a terminal, start it with `snap run view` (plain `view` is usually Vim's re
 
 ### Windows (**experimental**)
 
-Download [`View-Setup-0.1.0.exe`](https://github.com/Zdong104/View/releases/download/v0.1.0/View-Setup-0.1.0.exe) (installer) or [`View-0.1.0-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.1.0/View-0.1.0-windows-portable.zip) (no install). Windows may show a SmartScreen warning because the installer isn't code-signed yet: click **More info → Run anyway**. It builds and passes its self-test in CI, but has not yet been tried on a real PC, so feedback is wanted. Touchpad signing is Linux only (draw with the mouse or a pen instead), and text recognition (OCR) is not included on Windows yet.
+Download [`View-Setup-0.1.0.exe`](https://github.com/Zdong104/View/releases/download/v0.1.0/View-Setup-0.1.0.exe) (installer) or [`View-0.1.0-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.1.0/View-0.1.0-windows-portable.zip) (no install). It builds and passes its self-test in CI, but has barely been tried on real PCs, so feedback is wanted. Touchpad signing is Linux only (draw with the mouse or a pen instead).
+
+**Known problem in 0.1.0:** it isn't code-signed, so on PCs with **Smart App Control** turned on (or a work PC with an App Control policy) it stops at startup with *"DLL load failed … An Application Control policy has blocked this file"* ([#3](https://github.com/Zdong104/View/issues/3)). Signed builds fix this; until then it only runs where Smart App Control is off (Windows Security → App & browser control → Smart App Control settings). Without Smart App Control, Windows may show a SmartScreen warning instead: click **More info → Run anyway**.
+
+Text recognition (OCR) is included from the next release on. It runs in a small helper program, `ocr\view-ocr.exe`, which View starts in the background.
 
 ### From source
 
@@ -74,6 +78,8 @@ git clone https://github.com/Zdong104/View.git
 cd View
 make run
 ```
+
+`make install` adds this checkout to your app grid as **View (Dev)**, next to any snap or .deb copy; `make uninstall` removes it again (`make purge` also deletes its Python venv).
 
 ## Touchpad signing
 

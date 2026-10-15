@@ -249,6 +249,10 @@ def _gl():
 
 def _ocr():
     from . import ocr
+    helper = ocr.helper_path()
+    if helper:
+        ocr._get_engine()                   # starts the helper and loads the models
+        return f"helper process {helper}"
     if ocr.is_available():
         import onnxruntime  # noqa: F401  (find_spec alone misses broken installs)
         import rapidocr  # noqa: F401
@@ -445,8 +449,7 @@ def main(argv=()):
         res.check("combine images into PDF (img2pdf)", lambda: _combine(paths, d))
         res.check("video (GStreamer)", _gst)
         res.check("OpenGL (PyOpenGL)", _gl)
-        ocr_ok = res.check("text recognition (OCR)", _ocr, required=runtime.OCR_BUNDLED
-                           and not runtime.IS_WINDOWS)
+        ocr_ok = res.check("text recognition (OCR)", _ocr, required=runtime.OCR_BUNDLED)
         if ocr_ok and run_ocr:
             res.check("OCR recognize", lambda: _ocr_run(paths, d))
         if not no_ui:

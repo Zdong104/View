@@ -7,7 +7,24 @@ on:
   pull_request:
     paths-ignore: ["**.md", "docs/**"]
   workflow_dispatch:
+    inputs:
+      sign:
+        description: "Code-sign the build (needs the Artifact Signing secrets and variables)"
+        type: boolean
+        default: false
   workflow_call:
+    inputs:
+      sign:
+        description: "Code-sign the build (needs the Artifact Signing secrets and variables)"
+        type: boolean
+        default: false
+    secrets:
+      AZURE_TENANT_ID:
+        required: false
+      AZURE_CLIENT_ID:
+        required: false
+      AZURE_CLIENT_SECRET:
+        required: false
 
 permissions:
   contents: read
@@ -15,7 +32,17 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
+    env:
+      # Code signing (packaging/windows/sign.ps1). Smart App Control on Windows 11
+      # blocks unsigned DLLs, so releases must be signed to start at all there.
+      SIGN: ${{ inputs.sign && secrets.AZURE_CLIENT_ID != '' && '1' || '' }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      ARTIFACT_SIGNING_ENDPOINT: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+      ARTIFACT_SIGNING_ACCOUNT: ${{ vars.ARTIFACT_SIGNING_ACCOUNT }}
+      ARTIFACT_SIGNING_PROFILE: ${{ vars.ARTIFACT_SIGNING_PROFILE }}
     defaults:
       run:
         shell: msys2 {0}
@@ -60,10 +87,6 @@ jobs:
           python -m pip install --break-system-packages --no-deps pypdf img2pdf
           python -c "import pypdf, img2pdf; print('pypdf', pypdf.__version__)"
 
-      # Text recognition is not bundled on Windows: MSYS2's onnxruntime has no
-      # working Python binding (onnxruntime_pybind11_state missing) and PyPI
-      # has no wheels for MSYS2's Python.
-
       - name: Selftest from source (headless)
         env:
           GSK_RENDERER: cairo
@@ -81,18 +104,69 @@ jobs:
           bash packaging/windows/collect-licenses.sh dist/View
           du -sh dist/View
 
+      # Text recognition runs in a helper process, view-ocr.exe, built with
+      # python.org's Python: onnxruntime only publishes wheels for that one,
+      # and MSYS2's own onnxruntime package has no working Python binding.
+      # View starts ocr\view-ocr.exe on demand (preview/ocr.py).
+      - uses: actions/setup-python@v5
+        id: py
+        with:
+          python-version: "3.13"
+
+      - name: Text recognition helper (python.org Python)
+        shell: pwsh
+        run: |
+          $py = "${{ steps.py.outputs.python-path }}"
+          & $py -m pip install --disable-pip-version-check -r requirements-ocr.txt pyinstaller
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $py -m PyInstaller --noconfirm --clean --distpath build/ocr-dist --workpath build/pyi-ocr packaging/windows/view-ocr.spec
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Move-Item build/ocr-dist/view-ocr dist/View/ocr
+          $lic = "dist/View/licenses/ocr-helper"
+          New-Item -ItemType Directory -Force $lic | Out-Null
+          & $py packaging/windows/collect-python-licenses.py $lic > "$lic/PYTHON-PACKAGES.txt"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "{0:N0} MB" -f ((Get-ChildItem dist/View/ocr -Recurse -File | Measure-Object Length -Sum).Sum / 1MB)
+
+      - name: OCR test image
+        run: |
+          python - <<'EOF'
+          from PIL import Image, ImageDraw, ImageFont
+          im = Image.new("RGB", (640, 160), "white")
+          d = ImageDraw.Draw(im)
+          f = ImageFont.load_default(size=48)
+          d.text((20, 20), "Hello View 2026", fill="black", font=f)
+          d.text((20, 90), "Live Text works", fill="black", font=f)
+          im.save("build/ocr-test.png")
+          EOF
+
       - name: Smoke test (frozen)
         env:
           GSK_RENDERER: cairo
         run: |
           ./dist/View/view-app.exe --version
-          ./dist/View/view-app.exe --selftest --no-ui
+          ./dist/View/ocr/view-ocr.exe --test build/ocr-test.png "Hello View"
+          # --ocr: View recognizes text through the helper (fails if it is missing)
+          ./dist/View/view-app.exe --selftest --no-ui --ocr
 
       - name: Smoke test with windows (frozen, best effort)
         continue-on-error: true
         env:
           GSK_RENDERER: cairo
         run: timeout 300 ./dist/View/view-app.exe --selftest
+
+      - name: Code signing (app files)
+        if: ${{ env.SIGN }}
+        shell: pwsh
+        run: |
+          ./packaging/windows/sign.ps1 -Path dist/View
+          ./dist/View/view-app.exe --version
+          ./dist/View/ocr/view-ocr.exe --test build/ocr-test.png "Hello View"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Code signing skipped
+        if: ${{ inputs.sign && !env.SIGN }}
+        run: echo "::warning::sign was requested but AZURE_CLIENT_ID is not set; this build is unsigned and Smart App Control will block it"
 
       - name: Portable zip
         run: |
@@ -109,7 +183,11 @@ jobs:
             if (-not (Test-Path $p)) { choco install innosetup -y --no-progress | Out-Null }
             $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           } else { $iscc = $iscc.Source }
-          & $iscc "/DAppVersion=$env:VERSION" packaging\windows\preview.iss
+          $sign = @()
+          if ($env:SIGN) {
+            $sign = @("/DSign", "/Sviewsign=pwsh -NoProfile -File $PWD\packaging\windows\sign.ps1 -Path `$f")
+          }
+          & $iscc "/DAppVersion=$env:VERSION" @sign packaging\windows\preview.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Get-ChildItem dist
 

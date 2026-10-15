@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Install View from this source checkout for the current user (no sudo).
+# It shows up as "View (Dev)" so it can't be mistaken for the snap or .deb.
 # Re-run after moving the checkout.  Options:
 #   --no-files-integration   don't take over Space-bar previews in GNOME Files
 #   --uninstall              remove the per-user install (keeps the venv)
+#   --purge                  remove it and its Python venv
 set -euo pipefail
 
 SRC="$(cd "$(dirname "$0")" && pwd)"
@@ -12,10 +14,12 @@ VENV="$DATA/view/venv"
 BIN="$HOME/.local/bin/view-app"
 FILES_INTEGRATION=1
 UNINSTALL=0
+PURGE=0
 for a in "$@"; do
     case "$a" in
         --no-files-integration) FILES_INTEGRATION=0 ;;
         --uninstall) UNINSTALL=1 ;;
+        --purge) UNINSTALL=1; PURGE=1 ;;
         *) echo "unknown option: $a" >&2; exit 2 ;;
     esac
 done
@@ -37,7 +41,13 @@ if [ "$UNINSTALL" = 1 ]; then
           "$DATA/icons/hicolor/scalable/apps/$APP_ID.svg" \
           "$DATA/metainfo/$APP_ID.metainfo.xml"
     update-desktop-database -q "$DATA/applications" 2>/dev/null || true
-    echo "Uninstalled (the Python venv in $VENV was kept)."
+    if [ "$PURGE" = 1 ]; then
+        rm -rf "$VENV"
+        rmdir "$DATA/view" 2>/dev/null || true
+        echo "Removed View (Dev) and its Python venv."
+    else
+        echo "Removed View (Dev) (the Python venv in $VENV was kept; --purge removes it)."
+    fi
     exit 0
 fi
 
@@ -58,8 +68,8 @@ ln -sfn view-app "$HOME/.local/bin/preview-app"     # old name, for muscle memor
 install -Dm644 "$SRC/data/$APP_ID.svg" "$DATA/icons/hicolor/scalable/apps/$APP_ID.svg"
 install -Dm644 "$SRC/data/$APP_ID.metainfo.xml" "$DATA/metainfo/$APP_ID.metainfo.xml"
 mkdir -p "$DATA/applications"
-sed -e "s|^Exec=view-app|Exec=$BIN|" "$SRC/data/$APP_ID.desktop" \
-    > "$DATA/applications/$APP_ID.desktop"
+sed -e "s|^Exec=view-app|Exec=$BIN|" -e "s|^Name=View$|Name=View (Dev)|" \
+    "$SRC/data/$APP_ID.desktop" > "$DATA/applications/$APP_ID.desktop"
 
 # GNOME Files: Space-bar Quick Look + "Combine Images into PDF" script.
 # Both are per-user; undo with: view-app --disable-files-integration
@@ -69,4 +79,5 @@ fi
 
 update-desktop-database -q "$DATA/applications" 2>/dev/null || true
 gtk-update-icon-cache -q -t "$DATA/icons/hicolor" 2>/dev/null || true
-echo "Installed. Launch “View” from the app grid, or run: $BIN [files]"
+echo "Installed. Launch “View (Dev)” from the app grid, or run: $BIN [files]"
+echo "Remove it again with: $SRC/install.sh --uninstall   (or --purge to drop its venv too)"

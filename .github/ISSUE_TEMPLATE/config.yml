@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/Zdong104/Preview/discussions
+    about: Ask a question, share an idea or show what you made in Discussions.
+  - name: Report a security vulnerability
+    url: https://github.com/Zdong104/Preview/security/advisories/new
+    about: Please report security problems privately, not as a public issue.

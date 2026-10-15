@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deb:
+    uses: ./.github/workflows/deb.yml
+
+  snap:
+    uses: ./.github/workflows/snap.yml
+    with:
+      publish: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    secrets:
+      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+
+  windows:
+    uses: ./.github/workflows/windows.yml
+
+  release:
+    needs: [deb, snap, windows]
+    # publish whatever built: a failed snap or Windows build must not block the .deb
+    if: ${{ !cancelled() && needs.deb.result == 'success' && startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Collect files and checksums
+        run: |
+          mkdir -p upload
+          find artifacts -type f \( -name '*.deb' -o -name '*.snap' -o -name 'Preview-Setup-*.exe' \
+               -o -name 'Preview-*-windows-portable.zip' \) -exec cp {} upload/ \;
+          cd upload && sha256sum * > SHA256SUMS && cat SHA256SUMS
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          notes="Downloads: .deb (Ubuntu 25.10+/26.04, Debian 13), .snap, Windows installer and portable zip (experimental). Verify with SHA256SUMS."
+          gh release create "$TAG" upload/* --title "Preview ${TAG#v}" --notes "$notes" \
+            $([[ "$TAG" == *-* ]] && echo --prerelease)

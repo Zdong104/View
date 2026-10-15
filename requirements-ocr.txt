@@ -1,0 +1,3 @@
+# Optional text recognition (Live Text / searchable PDF export), ~280 MB.
+rapidocr
+onnxruntime

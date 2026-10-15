@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+/dist/
+/build/
+/.venv/
+venv/
+*.egg-info/
+*.snap
+/parts/
+/stage/
+/prime/
+/packaging/windows/build/
+/packaging/windows/dist/
+*.spec.bak
+.idea/
+.vscode/

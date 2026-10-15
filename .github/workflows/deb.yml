@@ -1,0 +1,51 @@
+name: Debian package
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md", "docs/**"]
+  pull_request:
+    paths-ignore: ["**.md", "docs/**"]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build .deb
+        run: packaging/deb/build-deb.sh
+      - name: Inspect
+        run: |
+          dpkg-deb -I dist/*.deb
+          dpkg-deb -c dist/*.deb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb
+          path: dist/*.deb
+          if-no-files-found: error
+
+  # apt-install the package in clean containers and run the self-test there.
+  install-test:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ["ubuntu:26.04", "ubuntu:25.10", "debian:trixie", "ubuntu:24.04"]
+    # 24.04 is expected to fail (libadwaita 1.5 / GTK 4.14, no gstreamer1.0-gtk4)
+    continue-on-error: ${{ matrix.image == 'ubuntu:24.04' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: deb
+          path: dist
+      - name: Install and selftest in ${{ matrix.image }}
+        env:
+          LINTIAN: ${{ matrix.image == 'debian:trixie' && '1' || '0' }}
+        run: packaging/deb/test-in-docker.sh "${{ matrix.image }}" dist/*.deb

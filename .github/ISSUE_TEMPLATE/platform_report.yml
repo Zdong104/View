@@ -1,0 +1,54 @@
+name: Platform report
+description: 'It works / doesn''t work on my system: the most useful feedback right now'
+title: "[Platform] "
+labels: ["platform-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Preview is only tested on Ubuntu 26.04 (Lenovo ThinkPad P1 Gen 8). Reports from **any** other system are valuable, whether it works or not.
+  - type: input
+    id: distro
+    attributes:
+      label: Distro / OS and version
+      placeholder: "Fedora 44 Workstation / Debian 13 / Windows 11"
+    validations:
+      required: true
+  - type: input
+    id: desktop
+    attributes:
+      label: Desktop, session and hardware
+      placeholder: "GNOME 48 on Wayland, Dell XPS 13, Intel iGPU"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Preview version and install method
+      placeholder: "0.1.0, .deb"
+    validations:
+      required: true
+  - type: dropdown
+    id: overall
+    attributes:
+      label: Overall
+      options: ["It works", "Mostly works", "Partly works", "It doesn't work", "It doesn't even start"]
+    validations:
+      required: true
+  - type: checkboxes
+    id: works
+    attributes:
+      label: What works for you? (tick what works)
+      options:
+        - label: Opens and views PDFs
+        - label: Images (zoom, edit, markup)
+        - label: Signing with the touchpad
+        - label: Video / audio playback
+        - label: 3D models (STL / OBJ / PLY)
+        - label: Quick Look (Space in Files)
+        - label: OCR / Live Text
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: What fails, error messages, anything odd. Terminal output from `preview-app` helps.

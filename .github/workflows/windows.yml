@@ -1,0 +1,133 @@
+name: Windows
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md", "docs/**"]
+  pull_request:
+    paths-ignore: ["**.md", "docs/**"]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            zip
+          pacboy: >-
+            python:p
+            python-pip:p
+            python-gobject:p
+            python-cairo:p
+            gtk4:p
+            libadwaita:p
+            adwaita-icon-theme:p
+            librsvg:p
+            poppler:p
+            gstreamer:p
+            gst-plugins-base:p
+            gst-plugins-good:p
+            gst-plugins-bad:p
+            gst-plugins-ugly:p
+            gst-libav:p
+            gst-plugins-rs:p
+            python-numpy:p
+            python-pillow:p
+            python-pyopengl:p
+            python-pygments:p
+            python-openpyxl:p
+            python-pikepdf:p
+            pyinstaller:p
+            pyinstaller-hooks-contrib:p
+
+      - name: Python packages not in MSYS2
+        run: |
+          # MSYS2's Python is "externally managed" (PEP 668); this is a throwaway CI image.
+          python -m pip install --break-system-packages --no-deps pypdf img2pdf
+          python -c "import pypdf, img2pdf; print('pypdf', pypdf.__version__)"
+
+      - name: Text recognition (best effort)
+        id: ocr
+        continue-on-error: true
+        run: |
+          # onnxruntime / OpenCV / Shapely come from MSYS2 (PyPI has no wheels for
+          # MSYS2's Python); RapidOCR and its pure-Python deps from PyPI; pyclipper
+          # is compiled here.
+          pacboy -S --noconfirm --needed python-onnxruntime:p python-opencv:p python-shapely:p \
+            python-tqdm:p python-colorlog:p python-requests:p python-yaml:p python-six:p \
+            python-setuptools-scm:p cython:p gcc:p
+          python -m pip install --break-system-packages --no-build-isolation pyclipper
+          python -m pip install --break-system-packages --no-deps rapidocr omegaconf \
+            antlr4-python3-runtime==4.9.3
+          python -c "import rapidocr, onnxruntime; print('OCR ok', onnxruntime.__version__)"
+
+      - name: Selftest from source (headless)
+        env:
+          GSK_RENDERER: cairo
+        run: python -m preview --selftest --no-ui
+
+      - name: Icon
+        run: |
+          mkdir -p build
+          rsvg-convert -w 256 -h 256 data/io.github.zdong104.Preview.svg -o build/icon.png
+          python -c "from PIL import Image; Image.open('build/icon.png').save('build/preview.ico', sizes=[(16,16),(24,24),(32,32),(48,48),(64,64),(128,128),(256,256)])"
+
+      - name: PyInstaller
+        run: |
+          pyinstaller --noconfirm --clean --distpath dist --workpath build/pyi packaging/windows/preview.spec
+          bash packaging/windows/collect-licenses.sh dist/Preview
+          du -sh dist/Preview
+
+      - name: Smoke test (frozen)
+        env:
+          GSK_RENDERER: cairo
+        run: |
+          ./dist/Preview/preview-app.exe --version
+          ./dist/Preview/preview-app.exe --selftest --no-ui
+
+      - name: Smoke test with windows (frozen, best effort)
+        continue-on-error: true
+        env:
+          GSK_RENDERER: cairo
+        run: timeout 300 ./dist/Preview/preview-app.exe --selftest
+
+      - name: Portable zip
+        run: |
+          VERSION=$(python -c "import preview; print(preview.__version__)")
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          cd dist && zip -qr "Preview-$VERSION-windows-portable.zip" Preview && ls -la
+
+      - name: Installer (Inno Setup)
+        shell: pwsh
+        run: |
+          $iscc = Get-Command iscc.exe -ErrorAction SilentlyContinue
+          if (-not $iscc) {
+            $p = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+            if (-not (Test-Path $p)) { choco install innosetup -y --no-progress | Out-Null }
+            $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          } else { $iscc = $iscc.Source }
+          & $iscc "/DAppVersion=$env:VERSION" packaging\windows\preview.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-ChildItem dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            dist/Preview-Setup-*.exe
+            dist/Preview-*-windows-portable.zip
+          if-no-files-found: error

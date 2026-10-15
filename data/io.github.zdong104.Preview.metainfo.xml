@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.zdong104.Preview</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>PolyForm-Noncommercial-1.0.0</project_license>
+  <name>Preview</name>
+  <summary>View and annotate PDFs, images, videos, text and 3D models</summary>
+  <developer id="io.github.zdong104">
+    <name>Zihan</name>
+  </developer>
+  <description>
+    <p>
+      Preview is a fast, macOS Preview–style viewer for GNOME. One app opens
+      PDFs, images, videos, spreadsheets, source code and 3D models, and lets
+      you mark them up and sign them.
+    </p>
+    <ul>
+      <li>PDFs: thumbnails, search, text selection, highlights and notes, form filling, page reordering, merging and signing</li>
+      <li>Images: markup, crop, rotate, color adjustments, export, and combining images into a PDF</li>
+      <li>Signatures drawn on the touchpad, or with a mouse, pen or finger</li>
+      <li>Live Text: select and copy text in images and scanned PDFs (optional OCR engine)</li>
+      <li>Video and audio playback with hardware decoding</li>
+      <li>CSV/TSV editor, syntax-highlighted text and code, STL/OBJ/PLY model viewer</li>
+      <li>Optional Space-bar Quick Look for GNOME Files</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">io.github.zdong104.Preview.desktop</launchable>
+  <url type="homepage">https://github.com/Zdong104/Preview</url>
+  <url type="bugtracker">https://github.com/Zdong104/Preview/issues</url>
+  <url type="vcs-browser">https://github.com/Zdong104/Preview</url>
+  <url type="donation">https://buymeacoffee.com/zdong</url>
+  <url type="contribute">https://github.com/Zdong104/Preview/blob/main/CONTRIBUTING.md</url>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Signing a PDF</caption>
+      <image>https://raw.githubusercontent.com/Zdong104/Preview/main/docs/screenshots/pdf-sign.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Marking up an image</caption>
+      <image>https://raw.githubusercontent.com/Zdong104/Preview/main/docs/screenshots/image-markup.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Editing a spreadsheet</caption>
+      <image>https://raw.githubusercontent.com/Zdong104/Preview/main/docs/screenshots/table.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Viewing a 3D model</caption>
+      <image>https://raw.githubusercontent.com/Zdong104/Preview/main/docs/screenshots/model-3d.png</image>
+    </screenshot>
+  </screenshots>
+  <content_rating type="oars-1.1"/>
+  <branding>
+    <color type="primary" scheme_preference="light">#a8c5f0</color>
+    <color type="primary" scheme_preference="dark">#1c3f74</color>
+  </branding>
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
+  <provides>
+    <binary>preview-app</binary>
+  </provides>
+  <categories>
+    <category>Graphics</category>
+    <category>Viewer</category>
+    <category>Office</category>
+  </categories>
+  <keywords>
+    <keyword>PDF</keyword>
+    <keyword>image</keyword>
+    <keyword>signature</keyword>
+    <keyword>video</keyword>
+    <keyword>STL</keyword>
+  </keywords>
+  <releases>
+    <release version="0.1.0" date="2026-10-15">
+      <description>
+        <p>First public release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

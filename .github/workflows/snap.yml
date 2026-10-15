@@ -1,0 +1,56 @@
+name: Snap
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md", "docs/**"]
+  pull_request:
+    paths-ignore: ["**.md", "docs/**"]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      publish:
+        description: "Upload to the Snap Store edge channel (needs SNAPCRAFT_STORE_CREDENTIALS)"
+        type: boolean
+        default: false
+    secrets:
+      SNAPCRAFT_STORE_CREDENTIALS:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  snap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: snapcore/action-build@v1
+        id: build
+        with:
+          snapcraft-channel: latest/stable
+
+      - name: Install and selftest (best effort)
+        continue-on-error: true
+        run: |
+          sudo snap install --dangerous "${{ steps.build.outputs.snap }}"
+          snap connections preview || true
+          preview --version
+          preview --selftest --no-ui
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snap
+          path: ${{ steps.build.outputs.snap }}
+          if-no-files-found: error
+
+      - name: Publish to edge
+        if: ${{ inputs.publish && env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
+        uses: snapcore/action-publish@v1
+        with:
+          snap: ${{ steps.build.outputs.snap }}
+          release: edge

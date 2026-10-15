@@ -1,0 +1,54 @@
+.TH PREVIEW-APP 1 "October 2026" "Preview 0.1.0" "User Commands"
+.SH NAME
+preview-app \- view and annotate PDFs, images, videos, text and 3D models
+.SH SYNOPSIS
+.B preview-app
+[\fIFILE\fR...]
+.br
+.B preview-app
+\fB\-\-new\-signature\fR | \fB\-\-version\fR | \fB\-\-selftest\fR [\fB\-\-no\-ui\fR]
+.br
+.B preview-app
+\fB\-\-combine\-pdf\fR [\fB\-o\fR \fIOUT.pdf\fR] \fIIMAGE\fR...
+.br
+.B preview-app
+\fB\-\-enable\-files\-integration\fR | \fB\-\-disable\-files\-integration\fR
+.SH DESCRIPTION
+Preview is a macOS Preview\-style viewer for GNOME. It opens PDF documents,
+images, video and audio, CSV/TSV spreadsheets, text and source code, and
+STL/OBJ/PLY 3D models. Images are grouped in one window; every other file
+opens in its own window.
+.SH OPTIONS
+.TP
+.B \-\-new\-signature
+Open the signature pad (touchpad on Linux, or mouse/pen/touch).
+.TP
+.B \-\-version
+Print the version and exit.
+.TP
+.B \-\-selftest
+Check that every viewer and library works and exit with status 0 or 1.
+With \fB\-\-no\-ui\fR no windows are opened (no display needed).
+.TP
+.B \-\-combine\-pdf
+Combine images into one PDF without opening a window; see
+\fBpreview-app \-\-combine\-pdf \-\-help\fR.
+.TP
+.B \-\-enable\-files\-integration
+For the current user, make Space in GNOME Files show previews with Preview
+(instead of GNOME Sushi) and add a "Combine Images into PDF" Files script.
+.TP
+.B \-\-disable\-files\-integration
+Undo \fB\-\-enable\-files\-integration\fR.
+.TP
+.B \-\-quicklook
+Run the Quick Look D\-Bus service (started by the session bus).
+.SH FILES
+.TP
+.I ~/.local/share/preview-app/ocr-venv
+Optional text recognition engine, downloaded on request.
+.TP
+.I ~/Pictures/Signatures
+Saved signatures.
+.SH SEE ALSO
+https://github.com/Zdong104/Preview

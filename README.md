@@ -1,0 +1,112 @@
+# Preview
+
+**A macOS-Preview-style viewer for Linux (GNOME).** View, annotate and sign PDFs, images, 3D models, tables and video in one fast GTK4 + libadwaita app, including signing with your laptop touchpad.
+
+[![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/Zdong104/Preview?include_prereleases)](https://github.com/Zdong104/Preview/releases)
+[![Downloads](https://img.shields.io/github/downloads/Zdong104/Preview/total)](https://github.com/Zdong104/Preview/releases)
+
+![Signing a PDF in Preview](docs/screenshots/pdf-sign.png)
+
+<details>
+<summary>More screenshots</summary>
+
+![Markup on an image](docs/screenshots/image-markup.png)
+![3D model viewer](docs/screenshots/model-3d.png)
+![CSV viewer](docs/screenshots/table.png)
+
+</details>
+
+## Features
+
+- **PDF**: fast on huge files (1,000-page and 600 MB scanned PDFs tested), thumbnails, search, text selection, form filling, print, Get Info.
+- **Page editing**: select thumbnails and press Delete, reorder, rotate, insert, merge several PDFs, drag pages out. Ctrl+S with pages selected saves just those pages as a new PDF.
+- **Export and protect**: export pages to images, password-encrypt, reduce file size.
+- **Sign with the touchpad**: your touchpad becomes a 1:1 drawing surface, like macOS Preview. Signatures are stored as vectors. Mouse and pen work too.
+- **Markup** on PDFs and images: sketch, shapes, arrows, text boxes, notes, highlight / underline / strikethrough.
+- **Images**: zoom, pan, pinch, rotate, flip, crop, adjust colour, instant alpha, resize, EXIF/GPS info. Animated GIF / WebP / APNG keep their animation when edited.
+- **Batch tools**: convert selected images, combine images into a PDF.
+- **Live Text (OCR)**: select and copy text in images and scanned PDFs, export searchable PDFs (RapidOCR, CPU, English + Chinese).
+- **3D models**: STL / OBJ / PLY, orbit with the touchpad, dimensions / volume / area (10M triangles tested).
+- **Tables and text**: CSV / TSV viewer and editor (1M rows), text and code viewer with syntax highlighting.
+- **Video and audio** with hardware (VA-API) decoding.
+- **Quick Look for GNOME Files**: press Space to preview a file (replaces Sushi; opt-in).
+
+## Install
+
+### Ubuntu / Debian (.deb)
+
+Download `preview-app_0.1.0_all.deb` from the [Releases page](https://github.com/Zdong104/Preview/releases), then:
+
+```bash
+sudo apt install ./preview-app_0.1.0_all.deb
+```
+
+`apt` is recommended because it also installs the dependencies. If you prefer `dpkg`:
+
+```bash
+sudo dpkg -i preview-app_0.1.0_all.deb && sudo apt -f install
+```
+
+### Snap (coming soon / edge)
+
+```bash
+sudo snap install preview
+sudo snap connect preview:raw-input   # needed for touchpad signing
+```
+
+The snap is sandboxed, so the GNOME Files integration (Space-bar Quick Look, "Combine Images into PDF") is only available in the .deb / source install.
+
+### Windows (**experimental**)
+
+`Preview-Setup-0.1.0.exe` on the Releases page. Experimental and untested; touchpad signing is Linux only.
+
+### From source
+
+```bash
+git clone https://github.com/Zdong104/Preview.git
+cd Preview
+make run
+```
+
+## Touchpad signing
+
+1. Add yourself to the `input` group (needed to read the touchpad directly): `sudo usermod -aG input $USER`, then log out and back in.
+2. Open **New Signature...** from the app menu (or run `preview-app --new-signature`).
+3. Draw with one finger. Where you touch the pad is where the ink goes. Press any key to finish, then place it on a page.
+
+## Compatibility
+
+| System | Status |
+| --- | --- |
+| Ubuntu 26.04 | ✅ Tested daily |
+| Ubuntu 25.10, Debian 13 | 🟡 Installs and passes the self-test in a container; not used day to day |
+| Ubuntu 24.04 | ❌ Too old (needs GTK ≥ 4.18 and libadwaita ≥ 1.7) — use the snap |
+| Fedora, Arch, other distros | ❓ Untested, please report (run from source) |
+| Windows | ⚠️ Experimental, untested, feedback wanted |
+| macOS | ❌ Use the real Preview 🙂 |
+
+## 🙏 Feedback wanted
+
+Preview is developed and tested **only on Ubuntu 26.04 on a Lenovo ThinkPad P1 Gen 8**. Everything else is a guess, and your report is the most useful thing you can send.
+
+- Tried it on your system? File a [**Platform report**](https://github.com/Zdong104/Preview/issues/new?template=platform_report.yml), even if everything works.
+- Found a problem? Open a [**Bug report**](https://github.com/Zdong104/Preview/issues/new?template=bug_report.yml).
+- Missing something? Open a [**Feature request**](https://github.com/Zdong104/Preview/issues/new?template=feature_request.yml).
+- Questions and ideas: use [Discussions](https://github.com/Zdong104/Preview/discussions).
+
+## Contributing
+
+Pull requests are welcome, from typo fixes to new viewers. Read [CONTRIBUTING.md](CONTRIBUTING.md) for how to run from source, the project layout and the PR checklist. Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Support the project
+
+Preview is free. If it saves you time, you can support development:
+
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/zdong)
+
+GitHub Sponsors is coming soon.
+
+## License
+
+Preview is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE): free for personal, educational, research and other noncommercial use. Commercial use or distribution requires permission; open a GitHub issue or contact the maintainer to ask. Note that this makes Preview *source-available*, not OSI-approved open source.

@@ -143,6 +143,9 @@ def _load_api():
         kernel32: {
             "GetCurrentThreadId": (wt.DWORD, []),
             "GetModuleHandleW": (wt.HMODULE, [wt.LPCWSTR]),
+            "CreateFileW": (wt.HANDLE, [wt.LPCWSTR, wt.DWORD, wt.DWORD, wt.LPVOID, wt.DWORD,
+                                        wt.DWORD, wt.HANDLE]),
+            "CloseHandle": (wt.BOOL, [wt.HANDLE]),
         },
         hid: {
             "HidP_GetCaps": (wt.LONG, [wt.LPVOID, P(HIDP_CAPS)]),
@@ -152,6 +155,7 @@ def _load_api():
                                              P(wt.ULONG), wt.LPVOID, wt.LPVOID, wt.ULONG]),
             "HidP_GetUsages": (wt.LONG, [ctypes.c_int, wt.USHORT, wt.USHORT, P(wt.USHORT),
                                          P(wt.ULONG), wt.LPVOID, wt.LPVOID, wt.ULONG]),
+            "HidD_GetProductString": (wt.BOOLEAN, [wt.HANDLE, wt.LPVOID, wt.ULONG]),
         },
     }
     for dll, fns in sigs.items():
@@ -190,6 +194,24 @@ def _device_info(user32, h, kind, struct=None):
     if user32.GetRawInputDeviceInfoW(h, kind, ctypes.byref(buf), ctypes.byref(size)) == 0xFFFFFFFF:
         return None
     return buf
+
+
+def _product_name(path):
+    """The HID product string ("Synaptics Touchpad" ...), or None."""
+    if not path:
+        return None
+    _, kernel32, hid = _load_api()
+    # no access rights needed to query strings; touchpads refuse read access
+    h = kernel32.CreateFileW(path, 0, 3, None, 3, 0, None)  # FILE_SHARE_READ|WRITE, OPEN_EXISTING
+    if not h or h == wt.HANDLE(-1).value:
+        return None
+    try:
+        buf = ctypes.create_unicode_buffer(127)
+        if hid.HidD_GetProductString(h, buf, ctypes.sizeof(buf)):
+            return buf.value.strip() or None
+    finally:
+        kernel32.CloseHandle(h)
+    return None
 
 
 def _span_mm(caps):
@@ -237,7 +259,14 @@ def find_touchpads():
         if hid.HidP_GetValueCaps(HIDP_INPUT, vcaps, ctypes.byref(count), pre) != \
                 HIDP_STATUS_SUCCESS:
             continue
-        pad = _PadInfo(d.hDevice, name.value if name is not None else "Touchpad", pre)
+        path = name.value if name is not None else None
+        try:
+            label = _product_name(path)
+        except OSError:
+            label = None
+        if label and "hid" in label.lower():         # "HIDI2C Device": says nothing
+            label = None
+        pad = _PadInfo(d.hDevice, label or "Precision Touchpad", pre)
         xs = {}
         ys = {}
         for vc in vcaps[:count.value]:
@@ -310,6 +339,7 @@ class Touchpad:
         self.grabbed = False
         self._pending_grab = None
         self._down = False
+        self._last_report = 0.0
         self._frames = {}
         self._tid = None
         self._hook = None
@@ -326,7 +356,9 @@ class Touchpad:
 
     # --- grab lifecycle ---------------------------------------------------
     def finger_down(self) -> bool:
-        return self._down
+        # A touching finger makes the pad report ~100 times a second, so a
+        # quiet pad means no finger even if the last lift report was lost.
+        return self._down and time.monotonic() - self._last_report < 0.25
 
     def grab(self, on_grabbed=None):
         """Start capturing once no finger touches the pad (so Windows never
@@ -335,7 +367,7 @@ class Touchpad:
             return
 
         def try_grab():
-            if self._down:
+            if self.finger_down():
                 return GLib.SOURCE_CONTINUE
             self._pending_grab = None
             self.grabbed = True
@@ -458,8 +490,11 @@ class Touchpad:
             if frame is not None:
                 frame = [c for c in frame if c is not None]    # lifted fingers, palms
                 self._down = bool(frame)
+                self._last_report = t
                 if self.grabbed and self.on_frame:
-                    GLib.idle_add(self._deliver, frame, t)
+                    # high priority like the Linux fd watch: ink must not wait
+                    # behind redraws and page rendering
+                    GLib.idle_add(self._deliver, frame, t, priority=GLib.PRIORITY_HIGH)
 
     def _deliver(self, frame, t):
         if self.grabbed and self.on_frame:

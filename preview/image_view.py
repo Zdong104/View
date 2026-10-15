@@ -1231,7 +1231,7 @@ class ImageViewer(Viewer):
         tools.append_section(None, t5)
         t4 = Gio.Menu()
         t4.append("Slideshow", "img.slideshow")
-        if runtime.IS_LINUX:            # GNOME background settings
+        if runtime.IS_LINUX or runtime.IS_WINDOWS:     # GNOME background settings / Win32
             t4.append("Set as Wallpaper…", "img.wallpaper")
         tools.append_section(None, t4)
         header.pack_start(Gtk.MenuButton(icon_name="applications-graphics-symbolic",
@@ -2785,14 +2785,17 @@ class ImageViewer(Viewer):
         if it is None or it.rendered is None:
             return
         schema = "org.gnome.desktop.background"
-        src = Gio.SettingsSchemaSource.get_default()
-        sch = src.lookup(schema, True) if src else None
-        if sch is None:
-            self.toast("Desktop background settings are not available")
-            return
+        sch = None
+        if not runtime.IS_WINDOWS:
+            src = Gio.SettingsSchemaSource.get_default()
+            sch = src.lookup(schema, True) if src else None
+            if sch is None:
+                self.toast("Desktop background settings are not available")
+                return
         dlg = Adw.AlertDialog(heading="Set as Wallpaper?",
-                              body=f"“{it.name}” will be used as the desktop background "
-                                   "for both light and dark styles.")
+                              body=f"“{it.name}” will be used as the desktop background" +
+                                   ("." if runtime.IS_WINDOWS else
+                                    " for both light and dark styles."))
         dlg.add_response("cancel", "Cancel")
         dlg.add_response("set", "Set Wallpaper")
         dlg.set_response_appearance("set", Adw.ResponseAppearance.SUGGESTED)
@@ -2816,6 +2819,14 @@ class ImageViewer(Viewer):
             def done(path, err):
                 if err:
                     self.toast(f"Could not set wallpaper: {err}")
+                    return
+                if runtime.IS_WINDOWS:
+                    import ctypes
+                    # SPI_SETDESKWALLPAPER, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE
+                    if ctypes.windll.user32.SystemParametersInfoW(0x14, 0, str(path), 3):
+                        self.toast("Wallpaper set")
+                    else:
+                        self.toast("Could not set wallpaper")
                     return
                 s = Gio.Settings.new(schema)
                 uri = Gio.File.new_for_path(path).get_uri()

@@ -29,7 +29,7 @@
 - **Live Text (OCR)**: select and copy text in images and scanned PDFs, export searchable PDFs (RapidOCR, CPU, English + Chinese).
 - **3D models**: STL / OBJ / PLY, orbit with the touchpad, dimensions / volume / area (10M triangles tested).
 - **Tables and text**: CSV / TSV viewer and editor (1M rows), text and code viewer with syntax highlighting.
-- **Video and audio** with hardware (VA-API) decoding.
+- **Video and audio**, with hardware (VA-API) decoding on Linux.
 - **Quick Look for GNOME Files**: press Space to preview a file (replaces Sushi; opt-in).
 
 ## Install
@@ -65,7 +65,15 @@ From a terminal, start it with `snap run view` (plain `view` is usually Vim's re
 
 ### Windows (**experimental**)
 
-Download [`View-Setup-0.1.0.exe`](https://github.com/Zdong104/View/releases/download/v0.1.0/View-Setup-0.1.0.exe) (installer) or [`View-0.1.0-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.1.0/View-0.1.0-windows-portable.zip) (no install). It builds and passes its self-test in CI, but has barely been tried on real PCs, so feedback is wanted. Touchpad signing needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
+Download [`View-Setup-0.1.0.exe`](https://github.com/Zdong104/View/releases/download/v0.1.0/View-Setup-0.1.0.exe) (installer) or [`View-0.1.0-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.1.0/View-0.1.0-windows-portable.zip) (no install). It is now tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: press **Space** (or **Start**) and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
+
+**Fixed since 0.1.0** (in the next release):
+
+- **Touchpad signing and touchpad drawing in Markup** now work on Windows (0.1.0 said they were Linux-only).
+- **The Markup toolbar button** (and the notes sidebar tab) showed no icon on Windows, so markup looked missing.
+- **Videos open at once.** 0.1.0 could spend over a minute retrying a failing Direct3D decoder; Windows now decodes in software (FFmpeg, dav1d, libvpx). Set `PREVIEW_VIDEO_HW=1` to try hardware decoding.
+- **Smoother drawing**: rendering goes through Direct Composition (about 50% more frames per second at 4K). `VIEW_NO_DCOMP=1` turns it off.
+- **Set as Wallpaper** works on Windows.
 
 **Known problem in 0.1.0:** it isn't code-signed, so on PCs with **Smart App Control** turned on (or a work PC with an App Control policy) it stops at startup with *"DLL load failed … An Application Control policy has blocked this file"* ([#3](https://github.com/Zdong104/View/issues/3)). Signed builds fix this; until then it only runs where Smart App Control is off (Windows Security → App & browser control → Smart App Control settings). Without Smart App Control, Windows may show a SmartScreen warning instead: click **More info → Run anyway**.
 

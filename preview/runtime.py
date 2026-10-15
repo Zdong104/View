@@ -36,9 +36,23 @@ OCR_BUNDLED = IN_SNAP or FROZEN
 def configure_gl_env():
     """PyOpenGL must talk to the same GL platform GTK uses.  On Linux GTK
     renders through EGL (Wayland and, since 4.16, X11 too); on Windows it uses
-    WGL, which is PyOpenGL's default there.  Must run before OpenGL is imported."""
+    WGL, which is PyOpenGL's default there.  Must run before OpenGL is imported.
+
+    On Windows (GTK 4.24) View draws with GTK's cairo renderer on top of
+    Direct Composition, which is still opt-in (GDK_DEBUG=dcomp): at 4K that
+    presents frames ~50% faster than plain cairo (layered window).  GTK's GL
+    and Vulkan renderers need Direct Composition too, but with it they paint
+    the transparent margin around every window, dialog and popover (shadows,
+    rounded corners, resize border) black - GTK keeps DComp off by default
+    for that reason - so they aren't used.  VIEW_NO_DCOMP=1 turns this off;
+    an explicit GSK_RENDERER is respected."""
     if IS_LINUX:
         os.environ.setdefault("PYOPENGL_PLATFORM", "egl")
+    if IS_WINDOWS and not os.environ.get("VIEW_NO_DCOMP"):
+        os.environ.setdefault("GSK_RENDERER", "cairo")
+        flags = os.environ.get("GDK_DEBUG", "").replace(",", ":").replace(" ", ":")
+        if "dcomp" not in flags.split(":"):
+            os.environ["GDK_DEBUG"] = ":".join(f for f in (flags, "dcomp") if f)
 
 
 def configure_frozen_env():

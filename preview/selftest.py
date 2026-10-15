@@ -426,7 +426,8 @@ def main(argv=()):
           f"{' (snap)' if runtime.IN_SNAP else ''}{' (frozen)' if runtime.FROZEN else ''}",
           flush=True)
     res = Result()
-    with tempfile.TemporaryDirectory(prefix="preview-selftest-") as d:
+    # (Windows cannot delete files Poppler still has open: ignore cleanup errors)
+    with tempfile.TemporaryDirectory(prefix="preview-selftest-", ignore_cleanup_errors=True) as d:
         if not res.check("versions", _versions):
             print("FAILED: required libraries are missing or too old", flush=True)
             return 1

@@ -65,9 +65,9 @@ parts:
       - requirements-ocr.txt
     stage-packages:
       - python3-venv                    # interpreter for the plugin's venv
-      - python3-gi
-      - python3-gi-cairo
-      - python3-cairo
+      # PyGObject + pycairo come from the gnome-core26 platform: the core26
+      # gnome extension deletes every .so the SDK also has, which would strip
+      # the binary modules out of staged python3-gi/python3-cairo anyway.
       - gir1.2-poppler-0.18
       - gstreamer1.0-plugins-bad        # VA-API decoders (va), more demuxers
       - gstreamer1.0-plugins-ugly
@@ -87,10 +87,9 @@ parts:
       # Preview snap launcher: our staged typelibs, GStreamer plugins and
       # Python modules first, then the gnome-core26 platform.
       A=$TRIPLET
-      # Exactly one PyGObject: ours (with its cairo bridge).  The extension also
-      # puts the platform's gi on PYTHONPATH; gi.overrides merges every gi dir
-      # it finds, and mixing the two versions breaks (gi._gi has no 'Pid').
-      export PYTHONPATH="\$SNAP/usr/lib/preview-app:\$SNAP/usr/lib/python3/dist-packages"
+      # PyGObject/pycairo from the platform (the extension puts them on
+      # PYTHONPATH); our package and staged pure-Python modules first.
+      export PYTHONPATH="\$SNAP/usr/lib/preview-app:\$SNAP/usr/lib/python3/dist-packages:\$SNAP/gnome-platform/usr/lib/python3/dist-packages\${PYTHONPATH:+:\$PYTHONPATH}"
       export GI_TYPELIB_PATH="\$SNAP/usr/lib/\$A/girepository-1.0\${GI_TYPELIB_PATH:+:\$GI_TYPELIB_PATH}"
       export LD_LIBRARY_PATH="\${LD_LIBRARY_PATH:+\$LD_LIBRARY_PATH:}\$SNAP/usr/lib/\$A:\$SNAP/usr/lib/\$A/blas:\$SNAP/usr/lib/\$A/lapack"
       export GST_PLUGIN_SYSTEM_PATH="\$SNAP/usr/lib/\$A/gstreamer-1.0:\$SNAP/gnome-platform/usr/lib/\$A/gstreamer-1.0"
@@ -110,20 +109,3 @@ parts:
       sed -e 's|^Icon=.*|Icon=${SNAP}/usr/share/icons/hicolor/scalable/apps/io.github.zdong104.Preview.svg|' \
         "$CRAFT_PART_SRC/data/io.github.zdong104.Preview.desktop" \
         > "$CRAFT_PART_INSTALL/usr/share/applications/io.github.zdong104.Preview.desktop"
-
-  # Drop shared libraries the base and the GNOME platform snap already
-  # provide, so staged .debs cannot shadow the platform's GTK/GLib stack.
-  # Python itself (interpreter, PyGObject with its cairo bridge) is kept.
-  cleanup:
-    after: [preview]
-    plugin: nil
-    build-snaps: [core26, gnome-core26]
-    override-prime: |
-      set -eu
-      for snap in core26 gnome-core26; do
-        cd "/snap/$snap/current"
-        # (find fails on a missing dir, e.g. lib/ in gnome-core26: tolerate it)
-        { find usr/lib lib -type f,l \( -name '*.so' -o -name '*.so.*' \) \
-               -not -path '*python3*' -not -name 'libpython3*' 2>/dev/null || true; } \
-          | while read -r f; do rm -f "$CRAFT_PRIME/$f"; done
-      done

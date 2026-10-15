@@ -36,22 +36,22 @@
 
 ### Ubuntu / Debian (.deb)
 
-Download [`view_0.1.0_all.deb`](https://github.com/Zdong104/View/releases/download/v0.1.0/view_0.1.0_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
+Download [`view_0.1.1_all.deb`](https://github.com/Zdong104/View/releases/download/v0.1.1/view_0.1.1_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
 
 ```bash
-sudo apt install ./view_0.1.0_all.deb
+sudo apt install ./view_0.1.1_all.deb
 ```
 
 Or in one go:
 
 ```bash
-wget https://github.com/Zdong104/View/releases/download/v0.1.0/view_0.1.0_all.deb && sudo apt install ./view_0.1.0_all.deb
+wget https://github.com/Zdong104/View/releases/download/v0.1.1/view_0.1.1_all.deb && sudo apt install ./view_0.1.1_all.deb
 ```
 
 `apt` is recommended because it also installs the dependencies. If you prefer `dpkg`:
 
 ```bash
-sudo dpkg -i view_0.1.0_all.deb && sudo apt -f install
+sudo dpkg -i view_0.1.1_all.deb && sudo apt -f install
 ```
 
 ### Snap (edge channel)
@@ -65,9 +65,9 @@ From a terminal, start it with `snap run view` (plain `view` is usually Vim's re
 
 ### Windows (**experimental**)
 
-Download [`View-Setup-0.1.0.exe`](https://github.com/Zdong104/View/releases/download/v0.1.0/View-Setup-0.1.0.exe) (installer) or [`View-0.1.0-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.1.0/View-0.1.0-windows-portable.zip) (no install). It is now tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: press **Space** (or **Start**) and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
+Download [`View-Setup-0.1.1.exe`](https://github.com/Zdong104/View/releases/download/v0.1.1/View-Setup-0.1.1.exe) (installer) or [`View-0.1.1-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.1.1/View-0.1.1-windows-portable.zip) (no install). It is now tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: press **Space** (or **Start**) and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
 
-**Fixed since 0.1.0** (in the next release):
+**New in 0.1.1:**
 
 - **Touchpad signing and touchpad drawing in Markup** now work on Windows (0.1.0 said they were Linux-only).
 - **The Markup toolbar button** (and the notes sidebar tab) showed no icon on Windows, so markup looked missing.
@@ -75,9 +75,9 @@ Download [`View-Setup-0.1.0.exe`](https://github.com/Zdong104/View/releases/down
 - **Smoother drawing**: rendering goes through Direct Composition (about 50% more frames per second at 4K). `VIEW_NO_DCOMP=1` turns it off.
 - **Set as Wallpaper** works on Windows.
 
-**Known problem in 0.1.0:** it isn't code-signed, so on PCs with **Smart App Control** turned on (or a work PC with an App Control policy) it stops at startup with *"DLL load failed … An Application Control policy has blocked this file"* ([#3](https://github.com/Zdong104/View/issues/3)). Signed builds fix this; until then it only runs where Smart App Control is off (Windows Security → App & browser control → Smart App Control settings). Without Smart App Control, Windows may show a SmartScreen warning instead: click **More info → Run anyway**.
+**Known problem:** the Windows build isn't code-signed yet, so on PCs with **Smart App Control** turned on (or a work PC with an App Control policy) it stops at startup with *"DLL load failed … An Application Control policy has blocked this file"* ([#3](https://github.com/Zdong104/View/issues/3)). Signed builds fix this; until then it only runs where Smart App Control is off (Windows Security → App & browser control → Smart App Control settings). Without Smart App Control, Windows may show a SmartScreen warning instead: click **More info → Run anyway**.
 
-Text recognition (OCR) is included from the next release on. It runs in a small helper program, `ocr\view-ocr.exe`, which View starts in the background.
+Text recognition (OCR) is included from 0.1.1 on. It runs in a small helper program, `ocr\view-ocr.exe`, which View starts in the background.
 
 ### From source
 

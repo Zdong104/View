@@ -77,6 +77,11 @@
     <keyword>STL</keyword>
   </keywords>
   <releases>
+    <release version="0.1.1" date="2026-10-15">
+      <description>
+        <p>Windows: touchpad signing and touchpad drawing in Markup, the Markup toolbar button shows, videos open at once (no Direct3D decoder hang), smoother drawing, Set as Wallpaper. Text recognition on Windows.</p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-10-15">
       <description>
         <p>First public release.</p>

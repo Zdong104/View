@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Preview is only tested on Ubuntu 26.04 (Lenovo ThinkPad P1 Gen 8). Reports from **any** other system are valuable, whether it works or not.
+        View is only tested on Ubuntu 26.04 (Lenovo ThinkPad P1 Gen 8). Reports from **any** other system are valuable, whether it works or not.
   - type: input
     id: distro
     attributes:
@@ -24,7 +24,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Preview version and install method
+      label: View version and install method
       placeholder: "0.1.0, .deb"
     validations:
       required: true
@@ -51,4 +51,4 @@ body:
     id: details
     attributes:
       label: Details
-      description: What fails, error messages, anything odd. Terminal output from `preview-app` helps.
+      description: What fails, error messages, anything odd. Terminal output from `view-app` helps.

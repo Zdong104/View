@@ -37,8 +37,8 @@ jobs:
       - name: Collect files and checksums
         run: |
           mkdir -p upload
-          find artifacts -type f \( -name '*.deb' -o -name '*.snap' -o -name 'Preview-Setup-*.exe' \
-               -o -name 'Preview-*-windows-portable.zip' \) -exec cp {} upload/ \;
+          find artifacts -type f \( -name '*.deb' -o -name '*.snap' -o -name 'View-Setup-*.exe' \
+               -o -name 'View-*-windows-portable.zip' \) -exec cp {} upload/ \;
           cd upload && sha256sum * > SHA256SUMS && cat SHA256SUMS
       - name: Create GitHub release
         env:
@@ -46,5 +46,5 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           notes="Downloads: .deb (Ubuntu 25.10+/26.04, Debian 13), .snap, Windows installer and portable zip (experimental). Verify with SHA256SUMS."
-          gh release create "$TAG" upload/* --title "Preview ${TAG#v}" --notes "$notes" \
+          gh release create "$TAG" upload/* --title "View ${TAG#v}" --notes "$notes" \
             $([[ "$TAG" == *-* ]] && echo --prerelease)

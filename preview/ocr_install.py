@@ -1,10 +1,10 @@
 """Optional, per-user installation of the text-recognition engine.
 
 The .deb does not depend on RapidOCR/onnxruntime (~280 MB, not packaged by
-Debian/Ubuntu).  When they are missing, Preview offers to install them into a
+Debian/Ubuntu).  When they are missing, View offers to install them into a
 private virtual environment (never into the system Python -- PEP 668):
 
-    <user data dir>/preview-app/ocr-venv   (python3 -m venv --system-site-packages)
+    <user data dir>/view/ocr-venv   (python3 -m venv --system-site-packages)
 
 and appends that venv's site-packages to ``sys.path`` at runtime.  The snap
 and the Windows build bundle the engine, so no offer is made there.
@@ -29,6 +29,12 @@ _activated: str | None = None
 
 def venv_dir() -> str:
     return os.path.join(runtime.user_data_dir(), "ocr-venv")
+
+
+def _legacy_venv_dir() -> str:
+    """Where pre-release builds (named "Preview") put the engine."""
+    from gi.repository import GLib
+    return os.path.join(GLib.get_user_data_dir(), "preview-app", "ocr-venv")
 
 
 def _venv_python(vd=None) -> str:
@@ -57,6 +63,8 @@ def activate() -> bool:
         return False
     try:
         sp = site_packages()
+        if not os.path.isdir(sp):
+            sp = site_packages(_legacy_venv_dir())
     except Exception:  # noqa: BLE001  (no GLib yet, odd environment)
         return False
     if os.path.isdir(sp) and sp not in sys.path:

@@ -3,12 +3,12 @@
 # and run the self-test, headless and then with a virtual X display.
 #
 #   packaging/deb/test-in-docker.sh [IMAGE] [DEB]
-#   IMAGE defaults to ubuntu:26.04; DEB to the newest dist/preview-app_*_all.deb
+#   IMAGE defaults to ubuntu:26.04; DEB to the newest dist/view_*_all.deb
 #   LINTIAN=1 also runs lintian inside the container.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 IMAGE="${1:-ubuntu:26.04}"
-DEB="${2:-$(ls -t "$ROOT"/dist/preview-app_*_all.deb | head -n1)}"
+DEB="${2:-$(ls -t "$ROOT"/dist/view_*_all.deb | head -n1)}"
 DEB_DIR="$(cd "$(dirname "$DEB")" && pwd)"
 DEB_NAME="$(basename "$DEB")"
 
@@ -22,13 +22,13 @@ if ! apt-get install -y -qq --no-install-recommends /dist/$DEB_NAME >/tmp/apt.lo
     grep -E 'Depends|unmet|E:|but' /tmp/apt.log | head -n 30
     exit 2
 fi
-echo \"installed: \$(dpkg-query -W -f='\${Version}' preview-app)\"
-preview-app --version
+echo \"installed: \$(dpkg-query -W -f='\${Version}' view)\"
+view-app --version
 echo '--- selftest (headless)'
-preview-app --selftest --no-ui
+view-app --selftest --no-ui
 echo '--- selftest (Xvfb)'
 apt-get install -y -qq --no-install-recommends xvfb xauth >/dev/null 2>&1
-xvfb-run -a -s '-screen 0 1280x1024x24' preview-app --selftest 2>&1 \
+xvfb-run -a -s '-screen 0 1280x1024x24' view-app --selftest 2>&1 \
     | grep -vE 'Gtk-WARNING|^\$|dbus|AT-SPI|Fontconfig'
 if [ \"\$LINTIAN\" = 1 ]; then
     echo '--- lintian'
@@ -36,7 +36,7 @@ if [ \"\$LINTIAN\" = 1 ]; then
     lintian --no-tag-display-limit /dist/$DEB_NAME || true
 fi
 echo '--- remove'
-apt-get remove -y -qq preview-app >/dev/null
-test ! -e /usr/lib/preview-app/preview/__pycache__ && echo 'clean removal'
+apt-get remove -y -qq view >/dev/null
+test ! -e /usr/lib/view/preview/__pycache__ && echo 'clean removal'
 echo RESULT: OK
 "

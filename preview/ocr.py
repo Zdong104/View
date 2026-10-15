@@ -1,8 +1,8 @@
-"""Text recognition ("Live Text") for Preview.
+"""Text recognition ("Live Text") for View.
 
 Engine: RapidOCR (PP-OCR ONNX models on onnxruntime, CPU only). The models ship
 inside the ``rapidocr`` wheel (~31 MB); if they are ever missing they are
-downloaded once into the user cache dir (preview-app/ocr). Without the
+downloaded once into the user cache dir (view/ocr). Without the
 wheels installed, preview.ocr_install offers a per-user download. The engine is a lazily created
 process-wide singleton.
 
@@ -37,12 +37,12 @@ def _cache_dir():
         base = GLib.get_user_cache_dir()
     except Exception:  # noqa: BLE001
         base = os.path.join(os.path.expanduser("~"), ".cache")
-    return os.path.join(base, "preview-app", "ocr")
+    return os.path.join(base, "view", "ocr")
 
 
 CACHE_DIR = _cache_dir()
 
-# A user-level engine installed by Preview's "Install text recognition" offer.
+# A user-level engine installed by View's "Install text recognition" offer.
 try:
     from .ocr_install import activate as _activate_private_engine
     _activate_private_engine()

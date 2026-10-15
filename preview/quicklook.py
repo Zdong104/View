@@ -68,7 +68,7 @@ DEBUG_XML = f"""
 </node>
 """
 
-CONFIG_PATH = os.path.join(GLib.get_user_config_dir(), "preview-app", "quicklook.json")
+CONFIG_PATH = os.path.join(GLib.get_user_config_dir(), "view", "quicklook.json")
 
 CSS = """
 .ql-card-title { font-size: 1.5em; font-weight: 800; }
@@ -159,9 +159,9 @@ class QuickLookWindow(Adw.Window):
         self.open_default_btn = Gtk.Button(label="Open")
         self.open_default_btn.connect("clicked", lambda *_: self.open_default())
         self.header.pack_end(self.open_default_btn)
-        self.open_preview_btn = Gtk.Button(label="Open with Preview",
+        self.open_preview_btn = Gtk.Button(label="Open with View",
                                            css_classes=["suggested-action"],
-                                           tooltip_text="Open with Preview (Enter)")
+                                           tooltip_text="Open with View (Enter)")
         self.open_preview_btn.connect("clicked", lambda *_: self.open_in_preview())
         self.header.pack_end(self.open_preview_btn)
 
@@ -250,7 +250,7 @@ class QuickLookWindow(Adw.Window):
         label = r.default_app_label()
         self.open_default_btn.set_label(label)
         self.open_default_btn.set_visible(
-            not (r.preview_can_open() and label == "Open With Preview"))
+            not (r.preview_can_open() and label == "Open With View"))
 
     def _teardown(self):
         r, self.renderer = self.renderer, None
@@ -382,13 +382,13 @@ class QuickLookWindow(Adw.Window):
             try:
                 launched = info.launch_uris(uris, self._launch_context())
             except GLib.Error as e:
-                _log("launching Preview failed:", e.message)
+                _log("launching View failed:", e.message)
         if not launched:
             launched = _spawn_preview_fallback(files)
         if launched:
             self.close_preview()
         else:
-            self.show_toast("Could not start Preview")
+            self.show_toast("Could not start View")
 
     def open_default(self):
         if self.gfile is None:

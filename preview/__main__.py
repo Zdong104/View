@@ -1,4 +1,4 @@
-"""Command-line entry point: ``preview-app`` / ``python -m preview``.
+"""Command-line entry point: ``view-app`` / ``python -m preview``.
 
 Options handled here (before GTK starts, no display needed):
   --version                      print the version and exit
@@ -23,7 +23,7 @@ def _usage_extra():
             "  --new-signature               Draw a new signature\n"
             "  --selftest [--no-ui]          Check that all viewers work and exit\n"
             "  --combine-pdf -o OUT IMG...   Combine images into one PDF\n"
-            "  --enable-files-integration    Use Preview for Space-bar previews in GNOME Files\n"
+            "  --enable-files-integration    Use View for Space-bar previews in GNOME Files\n"
             "  --disable-files-integration   Give Space-bar previews back to GNOME Sushi\n")
 
 

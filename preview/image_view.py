@@ -1645,7 +1645,7 @@ class ImageViewer(Viewer):
     def get_title(self):
         it = self.current
         if it is None:
-            return "Preview"
+            return "View"
         return it.name + (" — Edited" if (it.ops or it.overlay or it.markup) else "")
 
     def get_subtitle(self):

@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-# Build dist/preview-app_<version>_all.deb without debhelper (needs only
+# Build dist/view_<version>_all.deb without debhelper (needs only
 # dpkg-deb, gzip and python3; fakeroot is not required: --root-owner-group).
 #
-#   packaging/deb/build-deb.sh            # -> dist/preview-app_0.1.0_all.deb
+#   packaging/deb/build-deb.sh            # -> dist/view_0.1.0_all.deb
 #   DEB_MAINTAINER="Name <mail>" packaging/deb/build-deb.sh
 set -euo pipefail
 umask 022
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
-APP_ID=io.github.zdong104.Preview
-PKG=preview-app
+APP_ID=io.github.zdong104.View
+PKG=view
+CMD=view-app          # not "view": /usr/bin/view is vim's alternatives link
 VERSION="$(python3 -c 'import re;print(re.search(r"__version__\s*=\s*\"([^\"]+)\"", open("preview/__init__.py").read()).group(1))')"
 DEB_REVISION="${DEB_REVISION:-}"                 # e.g. "-1"; empty = native package
 MAINTAINER="${DEB_MAINTAINER:-Zihan <zdong104@users.noreply.github.com>}"
@@ -33,35 +34,35 @@ tar -C "$ROOT" --exclude='__pycache__' --exclude='*.pyc' --exclude='*.pyo' -cf -
 find "$P/usr/lib/$PKG" -type d -exec chmod 755 {} +
 find "$P/usr/lib/$PKG" -type f -exec chmod 644 {} +
 
-cat > "$P/usr/bin/$PKG" <<'EOF'
+cat > "$P/usr/bin/$CMD" <<'EOF'
 #!/usr/bin/python3
-"""Preview launcher (installed by the preview-app package)."""
+"""View launcher (installed by the view package)."""
 import os
 import sys
 
-sys.path.insert(0, "/usr/lib/preview-app")
-os.environ.setdefault("PREVIEW_APP_LAUNCHER", "/usr/bin/preview-app")
+sys.path.insert(0, "/usr/lib/view")
+os.environ.setdefault("VIEW_APP_LAUNCHER", "/usr/bin/view-app")
 
 from preview.__main__ import main  # noqa: E402
 
 sys.exit(main())
 EOF
-chmod 755 "$P/usr/bin/$PKG"
+chmod 755 "$P/usr/bin/$CMD"
 
 install -m644 "data/$APP_ID.desktop" "$P/usr/share/applications/$APP_ID.desktop"
 install -m644 "data/$APP_ID.svg" "$P/usr/share/icons/hicolor/scalable/apps/$APP_ID.svg"
 install -m644 "data/$APP_ID.metainfo.xml" "$P/usr/share/metainfo/$APP_ID.metainfo.xml"
 install -d "$P/usr/share/man/man1"
-gzip -9n -c data/preview-app.1 > "$P/usr/share/man/man1/preview-app.1.gz"
-chmod 644 "$P/usr/share/man/man1/preview-app.1.gz"
+gzip -9n -c data/view-app.1 > "$P/usr/share/man/man1/view-app.1.gz"
+chmod 644 "$P/usr/share/man/man1/view-app.1.gz"
 
 # ---- docs ------------------------------------------------------------------
 {
     cat <<EOF
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: Preview
-Upstream-Contact: https://github.com/Zdong104/Preview/issues
-Source: https://github.com/Zdong104/Preview
+Upstream-Name: View
+Upstream-Contact: https://github.com/Zdong104/View/issues
+Source: https://github.com/Zdong104/View
 
 Files: *
 Copyright: 2026 Zdong104
@@ -76,7 +77,7 @@ DATE="$(date -R -d "${SOURCE_DATE_EPOCH:+@$SOURCE_DATE_EPOCH}" 2>/dev/null || da
 cat > "$STAGE/changelog" <<EOF
 $PKG ($VERSION$DEB_REVISION) unstable; urgency=medium
 
-  * Release $VERSION. See https://github.com/Zdong104/Preview/releases
+  * Release $VERSION. See https://github.com/Zdong104/View/releases
 
  -- $MAINTAINER  $DATE
 EOF
@@ -111,9 +112,9 @@ Recommends: $(echo $RECOMMENDS)
 Suggests: $(echo $SUGGESTS)
 Section: graphics
 Priority: optional
-Homepage: https://github.com/Zdong104/Preview
+Homepage: https://github.com/Zdong104/View
 Description: macOS Preview-style viewer for PDFs, images, video, text and 3D
- Preview is a fast document and media viewer for GNOME built with GTK 4 and
+ View is a fast document and media viewer for GNOME built with GTK 4 and
  libadwaita. It opens PDFs (annotate, fill forms, reorder, merge, sign),
  images (markup, crop, adjust, combine into a PDF), video and audio,
  CSV/TSV spreadsheets, source code with syntax highlighting, and STL/OBJ/PLY
@@ -133,7 +134,7 @@ cat > "$P/DEBIAN/postinst" <<'EOF'
 #!/bin/sh
 set -e
 if [ "$1" = configure ] && command -v py3compile >/dev/null 2>&1; then
-    py3compile -p preview-app /usr/lib/preview-app/ || true
+    py3compile -p view /usr/lib/view/ || true
 fi
 exit 0
 EOF
@@ -141,9 +142,9 @@ cat > "$P/DEBIAN/prerm" <<'EOF'
 #!/bin/sh
 set -e
 if command -v py3clean >/dev/null 2>&1; then
-    py3clean -p preview-app || true
+    py3clean -p view || true
 else
-    find /usr/lib/preview-app -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null || true
+    find /usr/lib/view -name __pycache__ -type d -prune -exec rm -rf {} + 2>/dev/null || true
 fi
 exit 0
 EOF

@@ -1,7 +1,7 @@
 """Opt-in integration with GNOME Files (Nautilus), per user.
 
 * Quick Look: a user-level D-Bus service file for org.gnome.NautilusPreviewer
-  (~/.local/share/dbus-1/services/…) that starts ``preview-app --quicklook``
+  (~/.local/share/dbus-1/services/…) that starts ``view-app --quicklook``
   instead of GNOME Sushi when Space is pressed.  A system package cannot do
   this: the system-wide file belongs to gnome-sushi.
 * "Combine Images into PDF": a Nautilus script (~/.local/share/nautilus/scripts/).
@@ -20,7 +20,7 @@ from . import runtime
 
 BUS_NAME = "org.gnome.NautilusPreviewer"
 SCRIPT_NAME = "Combine Images into PDF"
-MARKER = f"Installed by Preview ({runtime.APP_ID})"
+MARKER = f"Installed by View ({runtime.APP_ID})"
 
 
 def _data_home():
@@ -42,8 +42,9 @@ def _is_ours(path) -> bool:
             head = f.read(4096)
     except OSError:
         return False
-    return MARKER in head or "preview.quicklook" in head or "preview-quicklook" in head \
-        or "preview.convert" in head
+    # (also files written by pre-release builds under the name "Preview")
+    return MARKER in head or "Installed by Preview" in head or "preview.quicklook" in head \
+        or "preview-quicklook" in head or "preview.convert" in head
 
 
 def quicklook_enabled() -> bool:
@@ -84,13 +85,13 @@ def _remove(path):
 SCRIPT_TEMPLATE = r'''#!/usr/bin/env bash
 # @MARKER@
 # GNOME Files script: combine the selected images into one PDF, in natural
-# file-name order.  Remove with:  preview-app --disable-files-integration
+# file-name order.  Remove with:  view-app --disable-files-integration
 set -u
 LAUNCHER=(@LAUNCHER@)
 @ENV@
 notify() {
     command -v notify-send >/dev/null 2>&1 &&
-        notify-send -a "Preview" -i application-pdf "$1" "${2:-}" 2>/dev/null
+        notify-send -a "View" -i application-pdf "$1" "${2:-}" 2>/dev/null
     return 0
 }
 
@@ -231,8 +232,8 @@ def cli(enable: bool) -> int:
         print(f"error: {e}", file=sys.stderr)
         return 1
     if enable:
-        print(f"Space-bar previews in Files now use Preview ({service_path()}).")
+        print(f"Space-bar previews in Files now use View ({service_path()}).")
         print(f"Added the Files script “{SCRIPT_NAME}” ({script_path()}).")
     else:
-        print("Removed Preview's Files integration; GNOME Sushi handles Space again.")
+        print("Removed View's Files integration; GNOME Sushi handles Space again.")
     return 0

@@ -181,7 +181,7 @@ class Viewer(Gtk.Box):
 
     def get_title(self) -> str:
         """Window title (usually the file name)."""
-        return "Preview"
+        return "View"
 
     def get_subtitle(self) -> str:
         """Window subtitle, e.g. 'Page 2 of 7' or '1920 × 1080'."""

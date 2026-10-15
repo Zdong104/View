@@ -86,7 +86,8 @@ class Touchpad:
     def __init__(self, on_frame=None, on_lost=None):
         if fcntl is None or not sys.platform.startswith("linux"):
             raise TouchpadError("Absolute touchpad capture is only available on Linux.")
-        snap_hint = (" In the snap, allow it with: sudo snap connect preview:raw-input"
+        snap = os.environ.get("SNAP_INSTANCE_NAME", "view")
+        snap_hint = (f" In the snap, allow it with: sudo snap connect {snap}:raw-input"
                      if os.environ.get("SNAP") else "")
         try:
             self.path = find_touchpad()

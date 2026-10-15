@@ -1,6 +1,6 @@
 """Images -> PDF conversion (library, CLI and a GTK export dialog).
 
-CLI:  preview-app --combine-pdf -o out.pdf img1 img2 ...  (or python -m preview.convert)
+CLI:  view-app --combine-pdf -o out.pdf img1 img2 ...  (or python -m preview.convert)
 """
 import argparse
 import io
@@ -204,7 +204,7 @@ def images_to_pdf(paths, out_path, page_size="fit", margin_mm=0, landscape_auto=
 # -------------------------------------------------------------------- CLI ---
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="preview-app --combine-pdf",
+    ap = argparse.ArgumentParser(prog="view-app --combine-pdf",
                                  description="Combine images into a PDF.")
     ap.add_argument("images", nargs="+")
     ap.add_argument("-o", "--output", help="output PDF (default: next to the first image)")

@@ -4,24 +4,24 @@
 # writes a manifest with exact versions + where to get the corresponding source
 # (needed for GPL components such as Poppler, and LGPL GTK/GStreamer).
 set -euo pipefail
-DIST="${1:-dist/Preview}"
+DIST="${1:-dist/View}"
 OUT="$DIST/licenses"
 PREFIX="${MINGW_PREFIX:-/ucrt64}"
 PKGPFX="${MINGW_PACKAGE_PREFIX:-mingw-w64-ucrt-x86_64}"
 mkdir -p "$OUT/msys2" "$OUT/python"
 
-cp LICENSE "$OUT/Preview-LICENSE.txt"
+cp LICENSE "$OUT/View-LICENSE.txt"
 
 # MSYS2 packages that ended up in the bundle (+ their dependency closure)
 pacman -Qq | grep "^$PKGPFX-" | sort > "$OUT/.pkgs"
 {
-    echo "Third-party components bundled with Preview for Windows"
+    echo "Third-party components bundled with View for Windows"
     echo "======================================================="
     echo
-    echo "Preview itself is licensed under the PolyForm Noncommercial License 1.0.0"
-    echo "(Preview-LICENSE.txt). It bundles the following independent components,"
+    echo "View itself is licensed under the PolyForm Noncommercial License 1.0.0"
+    echo "(View-LICENSE.txt). It bundles the following independent components,"
     echo "each under its own license (texts in msys2/ and python/). Their licenses"
-    echo "are not changed by Preview's license."
+    echo "are not changed by View's license."
     echo
     echo "Corresponding source for every MSYS2 package listed below:"
     echo "  build recipes: https://github.com/msys2/MINGW-packages (directory mingw-w64-<name>)"

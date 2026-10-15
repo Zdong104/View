@@ -112,7 +112,7 @@ _ICONS = {
 
 def _install_icons():
     try:
-        base = os.path.join(GLib.get_user_cache_dir(), "preview-app", "icons")
+        base = os.path.join(GLib.get_user_cache_dir(), "view", "icons")
         d = os.path.join(base, "hicolor", "scalable", "actions")
         os.makedirs(d, exist_ok=True)
         for name, body in _ICONS.items():
@@ -1257,7 +1257,7 @@ class ModelViewer(Viewer):
     # ------------------------------------------------------------------
     def _show_gl_error(self, message):
         self._gl_failed = message or "Unknown error"
-        desc = ("Preview couldn't start OpenGL 3.3, which is needed to display 3D models.\n\n"
+        desc = ("View couldn't start OpenGL 3.3, which is needed to display 3D models.\n\n"
                 f"<small>{GLib.markup_escape_text(self._gl_failed)}</small>")
         if self._mesh is not None and not self._compact:
             desc += "\n\nThe model's details are still available in the Inspector (Ctrl+I)."

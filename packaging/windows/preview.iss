@@ -1,32 +1,32 @@
-; Inno Setup script for Preview (Windows).
-;   iscc /DAppVersion=0.1.0 /DSourceDir=..\..\dist\Preview /DOutputDir=..\..\dist packaging\windows\preview.iss
+; Inno Setup script for View (Windows).
+;   iscc /DAppVersion=0.1.0 /DSourceDir=..\..\dist\View /DOutputDir=..\..\dist packaging\windows\preview.iss
 #ifndef AppVersion
   #define AppVersion "0.1.0"
 #endif
 #ifndef SourceDir
-  #define SourceDir "..\..\dist\Preview"
+  #define SourceDir "..\..\dist\View"
 #endif
 #ifndef OutputDir
   #define OutputDir "..\..\dist"
 #endif
 
 [Setup]
-AppId={{6C1E2B0E-3D4A-4C55-9C1B-2F1F5E0A7D11}
-AppName=Preview
+AppId={{93A42E94-E5CF-4C0D-95B9-B60F994D4175}
+AppName=View
 AppVersion={#AppVersion}
-AppVerName=Preview {#AppVersion}
+AppVerName=View {#AppVersion}
 AppPublisher=Zdong104
-AppPublisherURL=https://github.com/Zdong104/Preview
-AppSupportURL=https://github.com/Zdong104/Preview/issues
-AppUpdatesURL=https://github.com/Zdong104/Preview/releases
-DefaultDirName={autopf}\Preview
-DefaultGroupName=Preview
+AppPublisherURL=https://github.com/Zdong104/View
+AppSupportURL=https://github.com/Zdong104/View/issues
+AppUpdatesURL=https://github.com/Zdong104/View/releases
+DefaultDirName={autopf}\View
+DefaultGroupName=View
 DisableProgramGroupPage=yes
 LicenseFile=..\..\LICENSE
 OutputDir={#OutputDir}
-OutputBaseFilename=Preview-Setup-{#AppVersion}
+OutputBaseFilename=View-Setup-{#AppVersion}
 SetupIconFile=..\..\build\preview.ico
-UninstallDisplayIcon={app}\Preview.exe
+UninstallDisplayIcon={app}\View.exe
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
@@ -45,31 +45,31 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\Preview"; Filename: "{app}\Preview.exe"
-Name: "{group}\Uninstall Preview"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\Preview"; Filename: "{app}\Preview.exe"; Tasks: desktopicon
+Name: "{group}\View"; Filename: "{app}\View.exe"; AppUserModelID: "Zdong104.View"
+Name: "{group}\Uninstall View"; Filename: "{uninstallexe}"
+Name: "{autodesktop}\View"; Filename: "{app}\View.exe"; AppUserModelID: "Zdong104.View"; Tasks: desktopicon
 
 [Registry]
 ; "Open with" entries (does not take over any default association)
-Root: HKA; Subkey: "Software\Classes\Applications\Preview.exe"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "Preview"; Flags: uninsdeletekey
-Root: HKA; Subkey: "Software\Classes\Applications\Preview.exe\shell\open\command"; ValueType: string; ValueData: """{app}\Preview.exe"" ""%1"""
-Root: HKA; Subkey: "Software\Classes\Applications\Preview.exe\SupportedTypes"; ValueType: string; ValueName: ".pdf"; ValueData: ""
-Root: HKA; Subkey: "Software\Classes\Applications\Preview.exe\SupportedTypes"; ValueType: string; ValueName: ".png"; ValueData: ""
-Root: HKA; Subkey: "Software\Classes\Applications\Preview.exe\SupportedTypes"; ValueType: string; ValueName: ".jpg"; ValueData: ""
-Root: HKA; Subkey: "Software\Classes\Applications\Preview.exe\SupportedTypes"; ValueType: string; ValueName: ".jpeg"; ValueData: ""
-Root: HKA; Subkey: "Software\Classes\Applications\Preview.exe\SupportedTypes"; ValueType: string; ValueName: ".webp"; ValueData: ""
-Root: HKA; Subkey: "Software\Classes\Applications\Preview.exe\SupportedTypes"; ValueType: string; ValueName: ".gif"; ValueData: ""
-Root: HKA; Subkey: "Software\Classes\Applications\Preview.exe\SupportedTypes"; ValueType: string; ValueName: ".tif"; ValueData: ""
-Root: HKA; Subkey: "Software\Classes\Applications\Preview.exe\SupportedTypes"; ValueType: string; ValueName: ".tiff"; ValueData: ""
-Root: HKA; Subkey: "Software\Classes\Applications\Preview.exe\SupportedTypes"; ValueType: string; ValueName: ".stl"; ValueData: ""
-Root: HKA; Subkey: "Software\Classes\Applications\Preview.exe\SupportedTypes"; ValueType: string; ValueName: ".obj"; ValueData: ""
-Root: HKA; Subkey: "Software\Classes\Applications\Preview.exe\SupportedTypes"; ValueType: string; ValueName: ".csv"; ValueData: ""
-Root: HKA; Subkey: "Software\Classes\Applications\Preview.exe\SupportedTypes"; ValueType: string; ValueName: ".mp4"; ValueData: ""
-Root: HKA; Subkey: "Software\Classes\Applications\Preview.exe\SupportedTypes"; ValueType: string; ValueName: ".mkv"; ValueData: ""
-Root: HKA; Subkey: "Software\Classes\Applications\Preview.exe\SupportedTypes"; ValueType: string; ValueName: ".webm"; ValueData: ""
-Root: HKA; Subkey: "Software\Classes\.pdf\OpenWithList\Preview.exe"; ValueType: none; Flags: uninsdeletekey
-Root: HKA; Subkey: "Software\Classes\.png\OpenWithList\Preview.exe"; ValueType: none; Flags: uninsdeletekey
-Root: HKA; Subkey: "Software\Classes\.jpg\OpenWithList\Preview.exe"; ValueType: none; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\Applications\View.exe"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "View"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\Applications\View.exe\shell\open\command"; ValueType: string; ValueData: """{app}\View.exe"" ""%1"""
+Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; ValueType: string; ValueName: ".pdf"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; ValueType: string; ValueName: ".png"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; ValueType: string; ValueName: ".jpg"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; ValueType: string; ValueName: ".jpeg"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; ValueType: string; ValueName: ".webp"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; ValueType: string; ValueName: ".gif"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; ValueType: string; ValueName: ".tif"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; ValueType: string; ValueName: ".tiff"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; ValueType: string; ValueName: ".stl"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; ValueType: string; ValueName: ".obj"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; ValueType: string; ValueName: ".csv"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; ValueType: string; ValueName: ".mp4"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; ValueType: string; ValueName: ".mkv"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; ValueType: string; ValueName: ".webm"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\.pdf\OpenWithList\View.exe"; ValueType: none; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\.png\OpenWithList\View.exe"; ValueType: none; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\.jpg\OpenWithList\View.exe"; ValueType: none; Flags: uninsdeletekey
 
 [Run]
-Filename: "{app}\Preview.exe"; Description: "{cm:LaunchProgram,Preview}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\View.exe"; Description: "{cm:LaunchProgram,View}"; Flags: nowait postinstall skipifsilent

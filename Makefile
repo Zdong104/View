@@ -1,17 +1,17 @@
-# Preview developer tasks.  `make help` lists them.
+# View developer tasks.  `make help` lists them.
 # the system Python (it has PyGObject); a conda/pyenv python3 on PATH would not
 PYTHON   ?= $(shell test -x /usr/bin/python3 && echo /usr/bin/python3 || echo python3)
 VENV     ?= .venv
 VPY      := $(VENV)/bin/python
 VERSION  := $(shell $(PYTHON) -c 'import re;print(re.search(r"__version__\s*=\s*\"([^\"]+)\"", open("preview/__init__.py").read()).group(1))')
-DEB      := dist/preview-app_$(VERSION)_all.deb
+DEB      := dist/view_$(VERSION)_all.deb
 IMAGE    ?= ubuntu:26.04
 ARGS     ?=
 
 .PHONY: help run selftest selftest-headless venv ocr deb docker-test install uninstall check clean
 
 help:
-	@echo "make run [ARGS='file.pdf']   run Preview from the working tree"
+	@echo "make run [ARGS='file.pdf']   run View from the working tree"
 	@echo "make selftest                check every viewer (opens windows briefly)"
 	@echo "make selftest-headless       same, without a display"
 	@echo "make ocr                     add the optional OCR engine to $(VENV)"

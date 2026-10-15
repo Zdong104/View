@@ -72,33 +72,33 @@ jobs:
       - name: Icon
         run: |
           mkdir -p build
-          rsvg-convert -w 256 -h 256 data/io.github.zdong104.Preview.svg -o build/icon.png
+          rsvg-convert -w 256 -h 256 data/io.github.zdong104.View.svg -o build/icon.png
           python -c "from PIL import Image; Image.open('build/icon.png').save('build/preview.ico', sizes=[(16,16),(24,24),(32,32),(48,48),(64,64),(128,128),(256,256)])"
 
       - name: PyInstaller
         run: |
           pyinstaller --noconfirm --clean --distpath dist --workpath build/pyi packaging/windows/preview.spec
-          bash packaging/windows/collect-licenses.sh dist/Preview
-          du -sh dist/Preview
+          bash packaging/windows/collect-licenses.sh dist/View
+          du -sh dist/View
 
       - name: Smoke test (frozen)
         env:
           GSK_RENDERER: cairo
         run: |
-          ./dist/Preview/preview-app.exe --version
-          ./dist/Preview/preview-app.exe --selftest --no-ui
+          ./dist/View/view-app.exe --version
+          ./dist/View/view-app.exe --selftest --no-ui
 
       - name: Smoke test with windows (frozen, best effort)
         continue-on-error: true
         env:
           GSK_RENDERER: cairo
-        run: timeout 300 ./dist/Preview/preview-app.exe --selftest
+        run: timeout 300 ./dist/View/view-app.exe --selftest
 
       - name: Portable zip
         run: |
           VERSION=$(python -c "import preview; print(preview.__version__)")
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          cd dist && zip -qr "Preview-$VERSION-windows-portable.zip" Preview && ls -la
+          cd dist && zip -qr "View-$VERSION-windows-portable.zip" View && ls -la
 
       - name: Installer (Inno Setup)
         shell: pwsh
@@ -117,6 +117,6 @@ jobs:
         with:
           name: windows
           path: |
-            dist/Preview-Setup-*.exe
-            dist/Preview-*-windows-portable.zip
+            dist/View-Setup-*.exe
+            dist/View-*-windows-portable.zip
           if-no-files-found: error

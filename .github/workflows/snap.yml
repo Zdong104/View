@@ -35,13 +35,13 @@ jobs:
           # the gnome extension supports core26 from snapcraft 9.2 (candidate as of 2026-10)
           snapcraft-channel: latest/candidate
 
-      - name: Install and selftest (best effort)
-        continue-on-error: true
+      - name: Install and selftest
         run: |
           sudo snap install --dangerous "${{ steps.build.outputs.snap }}"
-          snap connections preview || true
-          preview --version
-          preview --selftest --no-ui
+          snap connections view || true
+          # "view" alone would run vim's /usr/bin/view: use snap run
+          snap run view --version
+          snap run view --selftest --no-ui
 
       - uses: actions/upload-artifact@v4
         with:

@@ -1,12 +1,12 @@
-# Preview
+# View
 
 **A macOS-Preview-style viewer for Linux (GNOME).** View, annotate and sign PDFs, images, 3D models, tables and video in one fast GTK4 + libadwaita app, including signing with your laptop touchpad.
 
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/Zdong104/Preview?include_prereleases)](https://github.com/Zdong104/Preview/releases)
-[![Downloads](https://img.shields.io/github/downloads/Zdong104/Preview/total)](https://github.com/Zdong104/Preview/releases)
+[![Release](https://img.shields.io/github/v/release/Zdong104/View?include_prereleases)](https://github.com/Zdong104/View/releases)
+[![Downloads](https://img.shields.io/github/downloads/Zdong104/View/total)](https://github.com/Zdong104/View/releases)
 
-![Signing a PDF in Preview](docs/screenshots/pdf-sign.png)
+![Signing a PDF in View](docs/screenshots/pdf-sign.png)
 
 <details>
 <summary>More screenshots</summary>
@@ -36,43 +36,43 @@
 
 ### Ubuntu / Debian (.deb)
 
-Download `preview-app_0.1.0_all.deb` from the [Releases page](https://github.com/Zdong104/Preview/releases), then:
+Download `view_0.1.0_all.deb` from the [Releases page](https://github.com/Zdong104/View/releases), then:
 
 ```bash
-sudo apt install ./preview-app_0.1.0_all.deb
+sudo apt install ./view_0.1.0_all.deb
 ```
 
 `apt` is recommended because it also installs the dependencies. If you prefer `dpkg`:
 
 ```bash
-sudo dpkg -i preview-app_0.1.0_all.deb && sudo apt -f install
+sudo dpkg -i view_0.1.0_all.deb && sudo apt -f install
 ```
 
-### Snap (coming soon / edge)
+### Snap (edge channel)
 
 ```bash
-sudo snap install preview
-sudo snap connect preview:raw-input   # needed for touchpad signing
+sudo snap install view --edge
+sudo snap connect view:raw-input   # needed for touchpad signing
 ```
 
-The snap is sandboxed, so the GNOME Files integration (Space-bar Quick Look, "Combine Images into PDF") is only available in the .deb / source install.
+From a terminal, start it with `snap run view` (plain `view` is usually Vim's read-only mode). The snap is sandboxed, so the GNOME Files integration (Space-bar Quick Look, "Combine Images into PDF") is only available in the .deb / source install.
 
 ### Windows (**experimental**)
 
-`Preview-Setup-0.1.0.exe` on the Releases page. Experimental and untested; touchpad signing is Linux only.
+`View-Setup-0.1.0.exe` (or `View-0.1.0-windows-portable.zip`) on the Releases page. It builds and passes its self-test in CI, but has not yet been tried on a real PC, so feedback is wanted. Touchpad signing is Linux only (draw with the mouse or a pen instead), and text recognition (OCR) is not included on Windows yet.
 
 ### From source
 
 ```bash
-git clone https://github.com/Zdong104/Preview.git
-cd Preview
+git clone https://github.com/Zdong104/View.git
+cd View
 make run
 ```
 
 ## Touchpad signing
 
 1. Add yourself to the `input` group (needed to read the touchpad directly): `sudo usermod -aG input $USER`, then log out and back in.
-2. Open **New Signature...** from the app menu (or run `preview-app --new-signature`).
+2. Open **New Signature...** from the app menu (or run `view-app --new-signature`).
 3. Draw with one finger. Where you touch the pad is where the ink goes. Press any key to finish, then place it on a page.
 
 ## Compatibility
@@ -88,12 +88,12 @@ make run
 
 ## 🙏 Feedback wanted
 
-Preview is developed and tested **only on Ubuntu 26.04 on a Lenovo ThinkPad P1 Gen 8**. Everything else is a guess, and your report is the most useful thing you can send.
+View is developed and tested **only on Ubuntu 26.04 on a Lenovo ThinkPad P1 Gen 8**. Everything else is a guess, and your report is the most useful thing you can send.
 
-- Tried it on your system? File a [**Platform report**](https://github.com/Zdong104/Preview/issues/new?template=platform_report.yml), even if everything works.
-- Found a problem? Open a [**Bug report**](https://github.com/Zdong104/Preview/issues/new?template=bug_report.yml).
-- Missing something? Open a [**Feature request**](https://github.com/Zdong104/Preview/issues/new?template=feature_request.yml).
-- Questions and ideas: use [Discussions](https://github.com/Zdong104/Preview/discussions).
+- Tried it on your system? File a [**Platform report**](https://github.com/Zdong104/View/issues/new?template=platform_report.yml), even if everything works.
+- Found a problem? Open a [**Bug report**](https://github.com/Zdong104/View/issues/new?template=bug_report.yml).
+- Missing something? Open a [**Feature request**](https://github.com/Zdong104/View/issues/new?template=feature_request.yml).
+- Questions and ideas: use [Discussions](https://github.com/Zdong104/View/discussions).
 
 ## Contributing
 
@@ -101,7 +101,7 @@ Pull requests are welcome, from typo fixes to new viewers. Read [CONTRIBUTING.md
 
 ## Support the project
 
-Preview is free. If it saves you time, you can support development:
+View is free. If it saves you time, you can support development:
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/zdong)
 
@@ -109,4 +109,4 @@ GitHub Sponsors is coming soon.
 
 ## License
 
-Preview is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE): free for personal, educational, research and other noncommercial use. Commercial use or distribution requires permission; open a GitHub issue or contact the maintainer to ask. Note that this makes Preview *source-available*, not OSI-approved open source.
+View is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE): free for personal, educational, research and other noncommercial use. Commercial use or distribution requires permission; open a GitHub issue or contact the maintainer to ask. Note that this makes View *source-available*, not OSI-approved open source.

@@ -1,18 +1,18 @@
-# Contributing to Preview
+# Contributing to View
 
-Thanks for your interest! Preview is a small community project and every kind of help is welcome: bug reports, "it works on my distro" reports, docs, translations of ideas into issues, and code.
+Thanks for your interest! View is a small community project and every kind of help is welcome: bug reports, "it works on my distro" reports, docs, translations of ideas into issues, and code.
 
-The most valuable contribution right now is **testing on other systems**. Please file a [Platform report](https://github.com/Zdong104/Preview/issues/new?template=platform_report.yml).
+The most valuable contribution right now is **testing on other systems**. Please file a [Platform report](https://github.com/Zdong104/View/issues/new?template=platform_report.yml).
 
-Please follow our [Code of Conduct](CODE_OF_CONDUCT.md). For questions and ideas, use [Discussions](https://github.com/Zdong104/Preview/discussions); for bugs and requests, use the issue forms.
+Please follow our [Code of Conduct](CODE_OF_CONDUCT.md). For questions and ideas, use [Discussions](https://github.com/Zdong104/View/discussions); for bugs and requests, use the issue forms.
 
 ## Run from source
 
 Requirements: Python 3.12+, GTK 4, libadwaita 1.x, PyGObject, Poppler (GIR), GStreamer with `gtk4paintablesink`, plus the Python packages listed in the Makefile / packaging files.
 
 ```bash
-git clone https://github.com/Zdong104/Preview.git
-cd Preview
+git clone https://github.com/Zdong104/View.git
+cd View
 make run                       # runs the app from the working tree
 ```
 
@@ -79,4 +79,4 @@ Attach screenshots to your pull request when the UI changes. Use sample files yo
 
 ## License of contributions
 
-Preview is released under the [PolyForm Noncommercial License 1.0.0](LICENSE). By submitting a contribution you agree that it is licensed under the same terms (inbound = outbound), and that you have the right to submit it. The maintainer may also relicense the project, including offering commercial licenses, which is how commercial use is granted permission.
+View is released under the [PolyForm Noncommercial License 1.0.0](LICENSE). By submitting a contribution you agree that it is licensed under the same terms (inbound = outbound), and that you have the right to submit it. The maintainer may also relicense the project, including offering commercial licenses, which is how commercial use is granted permission.

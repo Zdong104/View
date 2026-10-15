@@ -1,13 +1,13 @@
 [Desktop Entry]
 Type=Application
-Name=Preview
-GenericName=Document, Image, Video and Text Viewer
+Name=View
+GenericName=Document, Image, Video and 3D Viewer
 Comment=View PDFs, images, videos, text and 3D models; sign documents with the touchpad
-Exec=preview-app %U
-Icon=io.github.zdong104.Preview
+Exec=view-app %U
+Icon=io.github.zdong104.View
 Terminal=false
 StartupNotify=true
-StartupWMClass=io.github.zdong104.Preview
+StartupWMClass=io.github.zdong104.View
 Categories=Graphics;Viewer;Office;
 Keywords=pdf;image;photo;video;text;code;stl;3d;signature;sign;convert;
 MimeType=application/pdf;image/png;image/jpeg;image/webp;image/gif;image/bmp;image/tiff;image/heic;image/heif;image/avif;image/jxl;image/svg+xml;model/stl;model/x.stl-binary;model/x.stl-ascii;application/sla;model/obj;model/ply;text/csv;text/tab-separated-values;video/mp4;video/quicktime;video/webm;video/x-matroska;video/x-msvideo;text/plain;text/x-python;text/x-csrc;text/x-chdr;text/x-c++src;text/javascript;application/json;text/markdown;
@@ -15,4 +15,4 @@ Actions=new-signature;
 
 [Desktop Action new-signature]
 Name=New Signature
-Exec=preview-app --new-signature
+Exec=view-app --new-signature

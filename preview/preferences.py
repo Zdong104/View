@@ -37,7 +37,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
         grp = Adw.PreferencesGroup(
             title="GNOME Files",
             description="Applies to your user only. Turning these off restores the defaults.")
-        ql = Adw.SwitchRow(title="Use Preview for Space-bar previews in Files",
+        ql = Adw.SwitchRow(title="Use View for Space-bar previews in Files",
                            subtitle="Replaces GNOME Sushi’s quick previewer",
                            active=integration.quicklook_enabled())
         sc = Adw.SwitchRow(title="Add “Combine Images into PDF” to Files",

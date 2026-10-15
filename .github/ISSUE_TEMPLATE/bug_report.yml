@@ -5,12 +5,12 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reporting! Preview is only tested on Ubuntu 26.04, so details about your system help a lot.
+        Thanks for reporting! View is only tested on Ubuntu 26.04, so details about your system help a lot.
   - type: input
     id: version
     attributes:
-      label: Preview version
-      description: Output of `preview-app --version`
+      label: View version
+      description: Output of `view-app --version`
       placeholder: "0.1.0"
     validations:
       required: true
@@ -67,5 +67,5 @@ body:
     id: logs
     attributes:
       label: Logs
-      description: Run `preview-app` from a terminal and paste what it prints.
+      description: Run `view-app` from a terminal and paste what it prints.
       render: shell

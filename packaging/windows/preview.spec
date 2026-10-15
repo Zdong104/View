@@ -1,6 +1,6 @@
 # PyInstaller spec for the Windows build (run from an MSYS2 UCRT64 shell):
 #   pyinstaller --noconfirm --distpath dist --workpath build packaging/windows/preview.spec
-# Produces dist/Preview/{Preview.exe (GUI), preview-app.exe (console: --version,
+# Produces dist/View/{View.exe (GUI), view-app.exe (console: --version,
 # --selftest, --combine-pdf)} plus the GTK/GStreamer runtime.
 import os
 
@@ -8,7 +8,7 @@ from PyInstaller.utils.hooks import (collect_data_files, collect_dynamic_libs,
                                      collect_submodules)
 
 ROOT = os.path.abspath(os.path.join(SPECPATH, "..", ".."))
-APP_ID = "io.github.zdong104.Preview"
+APP_ID = "io.github.zdong104.View"
 
 hiddenimports = collect_submodules("preview") + [
     "gi._gi_cairo", "cairo",
@@ -80,8 +80,8 @@ pyz = PYZ(a.pure)
 icon = os.path.join(ROOT, "build", "preview.ico")
 icon = icon if os.path.exists(icon) else None
 
-gui = EXE(pyz, a.scripts, [], exclude_binaries=True, name="Preview", console=False,
+gui = EXE(pyz, a.scripts, [], exclude_binaries=True, name="View", console=False,
           icon=icon, version=None, upx=False)
-cli = EXE(pyz, a.scripts, [], exclude_binaries=True, name="preview-app", console=True,
+cli = EXE(pyz, a.scripts, [], exclude_binaries=True, name="view-app", console=True,
           icon=icon, upx=False)
-coll = COLLECT(gui, cli, a.binaries, a.datas, name="Preview", upx=False)
+coll = COLLECT(gui, cli, a.binaries, a.datas, name="View", upx=False)

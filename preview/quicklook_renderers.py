@@ -334,7 +334,7 @@ class ErrorRenderer(Renderer):
         return page
 
 
-# ================================================= embedding Preview viewers ===
+# ================================================= embedding View viewers ===
 
 class ViewerHost(Gtk.Box):
     """Stands in for the app window an embedded Viewer expects.  It is a real
@@ -360,7 +360,7 @@ class ViewerHost(Gtk.Box):
 
 
 def embed_viewer(renderer, module, clsname):
-    """Create Preview's viewer in compact mode, or None to use our fallback."""
+    """Create View's viewer in compact mode, or None to use our fallback."""
     if os.environ.get("PREVIEW_QL_NO_EMBED"):
         return None
     import importlib.util
@@ -409,7 +409,7 @@ def release_viewer(viewer):
 
 
 class EmbeddingRenderer(Renderer):
-    """Tries Preview's own viewer first, falls back to build_fallback()."""
+    """Tries View's own viewer first, falls back to build_fallback()."""
     module = clsname = ""
 
     def __init__(self, *a, **kw):
@@ -926,7 +926,7 @@ def _render_mesh(mesh, dark, size=1400, max_tris=90000):
 # ===================================================================== media ===
 
 class MediaRenderer(Renderer):
-    """Video / audio via Preview's MediaPlayer (VA-API + DMABuf zero-copy),
+    """Video / audio via View's MediaPlayer (VA-API + DMABuf zero-copy),
     compact: just play/pause and a seek bar."""
     kind = "media"
 
@@ -1250,7 +1250,7 @@ def _pygments_runs(text, name, content_type, dark):
 
 
 class CsvRenderer(EmbeddingRenderer):
-    """Read-only table: Preview's TableViewer if present, else a ColumnView of
+    """Read-only table: View's TableViewer if present, else a ColumnView of
     the first CSV_ROWS rows (delimiter sniffed); total rows counted in the
     background."""
     kind = "csv"
@@ -1336,7 +1336,7 @@ class CsvRenderer(EmbeddingRenderer):
         return self.stack
 
     def preview_can_open(self):
-        return self.viewer is not None     # only if Preview has a table viewer
+        return self.viewer is not None     # only if View has a table viewer
 
     def destroy(self):
         super().destroy()
@@ -1432,7 +1432,7 @@ def soffice_exe():
 
 
 _DECODE_LOCK = threading.Lock()
-CACHE_DIR = os.path.join(GLib.get_user_cache_dir(), "preview-app", "quicklook")
+CACHE_DIR = os.path.join(GLib.get_user_cache_dir(), "view", "quicklook")
 
 
 class OfficeRenderer(Renderer):

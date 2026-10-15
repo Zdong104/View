@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>io.github.zdong104.Preview</id>
+  <id>io.github.zdong104.View</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>PolyForm-Noncommercial-1.0.0</project_license>
-  <name>Preview</name>
+  <name>View</name>
   <summary>View and annotate PDFs, images, videos, text and 3D models</summary>
   <developer id="io.github.zdong104">
     <name>Zihan</name>
   </developer>
   <description>
     <p>
-      Preview is a fast, macOS Preview–style viewer for GNOME. One app opens
+      View is a fast, macOS Preview–style viewer for GNOME. One app opens
       PDFs, images, videos, spreadsheets, source code and 3D models, and lets
       you mark them up and sign them.
     </p>
@@ -24,28 +24,28 @@
       <li>Optional Space-bar Quick Look for GNOME Files</li>
     </ul>
   </description>
-  <launchable type="desktop-id">io.github.zdong104.Preview.desktop</launchable>
-  <url type="homepage">https://github.com/Zdong104/Preview</url>
-  <url type="bugtracker">https://github.com/Zdong104/Preview/issues</url>
-  <url type="vcs-browser">https://github.com/Zdong104/Preview</url>
+  <launchable type="desktop-id">io.github.zdong104.View.desktop</launchable>
+  <url type="homepage">https://github.com/Zdong104/View</url>
+  <url type="bugtracker">https://github.com/Zdong104/View/issues</url>
+  <url type="vcs-browser">https://github.com/Zdong104/View</url>
   <url type="donation">https://buymeacoffee.com/zdong</url>
-  <url type="contribute">https://github.com/Zdong104/Preview/blob/main/CONTRIBUTING.md</url>
+  <url type="contribute">https://github.com/Zdong104/View/blob/main/CONTRIBUTING.md</url>
   <screenshots>
     <screenshot type="default">
       <caption>Signing a PDF</caption>
-      <image>https://raw.githubusercontent.com/Zdong104/Preview/main/docs/screenshots/pdf-sign.png</image>
+      <image>https://raw.githubusercontent.com/Zdong104/View/main/docs/screenshots/pdf-sign.png</image>
     </screenshot>
     <screenshot>
       <caption>Marking up an image</caption>
-      <image>https://raw.githubusercontent.com/Zdong104/Preview/main/docs/screenshots/image-markup.png</image>
+      <image>https://raw.githubusercontent.com/Zdong104/View/main/docs/screenshots/image-markup.png</image>
     </screenshot>
     <screenshot>
       <caption>Editing a spreadsheet</caption>
-      <image>https://raw.githubusercontent.com/Zdong104/Preview/main/docs/screenshots/table.png</image>
+      <image>https://raw.githubusercontent.com/Zdong104/View/main/docs/screenshots/table.png</image>
     </screenshot>
     <screenshot>
       <caption>Viewing a 3D model</caption>
-      <image>https://raw.githubusercontent.com/Zdong104/Preview/main/docs/screenshots/model-3d.png</image>
+      <image>https://raw.githubusercontent.com/Zdong104/View/main/docs/screenshots/model-3d.png</image>
     </screenshot>
   </screenshots>
   <content_rating type="oars-1.1"/>
@@ -62,7 +62,7 @@
     <control>touch</control>
   </supports>
   <provides>
-    <binary>preview-app</binary>
+    <binary>view-app</binary>
   </provides>
   <categories>
     <category>Graphics</category>

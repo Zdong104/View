@@ -1,4 +1,4 @@
-# Python packages Preview needs on top of the system's GTK stack
+# Python packages View needs on top of the system's GTK stack
 # (PyGObject, pycairo, GTK 4, libadwaita, Poppler, GStreamer come from the OS).
 numpy
 Pillow

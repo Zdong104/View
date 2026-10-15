@@ -1,4 +1,4 @@
-"""``preview-app --selftest``: prove that an installation works.
+"""``view-app --selftest``: prove that an installation works.
 
 Headless checks (no display needed): library versions, every module imports,
 render a PDF page with Poppler, decode a PNG with Pillow and GdkPixbuf, parse
@@ -71,7 +71,7 @@ def _make_fixtures(d):
     cr.select_font_face("Sans")
     cr.set_font_size(28)
     cr.move_to(30, 220)
-    cr.show_text("Preview selftest")
+    cr.show_text("View selftest")
     surf.finish()
     paths["pdf"] = p
     # PNG
@@ -422,7 +422,7 @@ def main(argv=()):
         i = argv.index("--screenshots")
         shots = os.path.abspath(argv[i + 1]) if i + 1 < len(argv) else os.getcwd()
         os.makedirs(shots, exist_ok=True)
-    print(f"Preview {runtime.VERSION} selftest on {sys.platform}"
+    print(f"View {runtime.VERSION} selftest on {sys.platform}"
           f"{' (snap)' if runtime.IN_SNAP else ''}{' (frozen)' if runtime.FROZEN else ''}",
           flush=True)
     res = Result()

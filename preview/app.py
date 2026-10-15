@@ -475,7 +475,7 @@ class PreviewApp(Adw.Application):
         s3 = Gio.Menu()
         s3.append("Preferences", "app.preferences")
         s3.append("Keyboard Shortcuts", "app.shortcuts")
-        s3.append("About Preview", "app.about")
+        s3.append("About View", "app.about")
         s3.append("Quit", "app.quit")
         m.append_section(None, s3)
         return m

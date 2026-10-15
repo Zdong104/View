@@ -1,4 +1,4 @@
-"""Where and how Preview is running: platform, packaging, launcher, paths.
+"""Where and how View is running: platform, packaging, launcher, paths.
 
 Everything that differs between a source checkout, the .deb, the snap and the
 Windows (PyInstaller) build is decided here, so the rest of the code can ask
@@ -13,11 +13,11 @@ import sys
 
 from . import __version__
 
-APP_ID = "io.github.zdong104.Preview"
-APP_NAME = "Preview"
+APP_ID = "io.github.zdong104.View"
+APP_NAME = "View"
 VERSION = __version__
-HOMEPAGE = "https://github.com/Zdong104/Preview"
-ISSUES = "https://github.com/Zdong104/Preview/issues"
+HOMEPAGE = "https://github.com/Zdong104/View"
+ISSUES = "https://github.com/Zdong104/View/issues"
 DONATE = "https://buymeacoffee.com/zdong"
 
 IS_LINUX = sys.platform.startswith("linux")
@@ -67,13 +67,19 @@ def configure_frozen_env():
         os.environ["GST_PLUGIN_PATH"] = plugins
         os.environ["GST_PLUGIN_SYSTEM_PATH"] = ""
     local = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
-    cache = os.path.join(local, "Preview", "cache")
+    cache = os.path.join(local, "View", "cache")
     try:
         os.makedirs(cache, exist_ok=True)
         os.environ["GST_REGISTRY"] = os.path.join(cache, "gstreamer-registry.bin")
     except OSError:
         pass
     if IS_WINDOWS:
+        # group taskbar buttons with the Start-menu shortcut (Inno sets the same ID)
+        try:
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Zdong104.View")
+        except Exception:  # noqa: BLE001
+            pass
         # GSettings has no dconf on Windows; keep settings in the registry
         os.environ.setdefault("GSETTINGS_BACKEND", "registry")
 
@@ -84,27 +90,27 @@ def package_root() -> str:
 
 
 def user_data_dir() -> str:
-    """Per-user data dir for Preview (e.g. ~/.local/share/preview-app)."""
+    """Per-user data dir for View (e.g. ~/.local/share/view)."""
     from gi.repository import GLib
-    return os.path.join(GLib.get_user_data_dir(), "preview-app")
+    return os.path.join(GLib.get_user_data_dir(), "view")
 
 
 def user_cache_dir() -> str:
     from gi.repository import GLib
-    return os.path.join(GLib.get_user_cache_dir(), "preview-app")
+    return os.path.join(GLib.get_user_cache_dir(), "view")
 
 
 def launcher_argv() -> list[str]:
-    """argv prefix that starts Preview from outside this process (Files
-    scripts, D-Bus activation, "Open in Preview").  Absolute when possible."""
-    env = os.environ.get("PREVIEW_APP_LAUNCHER")      # set by our wrapper scripts
+    """argv prefix that starts View from outside this process (Files
+    scripts, D-Bus activation, "Open in View").  Absolute when possible."""
+    env = os.environ.get("VIEW_APP_LAUNCHER")      # set by our wrapper scripts
     if env and os.access(env, os.X_OK):
         return [env]
     if FROZEN:
         return [sys.executable]
     if IN_SNAP:
-        return ["/snap/bin/" + os.environ.get("SNAP_INSTANCE_NAME", "preview")]
-    exe = shutil.which("preview-app")
+        return ["/snap/bin/" + os.environ.get("SNAP_INSTANCE_NAME", "view")]
+    exe = shutil.which("view-app")
     if exe:
         return [os.path.abspath(exe)]
     return [sys.executable, "-m", "preview"]

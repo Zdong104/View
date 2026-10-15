@@ -121,7 +121,7 @@ def _ocr_module():
 
 
 def _ocr_offerable():
-    """OCR is missing but Preview can offer to download it."""
+    """OCR is missing but View can offer to download it."""
     try:
         from . import ocr_install
         return ocr_install.can_install()[0]
@@ -760,7 +760,7 @@ class PdfViewer(Viewer):
     def get_title(self) -> str:
         d = self.doc
         if d is None:
-            return "Preview"
+            return "View"
         return d.name + (" — Edited" if d.dirty() and not self.compact else "")
 
     def get_subtitle(self) -> str:
@@ -1755,7 +1755,7 @@ class PdfViewer(Viewer):
         # Small drags are written right away; big ones in a thread (they are
         # done long before a drop on another app can happen).
         _clean_drag_dir()
-        d = os.path.join(GLib.get_user_cache_dir(), "preview-app", "drag", token[:8])
+        d = os.path.join(GLib.get_user_cache_dir(), "view", "drag", token[:8])
         os.makedirs(d, exist_ok=True)
         path = os.path.join(d, name)
 
@@ -2836,7 +2836,7 @@ def _ranges(nums):
 
 
 def _clean_drag_dir():
-    d = os.path.join(GLib.get_user_cache_dir(), "preview-app", "drag")
+    d = os.path.join(GLib.get_user_cache_dir(), "view", "drag")
     try:
         now = time.time()
         for name in os.listdir(d):

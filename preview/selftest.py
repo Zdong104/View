@@ -247,6 +247,15 @@ def _gl():
     return f"PyOpenGL {OpenGL.__version__} ({os.environ.get('PYOPENGL_PLATFORM', 'default')})"
 
 
+def _touchpad():
+    from .touchpad import Touchpad
+    pad = Touchpad()
+    try:
+        return f"{pad.name}, {pad.width_mm:.0f} × {pad.height_mm:.0f} mm"
+    finally:
+        pad.close()
+
+
 def _ocr():
     from . import ocr
     helper = ocr.helper_path()
@@ -449,6 +458,7 @@ def main(argv=()):
         res.check("combine images into PDF (img2pdf)", lambda: _combine(paths, d))
         res.check("video (GStreamer)", _gst)
         res.check("OpenGL (PyOpenGL)", _gl)
+        res.check("touchpad (for signing)", _touchpad, required=False)
         ocr_ok = res.check("text recognition (OCR)", _ocr, required=runtime.OCR_BUNDLED)
         if ocr_ok and run_ocr:
             res.check("OCR recognize", lambda: _ocr_run(paths, d))

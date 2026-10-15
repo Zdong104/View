@@ -76,7 +76,7 @@ class TouchpadError(Exception):
 
 
 class Touchpad:
-    """Reads a touchpad. Call grab() to start capturing, release() to stop.
+    """Reads a touchpad (Linux; on Windows this name is preview.touchpad_win's). Call grab() to start capturing, release() to stop.
 
     on_frame(contacts, t) is called once per hardware frame while grabbed;
     contacts is a list of (tracking_id, x_mm, y_mm) for real fingers (palms
@@ -246,3 +246,8 @@ class Touchpad:
             s["y"] = value
         elif code == ABS_MT_TOOL_TYPE:
             s["tool"] = value
+
+
+if sys.platform == "win32":
+    # Precision Touchpad via Raw Input (same interface)
+    from .touchpad_win import Touchpad  # noqa: E402,F401,F811

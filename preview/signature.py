@@ -273,7 +273,7 @@ class SignaturePad(Gtk.DrawingArea):
 
 
 class SignatureCaptureWindow(Adw.Window):
-    """Modal window: sign on the touchpad (Linux, evdev) or draw with the
+    """Modal window: sign on the touchpad (Linux evdev / Windows Raw Input) or draw with the
     mouse / pen / finger inside the box (everywhere), then Save."""
 
     def __init__(self, parent, on_saved=None, draw_mode=None):
@@ -358,7 +358,7 @@ class SignatureCaptureWindow(Adw.Window):
         self.start_btn.add_css_class("pill")
         self.start_btn.add_css_class("suggested-action")
         self.start_btn.connect("clicked", lambda *_: self._toggle())
-        # input source: touchpad (absolute, Linux) or mouse / pen / touch
+        # input source: touchpad (absolute) or mouse / pen / touch
         self.src_box = Gtk.Box(css_classes=["linked"], visible=self.pad is not None)
         self.src_pad = Gtk.ToggleButton(label="Touchpad", tooltip_text="Sign on the touchpad")
         self.src_draw = Gtk.ToggleButton(label="Mouse or Pen", group=self.src_pad,

@@ -43,6 +43,21 @@ jobs:
           snap run view --version
           snap run view --selftest --no-ui
 
+      # The selftest runs under its own application ID, so it can't see launch
+      # problems (0.1.0's snap exited at once: it wasn't allowed to own its
+      # D-Bus name).  Launch it for real and open a PDF.
+      - name: Launch and open a PDF
+        run: |
+          sudo apt-get install -y --no-install-recommends xvfb xdotool imagemagick dbus-user-session
+          packaging/snap/launch-test.sh
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: snap-launch-test
+          path: launch-test/
+          if-no-files-found: ignore
+
       - uses: actions/upload-artifact@v4
         with:
           name: snap

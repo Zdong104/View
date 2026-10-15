@@ -84,6 +84,39 @@ def configure_frozen_env():
         os.environ.setdefault("GSETTINGS_BACKEND", "registry")
 
 
+def process_age() -> float | None:
+    """Seconds since this process started (includes the PyInstaller
+    bootloader and Python's own startup), or None if unknown."""
+    try:
+        if IS_WINDOWS:
+            import ctypes
+            from ctypes import wintypes as wt
+            k32 = ctypes.windll.kernel32
+            k32.GetCurrentProcess.restype = wt.HANDLE
+            created, ex, kt, ut, now = (wt.FILETIME() for _ in range(5))
+            k32.GetProcessTimes.argtypes = [wt.HANDLE] + [ctypes.POINTER(wt.FILETIME)] * 4
+            if not k32.GetProcessTimes(k32.GetCurrentProcess(), ctypes.byref(created),
+                                       ctypes.byref(ex), ctypes.byref(kt), ctypes.byref(ut)):
+                return None
+            k32.GetSystemTimeAsFileTime(ctypes.byref(now))
+
+            def t(ft):
+                return (ft.dwHighDateTime << 32 | ft.dwLowDateTime) / 1e7
+            return t(now) - t(created)
+        if IS_LINUX:
+            with open("/proc/self/stat") as f:
+                start = int(f.read().rsplit(")", 1)[1].split()[19])
+            with open("/proc/uptime") as f:
+                up = float(f.read().split()[0])
+            return up - start / os.sysconf("SC_CLK_TCK")
+    except Exception:  # noqa: BLE001
+        return None
+    return None
+
+
+startup_seconds: float | None = None     # process start -> first window shown (set by the app)
+
+
 def package_root() -> str:
     """Directory that contains the ``preview`` package (for ``-m preview`` fallbacks)."""
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

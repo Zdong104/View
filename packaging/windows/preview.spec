@@ -4,8 +4,7 @@
 # --selftest, --combine-pdf)} plus the GTK/GStreamer runtime.
 import os
 
-from PyInstaller.utils.hooks import (collect_data_files, collect_dynamic_libs,
-                                     collect_submodules)
+from PyInstaller.utils.hooks import collect_submodules
 
 ROOT = os.path.abspath(os.path.join(SPECPATH, "..", ".."))
 APP_ID = "io.github.zdong104.View"
@@ -24,18 +23,8 @@ datas = [
 ]
 binaries = []
 
-# Text recognition (optional on Windows: only if the CI managed to install it)
-try:
-    import rapidocr  # noqa: F401
-    import onnxruntime  # noqa: F401
-    datas += collect_data_files("rapidocr")           # ONNX models + YAML configs
-    hiddenimports += collect_submodules("rapidocr")
-    binaries += collect_dynamic_libs("onnxruntime")
-    datas += collect_data_files("onnxruntime")
-    hiddenimports += collect_submodules("onnxruntime") + ["cv2", "shapely", "pyclipper",
-                                                          "omegaconf"]
-except Exception as e:  # noqa: BLE001
-    print(f"preview.spec: OCR not bundled ({e})")
+# Text recognition is not in this bundle: it is a separate program,
+# ocr\view-ocr.exe, built with python.org's Python (view-ocr.spec).
 
 a = Analysis(
     [os.path.join(SPECPATH, "preview_main.py")],

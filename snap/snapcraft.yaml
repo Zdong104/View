@@ -38,12 +38,22 @@ confinement: strict
 platforms:
   amd64:
 
+# GApplication owns its application ID on the session bus at startup and
+# exits if it can't; strict confinement only allows that for a name the snap
+# declares as a dbus slot.
+slots:
+  view-dbus:
+    interface: dbus
+    bus: session
+    name: io.github.zdong104.View
+
 apps:
   view:
     command: usr/bin/view-app
     desktop: usr/share/applications/io.github.zdong104.View.desktop
     common-id: io.github.zdong104.View
     extensions: [gnome]
+    slots: [view-dbus]
     plugs:
       - home
       - removable-media

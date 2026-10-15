@@ -6,6 +6,12 @@ downloaded once into the user cache dir (view/ocr). Without the
 wheels installed, preview.ocr_install offers a per-user download. The engine is a lazily created
 process-wide singleton.
 
+On Windows the engine runs in a helper process (view-ocr.exe, see
+preview.ocr_helper): onnxruntime only ships for python.org's Python, while
+the app runs on MSYS2's Python (where GTK comes from), and one Python cannot
+load the other's binary modules.  ``VIEW_OCR_HELPER`` names a helper
+executable explicitly (any platform; used by tests).
+
 Public API (kept stable, other viewers integrate it):
 
     OcrLine(box, text, confidence)       box = 4 (x, y) corners in image pixels,
@@ -25,8 +31,11 @@ CLI:  python -m preview.ocr image.png [...]
 from __future__ import annotations
 
 import io
+import json
 import math
 import os
+import subprocess
+import sys
 import threading
 import time
 from dataclasses import dataclass, field
@@ -53,6 +62,7 @@ _engine = None
 _engine_lock = threading.Lock()
 _run_lock = threading.Lock()  # onnxruntime sessions are fine concurrently, but one at a time keeps latency predictable
 _unavailable_reason: str | None = None
+_LOCAL_ONLY = False  # set inside the helper process itself
 
 
 @dataclass
@@ -66,8 +76,11 @@ class OcrLine:
 # Engine
 # ---------------------------------------------------------------------------
 def is_available() -> bool:
-    """True if rapidocr + onnxruntime can be imported (does not load models)."""
+    """True if the engine can be used (does not load models): rapidocr +
+    onnxruntime importable here, or a helper executable is present."""
     global _unavailable_reason
+    if helper_path():
+        return True
     try:
         import importlib.util
         for mod in ("rapidocr", "onnxruntime", "numpy", "PIL"):
@@ -78,6 +91,74 @@ def is_available() -> bool:
     except Exception as e:  # noqa: BLE001
         _unavailable_reason = str(e)
         return False
+
+
+def helper_path() -> str | None:
+    """The out-of-process engine (view-ocr.exe), if this build has one."""
+    if _LOCAL_ONLY:
+        return None
+    env = os.environ.get("VIEW_OCR_HELPER")
+    if env:
+        return env if os.path.isfile(env) else None
+    if getattr(sys, "frozen", False) and sys.platform == "win32":
+        p = os.path.join(os.path.dirname(sys.executable), "ocr", "view-ocr.exe")
+        if os.path.isfile(p):
+            return p
+    return None
+
+
+class _Helper:
+    """Client for preview.ocr_helper over the child's stdin/stdout.
+
+    Request:  one JSON line {"w", "h"} followed by w*h*3 bytes of RGB.
+    Response: one JSON line {"lines": [[box, text, confidence], ...]}
+              or {"error": "..."}.
+    The child starts on first use and stays up; it is restarted once if it
+    dies.  Calls are serialized by the caller (_run_lock)."""
+
+    def __init__(self, exe):
+        self.exe = exe
+        self.proc = None
+
+    def _start(self):
+        flags = 0x08000000 if sys.platform == "win32" else 0   # CREATE_NO_WINDOW
+        self.proc = subprocess.Popen([self.exe], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                     stderr=subprocess.DEVNULL, creationflags=flags)
+        hello = self._read()
+        if not hello.get("ready"):
+            raise RuntimeError(f"OCR helper did not start: {hello.get('error', hello)}")
+
+    def _read(self):
+        line = self.proc.stdout.readline()
+        if not line:
+            raise RuntimeError("OCR helper exited")
+        return json.loads(line)
+
+    def _call(self, header, payload=b""):
+        if self.proc is None or self.proc.poll() is not None:
+            self._start()
+        self.proc.stdin.write(json.dumps(header).encode() + b"\n" + payload)
+        self.proc.stdin.flush()
+        return self._read()
+
+    def request(self, header, payload=b""):
+        try:
+            res = self._call(header, payload)
+        except (OSError, ValueError, RuntimeError):
+            self.close()
+            res = self._call(header, payload)        # one restart
+        if "error" in res:
+            raise RuntimeError(res["error"])
+        return res
+
+    def close(self):
+        p, self.proc = self.proc, None
+        if p is not None:
+            try:
+                p.kill()
+                p.wait(2)
+            except Exception:  # noqa: BLE001
+                pass
 
 
 def _bundled_models_present() -> bool:
@@ -98,6 +179,13 @@ def _get_engine():
         return _engine
     with _engine_lock:
         if _engine is not None:
+            return _engine
+        exe = helper_path()
+        if exe:
+            helper = _Helper(exe)
+            with _run_lock:
+                helper.request({"cmd": "load"})
+            _engine = helper
             return _engine
         if not is_available():
             raise RuntimeError("Text recognition is unavailable: "
@@ -133,8 +221,7 @@ def warm_up_async():
 # ---------------------------------------------------------------------------
 # Recognition
 # ---------------------------------------------------------------------------
-def _to_bgr_array(image):
-    import numpy as np
+def _to_rgb_image(image):
     from PIL import Image, ImageOps
 
     if isinstance(image, (str, os.PathLike)):
@@ -156,16 +243,18 @@ def _to_bgr_array(image):
         im = bg.convert("RGB")
     elif im.mode != "RGB":
         im = im.convert("RGB")
+    return im
+
+
+def _rgb_to_bgr_array(im):
+    import numpy as np
     arr = np.asarray(im)
     return np.ascontiguousarray(arr[:, :, ::-1])  # RGB -> BGR
 
 
-def recognize(image) -> list[OcrLine]:
-    """Run OCR on a PIL image / path / bytes. Blocking (1-3 s on a CPU)."""
-    arr = _to_bgr_array(image)
-    h, w = arr.shape[:2]
-    if h < 8 or w < 8:
-        return []
+def recognize_raw(arr):
+    """Run the in-process engine on a BGR array: [(box, text, confidence)]
+    with raw corner order (also what the helper process sends back)."""
     engine = _get_engine()
     with _run_lock:
         res = engine(arr)
@@ -174,8 +263,24 @@ def recognize(image) -> list[OcrLine]:
     scores = getattr(res, "scores", None)
     if boxes is None or txts is None:
         return []
+    return [([(float(p[0]), float(p[1])) for p in b], t or "", float(s))
+            for b, t, s in zip(boxes, txts, scores)]
+
+
+def recognize(image) -> list[OcrLine]:
+    """Run OCR on a PIL image / path / bytes. Blocking (1-3 s on a CPU)."""
+    im = _to_rgb_image(image)
+    w, h = im.size
+    if h < 8 or w < 8:
+        return []
+    engine = _get_engine()
+    if isinstance(engine, _Helper):
+        with _run_lock:
+            raw = engine.request({"w": w, "h": h}, im.tobytes())["lines"]
+    else:
+        raw = recognize_raw(_rgb_to_bgr_array(im))
     out = []
-    for b, t, s in zip(boxes, txts, scores):
+    for b, t, s in raw:
         t = (t or "").strip()
         if not t:
             continue

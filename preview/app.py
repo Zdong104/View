@@ -129,6 +129,55 @@ SHORTCUT_SECTIONS = [
 ]
 
 
+def _note_startup(_widget, _clock):
+    """First frame of the first window: how long startup took (About → Troubleshooting)."""
+    if runtime.startup_seconds is None:
+        runtime.startup_seconds = runtime.process_age()
+    return GLib.SOURCE_REMOVE
+
+
+def debug_info(window=None) -> str:
+    """Plain-text system report for bug reports (About → Troubleshooting)."""
+    import platform
+    lines = [f"{APP_NAME} {runtime.VERSION}",
+             f"System: {platform.platform()} ({platform.machine()})",
+             "Build: " + ("Windows (frozen)" if runtime.FROZEN else
+                          "snap" if runtime.IN_SNAP else "source / .deb"),
+             f"Python: {platform.python_version()}",
+             f"GTK {Gtk.get_major_version()}.{Gtk.get_minor_version()}.{Gtk.get_micro_version()}, "
+             f"libadwaita {Adw.get_major_version()}.{Adw.get_minor_version()}."
+             f"{Adw.get_micro_version()}, GLib {GLib.MAJOR_VERSION}.{GLib.MINOR_VERSION}"]
+    if runtime.startup_seconds is not None:
+        lines.append(f"Startup: {runtime.startup_seconds:.1f} s to the first window")
+    display = Gdk.Display.get_default()
+    if display is not None:
+        lines.append(f"Display: {type(display).__name__}")
+    if window is not None and window.get_native() is not None:
+        r = window.get_native().get_renderer()
+        lines.append(f"Renderer: {type(r).__name__ if r is not None else '?'}")
+    for var in ("GSK_RENDERER", "GDK_BACKEND", "GDK_DEBUG", "GDK_SCALE"):
+        if os.environ.get(var):
+            lines.append(f"{var}={os.environ[var]}")
+    try:
+        from . import ocr
+        helper = ocr.helper_path()
+        lines.append("Text recognition: " + (f"helper {helper}" if helper else
+                                             "in-process" if ocr.is_available() else
+                                             "not installed"))
+    except Exception as e:  # noqa: BLE001
+        lines.append(f"Text recognition: error {e}")
+    try:
+        from .touchpad import Touchpad
+        pad = Touchpad()
+        try:
+            lines.append(f"Touchpad: {pad.name}, {pad.width_mm:.0f} × {pad.height_mm:.0f} mm")
+        finally:
+            pad.close()
+    except Exception as e:  # noqa: BLE001
+        lines.append(f"Touchpad: unavailable ({e})")
+    return "\n".join(lines) + "\n"
+
+
 class MainWindow(Adw.ApplicationWindow):
     def __init__(self, app):
         super().__init__(application=app, default_width=1040, default_height=740,
@@ -201,6 +250,8 @@ class MainWindow(Adw.ApplicationWindow):
         self.toolbar.add_controller(dt)
 
         self.connect("close-request", self._on_close_request)
+        if runtime.startup_seconds is None:
+            self.add_tick_callback(_note_startup)
 
     # ---- empty state -------------------------------------------------------
     def _build_empty(self):
@@ -682,7 +733,10 @@ class PreviewApp(Adw.Application):
                                       "license from the author.\n\n"
                                       "https://polyformproject.org/licenses/noncommercial/1.0.0/")
         dlg.add_link("Support Development", runtime.DONATE)
-        dlg.present(self._any_window())
+        win = self._any_window()
+        dlg.set_debug_info(debug_info(win))
+        dlg.set_debug_info_filename("view-debug-info.txt")
+        dlg.present(win)
 
     def _preferences(self):
         from .preferences import PreferencesDialog

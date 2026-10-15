@@ -7,7 +7,8 @@ private virtual environment (never into the system Python -- PEP 668):
     <user data dir>/view/ocr-venv   (python3 -m venv --system-site-packages)
 
 and appends that venv's site-packages to ``sys.path`` at runtime.  The snap
-and the Windows build bundle the engine, so no offer is made there.
+bundles the engine and the Windows build ships it as a helper process
+(view-ocr.exe, see preview.ocr_helper), so no offer is made there.
 """
 from __future__ import annotations
 
@@ -82,7 +83,8 @@ def engine_importable() -> bool:
 def can_install() -> tuple[bool, str]:
     """(possible, reason-if-not) for offering the download."""
     if runtime.IS_WINDOWS:
-        return False, "Text recognition is not available in the Windows build yet."
+        return False, ("Text recognition is not included in this build "
+                       "(ocr\\view-ocr.exe is missing). Reinstall View to get it back.")
     if runtime.OCR_BUNDLED:
         return False, "Text recognition should be bundled with this build."
     if importlib.util.find_spec("venv") is None or importlib.util.find_spec("ensurepip") is None:

@@ -1,5 +1,7 @@
 ; Inno Setup script for View (Windows).
 ;   iscc /DAppVersion=0.1.0 /DSourceDir=..\..\dist\View /DOutputDir=..\..\dist packaging\windows\preview.iss
+; Signed release builds add  /DSign "/Sviewsign=pwsh -NoProfile -File <repo>\packaging\windows\sign.ps1 -Path $f"
+; so the installer and its uninstaller are signed too (see sign.ps1).
 #ifndef AppVersion
   #define AppVersion "0.1.0"
 #endif
@@ -34,6 +36,10 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequiredOverridesAllowed=dialog
 ChangesAssociations=yes
+#ifdef Sign
+SignTool=viewsign
+SignedUninstaller=yes
+#endif
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

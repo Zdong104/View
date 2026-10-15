@@ -35,6 +35,7 @@ All code lives in `preview/`:
 | `image_view.py`, `image_ops.py` | Image viewer and its edit pipeline |
 | `convert.py` | Images to PDF (library, CLI and dialog) |
 | `ocr.py` | Live Text via RapidOCR |
+| `ocr_helper.py` | Out-of-process OCR engine (`view-ocr.exe` on Windows) |
 | `stl_view.py`, `mesh_io.py` | 3D viewer (GLArea) and mesh loading/statistics |
 | `table_view.py`, `table_data.py` | CSV / TSV viewer and editor, and its document model |
 | `text_view.py`, `syntax.py` | Text and code viewer, Pygments helpers |

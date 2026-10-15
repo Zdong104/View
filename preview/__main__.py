@@ -27,7 +27,19 @@ def _usage_extra():
             "  --disable-files-integration   Give Space-bar previews back to GNOME Sushi\n")
 
 
+def _safe_stdio():
+    """Never crash on printing non-ASCII (e.g. a cp1252 Windows console);
+    a windowed Windows exe has no stdout at all."""
+    for s in (sys.stdout, sys.stderr):
+        try:
+            if s is not None and hasattr(s, "reconfigure"):
+                s.reconfigure(errors="replace")
+        except Exception:  # noqa: BLE001
+            pass
+
+
 def main(argv=None):
+    _safe_stdio()
     argv = list(sys.argv if argv is None else argv)
     args = argv[1:]
     first = args[0] if args else ""

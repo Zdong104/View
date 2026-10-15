@@ -67,9 +67,12 @@ jobs:
           # onnxruntime / OpenCV / Shapely come from MSYS2 (PyPI has no wheels for
           # MSYS2's Python); RapidOCR and its pure-Python deps from PyPI; pyclipper
           # is compiled here.
-          pacboy -S --noconfirm --needed python-onnxruntime:p python-opencv:p python-shapely:p \
-            python-tqdm:p python-colorlog:p python-requests:p python-yaml:p python-six:p \
-            python-setuptools-scm:p cython:p gcc:p
+          for i in 1 2 3; do   # MSYS2 mirrors are sometimes slow; retry
+            pacboy -S --noconfirm --needed python-onnxruntime:p python-opencv:p python-shapely:p \
+              python-tqdm:p python-colorlog:p python-requests:p python-yaml:p python-six:p \
+              python-setuptools-scm:p cython:p gcc:p && break
+            sleep 20
+          done
           python -m pip install --break-system-packages --no-build-isolation pyclipper
           python -m pip install --break-system-packages --no-deps rapidocr omegaconf \
             antlr4-python3-runtime==4.9.3

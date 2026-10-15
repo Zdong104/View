@@ -32,7 +32,8 @@ jobs:
       - uses: snapcore/action-build@v1
         id: build
         with:
-          snapcraft-channel: latest/stable
+          # the gnome extension supports core26 from snapcraft 9.2 (candidate as of 2026-10)
+          snapcraft-channel: latest/candidate
 
       - name: Install and selftest (best effort)
         continue-on-error: true

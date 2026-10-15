@@ -87,7 +87,10 @@ parts:
       # Preview snap launcher: our staged typelibs, GStreamer plugins and
       # Python modules first, then the gnome-core26 platform.
       A=$TRIPLET
-      export PYTHONPATH="\$SNAP/usr/lib/preview-app:\$SNAP/usr/lib/python3/dist-packages\${PYTHONPATH:+:\$PYTHONPATH}"
+      # Exactly one PyGObject: ours (with its cairo bridge).  The extension also
+      # puts the platform's gi on PYTHONPATH; gi.overrides merges every gi dir
+      # it finds, and mixing the two versions breaks (gi._gi has no 'Pid').
+      export PYTHONPATH="\$SNAP/usr/lib/preview-app:\$SNAP/usr/lib/python3/dist-packages"
       export GI_TYPELIB_PATH="\$SNAP/usr/lib/\$A/girepository-1.0\${GI_TYPELIB_PATH:+:\$GI_TYPELIB_PATH}"
       export LD_LIBRARY_PATH="\${LD_LIBRARY_PATH:+\$LD_LIBRARY_PATH:}\$SNAP/usr/lib/\$A:\$SNAP/usr/lib/\$A/blas:\$SNAP/usr/lib/\$A/lapack"
       export GST_PLUGIN_SYSTEM_PATH="\$SNAP/usr/lib/\$A/gstreamer-1.0:\$SNAP/gnome-platform/usr/lib/\$A/gstreamer-1.0"

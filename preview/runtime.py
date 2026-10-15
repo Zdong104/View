@@ -59,6 +59,13 @@ def configure_frozen_env():
     fonts = os.path.join(base, "etc", "fonts", "fonts.conf")
     if os.path.exists(fonts):
         os.environ.setdefault("FONTCONFIG_FILE", fonts)
+    # PyInstaller's GStreamer hook puts the whole bundle dir on GST_PLUGIN_PATH,
+    # so GStreamer would try to load every DLL there as a plugin (ggml.dll
+    # aborts the process when loaded that way).  Only scan the plugin dir.
+    plugins = os.path.join(base, "gst_plugins")
+    if os.path.isdir(plugins):
+        os.environ["GST_PLUGIN_PATH"] = plugins
+        os.environ["GST_PLUGIN_SYSTEM_PATH"] = ""
     local = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
     cache = os.path.join(local, "Preview", "cache")
     try:

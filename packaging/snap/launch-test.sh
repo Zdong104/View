@@ -4,17 +4,32 @@
 # shows the PDF in a window.  --selftest can't catch launch problems: it runs
 # under its own non-unique application ID.
 #
-#   packaging/snap/launch-test.sh            (re-executes itself under
-#                                             dbus-run-session + xvfb-run)
-# Needs: xvfb, xdotool, dbus (dbus-run-session), libglib2.0-bin (gdbus).
+#   packaging/snap/launch-test.sh            (re-executes itself under xvfb-run)
+# Needs: xvfb, xdotool, dbus-user-session, libglib2.0-bin (gdbus).
+# Uses the user's real session bus: snap run tracks apps in a systemd --user
+# scope and refuses to start them on a private (dbus-run-session) bus.
 set -euo pipefail
 APP_ID=io.github.zdong104.View
 OUT="${OUT:-$PWD/launch-test}"
 
 if [ -z "${VIEW_LAUNCH_TEST_INNER:-}" ]; then
     mkdir -p "$OUT"
+    export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+    if [ ! -S "$XDG_RUNTIME_DIR/bus" ]; then
+        # no login session (CI runner): lingering starts systemd --user + its bus
+        sudo loginctl enable-linger "$(id -un)"
+        for _ in $(seq 30); do
+            [ -S "$XDG_RUNTIME_DIR/bus" ] && break
+            sleep 1
+        done
+    fi
+    if [ ! -S "$XDG_RUNTIME_DIR/bus" ]; then
+        echo "FAILED: no user session bus at $XDG_RUNTIME_DIR/bus (install dbus-user-session)"
+        exit 1
+    fi
+    export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
     export VIEW_LAUNCH_TEST_INNER=1 OUT
-    exec dbus-run-session -- xvfb-run -a -s "-screen 0 1280x800x24" "$0" "$@"
+    exec xvfb-run -a -s "-screen 0 1280x800x24" "$0" "$@"
 fi
 
 # A one-page PDF in $HOME (the snap's home plug can't read /tmp or dot-dirs).

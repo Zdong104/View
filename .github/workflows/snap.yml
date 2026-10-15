@@ -48,7 +48,7 @@ jobs:
       # D-Bus name).  Launch it for real and open a PDF.
       - name: Launch and open a PDF
         run: |
-          sudo apt-get install -y --no-install-recommends xvfb xdotool imagemagick
+          sudo apt-get install -y --no-install-recommends xvfb xdotool imagemagick dbus-user-session
           packaging/snap/launch-test.sh
 
       - uses: actions/upload-artifact@v4

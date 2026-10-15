@@ -73,6 +73,8 @@ def engine_importable() -> bool:
 
 def can_install() -> tuple[bool, str]:
     """(possible, reason-if-not) for offering the download."""
+    if runtime.IS_WINDOWS:
+        return False, "Text recognition is not available in the Windows build yet."
     if runtime.OCR_BUNDLED:
         return False, "Text recognition should be bundled with this build."
     if importlib.util.find_spec("venv") is None or importlib.util.find_spec("ensurepip") is None:

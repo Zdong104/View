@@ -249,7 +249,10 @@ def _gl():
 
 def _ocr():
     from . import ocr
-    if not ocr.is_available():
+    if ocr.is_available():
+        import onnxruntime  # noqa: F401  (find_spec alone misses broken installs)
+        import rapidocr  # noqa: F401
+    else:
         from . import ocr_install
         ok, why = ocr_install.can_install()
         raise RuntimeError("not installed; " + ("offered as an optional download" if ok else why))

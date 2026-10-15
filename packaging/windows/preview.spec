@@ -51,6 +51,24 @@ a = Analysis(
             "languages": ["en_US", "en_GB", "de", "fr", "es", "it", "pt_BR", "ja", "zh_CN"],
             "module-versions": {"Gtk": "4.0", "Gdk": "4.0", "Gsk": "4.0", "GtkSource": "5"},
         },
+        # Only the plugins playback needs.  Bundling all of them is huge and the
+        # frozen app loads plugins in-process (no fork scanner): one stray
+        # plugin (a ggml-based one) aborted the process during registry scan.
+        "gstreamer": {
+            "include_plugins": [
+                "coreelements", "playback", "typefindfunctions", "app", "autodetect",
+                "videoconvertscale", "videorate", "videofilter", "deinterlace",
+                "overlaycomposition", "pango", "subparse",
+                "audioconvert", "audioresample", "audiorate", "volume", "audiofx",
+                "wasapi", "wasapi2", "directsound",
+                "d3d11", "d3d12", "mediafoundation", "codectimestamper", "codecalpha",
+                "libav", "dav1d", "vpx", "opus", "vorbis", "flac", "mpg123",
+                "isomp4", "matroska", "avi", "flv", "ogg", "wavparse", "mpegtsdemux",
+                "id3demux", "apetag", "icydemux", "rawparse",
+                "videoparsersbad", "audioparsers",
+                "gtk4", "opengl",
+            ],
+        },
     },
     runtime_hooks=[],
     excludes=["tkinter", "PyQt5", "PyQt6", "PySide2", "PySide6", "matplotlib", "IPython",

@@ -119,7 +119,8 @@ parts:
       set -eu
       for snap in core26 gnome-core26; do
         cd "/snap/$snap/current"
-        find usr/lib lib -type f,l \( -name '*.so' -o -name '*.so.*' \) \
-             -not -path '*python3*' -not -name 'libpython3*' 2>/dev/null \
+        # (find fails on a missing dir, e.g. lib/ in gnome-core26: tolerate it)
+        { find usr/lib lib -type f,l \( -name '*.so' -o -name '*.so.*' \) \
+               -not -path '*python3*' -not -name 'libpython3*' 2>/dev/null || true; } \
           | while read -r f; do rm -f "$CRAFT_PRIME/$f"; done
       done

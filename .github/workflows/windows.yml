@@ -60,23 +60,9 @@ jobs:
           python -m pip install --break-system-packages --no-deps pypdf img2pdf
           python -c "import pypdf, img2pdf; print('pypdf', pypdf.__version__)"
 
-      - name: Text recognition (best effort)
-        id: ocr
-        continue-on-error: true
-        run: |
-          # onnxruntime / OpenCV / Shapely come from MSYS2 (PyPI has no wheels for
-          # MSYS2's Python); RapidOCR and its pure-Python deps from PyPI; pyclipper
-          # is compiled here.
-          for i in 1 2 3; do   # MSYS2 mirrors are sometimes slow; retry
-            pacboy -S --noconfirm --needed python-onnxruntime:p python-opencv:p python-shapely:p \
-              python-tqdm:p python-colorlog:p python-requests:p python-yaml:p python-six:p \
-              python-setuptools-scm:p cython:p gcc:p && break
-            sleep 20
-          done
-          python -m pip install --break-system-packages --no-build-isolation pyclipper
-          python -m pip install --break-system-packages --no-deps rapidocr omegaconf \
-            antlr4-python3-runtime==4.9.3
-          python -c "import rapidocr, onnxruntime; print('OCR ok', onnxruntime.__version__)"
+      # Text recognition is not bundled on Windows: MSYS2's onnxruntime has no
+      # working Python binding (onnxruntime_pybind11_state missing) and PyPI
+      # has no wheels for MSYS2's Python.
 
       - name: Selftest from source (headless)
         env:

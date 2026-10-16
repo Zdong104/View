@@ -1,6 +1,6 @@
 name: view
 title: View
-version: '0.1.1'
+version: '0.1.2'
 summary: View and annotate PDFs, images, videos, text and 3D models
 description: |
   View is a fast, macOS Preview-style viewer for GNOME. One app opens
@@ -38,14 +38,9 @@ confinement: strict
 platforms:
   amd64:
 
-# GApplication owns its application ID on the session bus at startup and
-# exits if it can't; strict confinement only allows that for a name the snap
-# declares as a dbus slot.
-slots:
-  view-dbus:
-    interface: dbus
-    bus: session
-    name: io.github.zdong104.View
+# No dbus slot: the store holds uploads that declare one for human review.
+# Under the snap View runs NON_UNIQUE instead (see PreviewApp.__init__), so
+# it never needs to own io.github.zdong104.View on the session bus.
 
 apps:
   view:
@@ -53,7 +48,6 @@ apps:
     desktop: usr/share/applications/io.github.zdong104.View.desktop
     common-id: io.github.zdong104.View
     extensions: [gnome]
-    slots: [view-dbus]
     plugs:
       - home
       - removable-media

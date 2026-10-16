@@ -486,7 +486,12 @@ class MainWindow(Adw.ApplicationWindow):
 class PreviewApp(Adw.Application):
     def __init__(self):
         GLib.set_application_name(APP_NAME)
-        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.HANDLES_OPEN)
+        flags = Gio.ApplicationFlags.HANDLES_OPEN
+        if runtime.IN_SNAP:
+            # Owning our ID on the session bus needs a dbus slot, and the
+            # Snap Store holds every upload with one for manual review.
+            flags |= Gio.ApplicationFlags.NON_UNIQUE
+        super().__init__(application_id=APP_ID, flags=flags)
         self.recent_menu = Gio.Menu()
         self.primary_menu = self._build_menu()
         self._want_signature = False

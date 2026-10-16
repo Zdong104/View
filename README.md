@@ -102,8 +102,8 @@ On Windows it works out of the box with a Precision Touchpad: open **New Signatu
 | System | Status |
 | --- | --- |
 | Ubuntu 26.04 | ✅ Tested daily |
-| Ubuntu 25.10, Debian 13 | 🟡 Installs and passes the self-test in a container; not used day to day |
-| Ubuntu 24.04 | ❌ Too old (needs GTK ≥ 4.18 and libadwaita ≥ 1.7) — use the snap |
+| Ubuntu 25.10, Debian 13 | Installs and passes the self-test in a container|
+| Ubuntu 24.04 | Tested on the snap install |
 | Fedora, Arch, other distros | ❓ Untested |
 | Windows | ✅ Tested, feedback wanted |
 | macOS | Use Mac Preview 🙂 |

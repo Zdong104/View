@@ -36,36 +36,37 @@
 
 ### Ubuntu / Debian (.deb)
 
-Download [`view_0.1.2_all.deb`](https://github.com/Zdong104/View/releases/download/v0.1.2/view_0.1.2_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
+Download [`view_0.1.3_all.deb`](https://github.com/Zdong104/View/releases/download/v0.1.3/view_0.1.3_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
 
 ```bash
-sudo apt install ./view_0.1.2_all.deb
+sudo apt install ./view_0.1.3_all.deb
 ```
 
 Or in one go:
 
 ```bash
-wget https://github.com/Zdong104/View/releases/download/v0.1.2/view_0.1.2_all.deb && sudo apt install ./view_0.1.2_all.deb
+wget https://github.com/Zdong104/View/releases/download/v0.1.3/view_0.1.3_all.deb && sudo apt install ./view_0.1.3_all.deb
 ```
 
 `apt` is recommended because it also installs the dependencies. If you prefer `dpkg`:
 
 ```bash
-sudo dpkg -i view_0.1.2_all.deb && sudo apt -f install
+sudo dpkg -i view_0.1.3_all.deb && sudo apt -f install
 ```
 
 ### Snap (edge channel)
 
 ```bash
-sudo snap install view --edge
-sudo snap connect view:raw-input   # needed for touchpad signing
+sudo snap install view --edge && sudo snap connect view:raw-input
 ```
+
+The second half lets the sandboxed snap read the touchpad for touchpad signing; without it you can still sign with the mouse, a pen or a finger. If you already installed the snap, just run `sudo snap connect view:raw-input`. Like every install, touchpad signing also needs your user in the `input` group (`sudo usermod -aG input $USER`, then log out and back in).
 
 From a terminal, start it with `snap run view` (plain `view` is usually Vim's read-only mode). The snap is sandboxed, so the GNOME Files integration (Space-bar Quick Look, "Combine Images into PDF") is only available in the .deb / source install.
 
 ### Windows (**experimental**)
 
-Download [`View-Setup-0.1.2.exe`](https://github.com/Zdong104/View/releases/download/v0.1.2/View-Setup-0.1.2.exe) (installer) or [`View-0.1.2-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.1.2/View-0.1.2-windows-portable.zip) (no install). It is now tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: press **Space** (or **Start**) and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
+Download [`View-Setup-0.1.3.exe`](https://github.com/Zdong104/View/releases/download/v0.1.3/View-Setup-0.1.3.exe) (installer) or [`View-0.1.3-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.1.3/View-0.1.3-windows-portable.zip) (no install). It is now tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: press **Space** (or **Start**) and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
 
 **New in 0.1.1:**
 

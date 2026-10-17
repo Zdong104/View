@@ -36,6 +36,9 @@ INPUT_PROP_DIRECT = 1
 EVIOCGRAB = 0x40044590              # _IOW('E', 0x90, int)
 EVIOCGABS_BASE = 0x80184540         # _IOR('E', 0x40 + abs, struct input_absinfo)
 EVIOCGKEY_96 = 0x80604518           # _IOR('E', 0x18, char[96])
+EVIOCGNAME_256 = 0x81004506         # _IOR('E', 0x06, char[256])
+EVIOCGPROP_8 = 0x80084509           # _IOR('E', 0x09, char[8])
+EVIOCGBIT_ABS_8 = 0x80084523        # _IOR('E', 0x20 + EV_ABS, char[8]); ABS_MAX = 0x3f
 
 EVENT = struct.Struct("llHHi")      # struct input_event on 64-bit
 
@@ -47,6 +50,39 @@ def _bits(text: str) -> int:
     return value
 
 
+def _ioctl_bytes(fd, request, size) -> bytes:
+    buf = bytearray(size)
+    n = fcntl.ioctl(fd, request, buf)
+    return bytes(buf[:n]) if isinstance(n, int) and 0 <= n <= size else bytes(buf)
+
+
+def _device_name(fd) -> str:
+    return _ioctl_bytes(fd, EVIOCGNAME_256, 256).split(b"\0", 1)[0].decode(errors="replace").strip()
+
+
+def _device_info(dev: Path) -> tuple[int, int, str]:
+    """(abs capability bits, input properties, name) of /sys/class/input/eventN.
+
+    Reads sysfs when allowed; otherwise (the snap's raw-input AppArmor rules
+    only expose capabilities/*, not name or properties) asks the device
+    itself with ioctls, which raw-input does permit.
+    """
+    try:
+        return (_bits((dev / "device/capabilities/abs").read_text()),
+                _bits((dev / "device/properties").read_text()),
+                (dev / "device/name").read_text().strip())
+    except OSError:
+        if fcntl is None:
+            raise
+    fd = os.open(f"/dev/input/{dev.name}", os.O_RDONLY | os.O_NONBLOCK | os.O_CLOEXEC)
+    try:
+        caps = int.from_bytes(_ioctl_bytes(fd, EVIOCGBIT_ABS_8, 8).ljust(8, b"\0"), "little")
+        props = int.from_bytes(_ioctl_bytes(fd, EVIOCGPROP_8, 8).ljust(8, b"\0"), "little")
+        return caps, props, _device_name(fd)
+    finally:
+        os.close(fd)
+
+
 def find_touchpad() -> str | None:
     """Return /dev/input/eventN of the built-in multitouch touchpad."""
     if not sys.platform.startswith("linux"):
@@ -54,9 +90,7 @@ def find_touchpad() -> str | None:
     best = None
     for dev in sorted(Path("/sys/class/input").glob("event*")):
         try:
-            caps = _bits((dev / "device/capabilities/abs").read_text())
-            props = _bits((dev / "device/properties").read_text())
-            name = (dev / "device/name").read_text().strip()
+            caps, props, name = _device_info(dev)
         except OSError:
             continue
         if not caps >> ABS_MT_POSITION_X & 1:
@@ -69,6 +103,21 @@ def find_touchpad() -> str | None:
         if props >> INPUT_PROP_POINTER & 1 and best is None:
             best = path
     return best
+
+
+def _snap_access_hint(snap: str) -> str:
+    """Why the snap sees no touchpad: raw-input not connected (AppArmor hides
+    the devices), or the user can't read them (root:input 0660)."""
+    try:
+        st = os.stat(next(iter(sorted(Path("/dev/input").glob("event*")))))
+    except (OSError, StopIteration):
+        st = None
+    if st is not None and os.getuid() != st.st_uid and st.st_gid not in os.getgroups() \
+            and not st.st_mode & 0o004:
+        return ("it needs read access to the touchpad; run "
+                "sudo usermod -aG input $USER, then log out and back in")
+    return ("it needs a one-time permission; run "
+            f"sudo snap connect {snap}:raw-input and reopen this dialog")
 
 
 class TouchpadError(Exception):
@@ -87,14 +136,17 @@ class Touchpad:
         if fcntl is None or not sys.platform.startswith("linux"):
             raise TouchpadError("Absolute touchpad capture is only available on Linux.")
         snap = os.environ.get("SNAP_INSTANCE_NAME", "view")
+        in_snap = bool(os.environ.get("SNAP"))
         snap_hint = (f" In the snap, allow it with: sudo snap connect {snap}:raw-input"
-                     if os.environ.get("SNAP") else "")
+                     if in_snap else "")
         try:
             self.path = find_touchpad()
         except OSError:
             self.path = None
         if not self.path:
-            raise TouchpadError("No touchpad found." + snap_hint)
+            if in_snap:
+                raise TouchpadError(_snap_access_hint(snap))
+            raise TouchpadError("No touchpad found.")
         try:
             self.fd = os.open(self.path, os.O_RDONLY | os.O_NONBLOCK | os.O_CLOEXEC)
         except PermissionError:
@@ -104,7 +156,10 @@ class Touchpad:
                 + snap_hint)
         self.on_frame = on_frame
         self.on_lost = on_lost
-        self.name = Path(f"/sys/class/input/{Path(self.path).name}/device/name").read_text().strip()
+        try:
+            self.name = _device_name(self.fd)
+        except OSError:
+            self.name = "Touchpad"
         self.x = self._absinfo(ABS_MT_POSITION_X)
         self.y = self._absinfo(ABS_MT_POSITION_Y)
         self.width_mm = self._span(self.x)

@@ -13,9 +13,11 @@ Interaction (turntable camera, Z up):
 """
 import os
 
+from . import opengl_win
 from .runtime import configure_gl_env
 
 configure_gl_env()
+opengl_win.ensure()          # Windows without an OpenGL driver: Mesa, before PyOpenGL loads
 
 import ctypes
 import math
@@ -1190,6 +1192,9 @@ class ModelViewer(Viewer):
         self._gl_failed = message or "Unknown error"
         desc = ("View couldn't start OpenGL 3.3, which is needed to display 3D models.\n\n"
                 f"<small>{GLib.markup_escape_text(self._gl_failed)}</small>")
+        if opengl_win.remember_failure():
+            desc += ("\n\nThis PC's graphics driver has no OpenGL 3.3. Close and reopen "
+                     "View to show 3D models with software rendering instead.")
         if self._mesh is not None and not self._compact:
             desc += "\n\nThe model's details are still available in the Inspector (Ctrl+I)."
         self.gl_error_page.set_description(desc)

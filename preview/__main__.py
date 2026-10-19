@@ -68,6 +68,7 @@ def main(argv=None):
         return updates_cli()
     if first == "--startup-trace":
         runtime.startup_trace = True
+        runtime.stall_watch = runtime.StallWatch()
         return _run_app([argv[0], *args[1:]])
     if first in ("-h", "--help", "--help-all"):
         # let GApplication print its help, then ours

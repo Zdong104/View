@@ -160,6 +160,59 @@ def startup_report() -> str:
     return "\n".join(lines)
 
 
+class StallWatch:
+    """--startup-trace: notice when the main thread stops running its main
+    loop for more than `threshold` seconds (Windows shows "Not Responding"
+    after 5) and sample what Python code it is in meanwhile."""
+
+    def __init__(self, threshold=0.5):
+        import threading
+        self.threshold = threshold
+        self.stalls = []                     # (start, seconds, most common stack)
+        self._beat = time.perf_counter()
+        self._main = threading.main_thread().ident
+        threading.Thread(target=self._watch, daemon=True, name="view-stallwatch").start()
+
+    def beat(self):
+        """Call from the main loop (a short GLib timeout)."""
+        now = time.perf_counter()
+        gap = now - self._beat
+        if gap > self.threshold and self._samples:
+            stack = max(set(self._samples), key=self._samples.count)
+            self.stalls.append((self._beat + _age_offset if self._looping else None,
+                                gap, stack))
+        self._looping = True
+        self._samples = []
+        self._beat = now
+        return True
+
+    _samples: list = []
+    _looping = False                         # False until the main loop's first beat
+
+    def _watch(self):
+        import traceback
+        while True:
+            time.sleep(0.1)
+            if time.perf_counter() - self._beat > self.threshold:
+                frame = sys._current_frames().get(self._main)
+                if frame is not None:
+                    self._samples = self._samples + ["".join(
+                        traceback.format_stack(frame)[-8:])]
+
+    def report(self) -> str:
+        if not self.stalls:
+            return f"No main-thread stalls over {self.threshold:.1f} s."
+        out = []
+        for start, secs, stack in self.stalls:
+            when = (f"blocked {secs:.1f} s from {start:.1f} s" if start is not None else
+                    f"busy {secs:.1f} s before the main loop ran")
+            out.append(f"Main thread {when}, mostly in:\n{stack}")
+        return "\n".join(out)
+
+
+stall_watch: StallWatch | None = None
+
+
 def loaded_modules() -> list[str]:
     """Paths of the DLLs loaded in this process (Windows; an antivirus scans
     each of them on first load, so their number and size matter)."""

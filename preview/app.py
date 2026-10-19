@@ -157,8 +157,22 @@ def _note_startup(widget, _clock):
                 if os.environ.get("VIEW_STARTUP_TRACE_DLLS"):
                     for m in sorted(ours, key=lambda m: -os.path.getsize(m)):
                         print(f"  {os.path.getsize(m) / 1e6:6.1f} MB  {m}", flush=True)
+            # keep running a little: loading often goes on after the first frame
             app = widget.get_application()
-            GLib.timeout_add(300, lambda: (app.quit(), False)[1])
+            wait = float(os.environ.get("VIEW_STARTUP_TRACE_WAIT", "5"))
+
+            def done():
+                if runtime.stall_watch is not None:
+                    print(runtime.stall_watch.report(), flush=True)
+                for w in app.get_windows():
+                    failed = getattr(getattr(w, "viewer", None), "_gl_failed", None)
+                    if failed:
+                        print(f"3D viewer: OpenGL failed: {failed}", flush=True)
+                if "preview.opengl_win" in sys.modules:
+                    print("OpenGL: " + str(sys.modules["preview.opengl_win"]._state), flush=True)
+                app.quit()
+                return GLib.SOURCE_REMOVE
+            GLib.timeout_add(int(wait * 1000), done)
     return GLib.SOURCE_REMOVE
 
 
@@ -182,6 +196,9 @@ def debug_info(window=None) -> str:
     if window is not None and window.get_native() is not None:
         r = window.get_native().get_renderer()
         lines.append(f"Renderer: {type(r).__name__ if r is not None else '?'}")
+    if runtime.IS_WINDOWS:
+        from . import opengl_win
+        lines.append("OpenGL (3D): " + (opengl_win._state or "not used yet"))
     for var in ("GSK_RENDERER", "GDK_BACKEND", "GDK_DEBUG", "GDK_SCALE"):
         if os.environ.get(var):
             lines.append(f"{var}={os.environ[var]}")
@@ -583,6 +600,8 @@ class PreviewApp(Adw.Application):
 
     def do_startup(self):
         runtime.mark("application registered")
+        if runtime.stall_watch is not None:
+            GLib.timeout_add(50, runtime.stall_watch.beat)
         Adw.Application.do_startup(self)
         runtime.mark("GTK and libadwaita initialized")
         prov = Gtk.CssProvider()

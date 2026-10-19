@@ -242,9 +242,12 @@ def _gst():
 
 
 def _gl():
+    from . import opengl_win
+    gl = opengl_win.ensure()            # before PyOpenGL loads opengl32.dll (Windows)
     from OpenGL import GL  # noqa: F401
     import OpenGL
-    return f"PyOpenGL {OpenGL.__version__} ({os.environ.get('PYOPENGL_PLATFORM', 'default')})"
+    return (f"PyOpenGL {OpenGL.__version__} "
+            f"({os.environ.get('PYOPENGL_PLATFORM', 'default')}), {gl}")
 
 
 def _touchpad():
@@ -329,6 +332,13 @@ def _ui(paths, res, shots=None):
                     if win.viewer is None:
                         raise RuntimeError("viewer failed to load (error page shown)")
                     title = win.viewer.get_title()
+                    gl_err = getattr(win.viewer, "_gl_failed", None)
+                    if gl_err:
+                        # the Windows build brings its own OpenGL (Mesa) for PCs without
+                        # a driver, so there it must always work
+                        if runtime.IS_WINDOWS and runtime.FROZEN:
+                            raise RuntimeError(f"no 3D rendering: {gl_err}")
+                        res.warn(name + " (OpenGL)", gl_err)
                     if shots:
                         _try_snapshot(res, win, os.path.join(shots, f"selftest-{kind}.png"))
                     res.ok(name, title or "")

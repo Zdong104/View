@@ -101,6 +101,12 @@ jobs:
       - name: PyInstaller
         run: |
           pyinstaller --noconfirm --clean --distpath dist --workpath build/pyi packaging/windows/preview.spec
+          # Mesa's software OpenGL for PCs without an OpenGL driver (VMs, Remote
+          # Desktop; preview/opengl_win.py).  Installed only now so PyInstaller
+          # can't mistake its opengl32.dll for the system's.
+          pacman -S --noconfirm --needed mingw-w64-ucrt-x86_64-mesa
+          gl=$(pacman -Ql mingw-w64-ucrt-x86_64-mesa | awk '{print $2}' | grep -i '/bin/opengl32\.dll$')
+          python packaging/windows/bundle-mesa.py "$(cygpath -w "$gl")" dist/View
           bash packaging/windows/collect-licenses.sh dist/View
           du -sh dist/View
 
@@ -160,35 +166,35 @@ jobs:
       # Time from launch to the first window, step by step (see runtime.mark).
       # The first run is the cold one; GitHub's runners have no real-time
       # antivirus scan, so a user's first launch can still be slower.
+      # Time from launch to the first window, step by step (runtime.mark), and
+      # any main-thread stall afterwards (runtime.StallWatch).  "fresh profile"
+      # deletes every per-user cache first, like a user's very first start:
+      # earlier steps here have already built the font and GStreamer caches.
       - name: Startup time (frozen)
         continue-on-error: true
         run: |
+          python packaging/windows/test-files.py build/t
+          gst-launch-1.0 -q videotestsrc num-buffers=90 ! video/x-raw,width=640,height=360 \
+            ! vp8enc deadline=1 ! webmmux ! filesink location=build/t/sample.webm || true
+          local_app=$(cygpath -u "$LOCALAPPDATA")
+          fresh() {
+            rm -rf "$local_app/fontconfig" "$local_app/View" "$local_app/gstreamer-1.0" \
+                   "$local_app/recently-used.xbel" "$local_app/Microsoft/Windows/INetCache/view"
+          }
           trace() {   # title, args...: print the trace and keep it as an annotation
             local title=$1; shift
             echo "== $title"
-            timeout 120 ./dist/View/view-app.exe --startup-trace "$@" 2>&1 | tee build/trace.txt
+            VIEW_STARTUP_TRACE_WAIT=6 timeout 180 ./dist/View/view-app.exe --startup-trace "$@" \
+              2>&1 | tee build/trace.txt
             echo "::notice title=Startup: $title::$(sed -z 's/\r//g; s/\n/%0A/g' build/trace.txt)"
           }
-          for run in 1 2 3; do trace "empty window, run $run"; done
-          trace "with an image" build/ocr-test.png
-          VIEW_NO_DCOMP=1 trace "without Direct Composition"
-          VIEW_STARTUP_TRACE_DLLS=1 timeout 120 ./dist/View/view-app.exe --startup-trace | tail -n 60
-
-      # Users have Microsoft Defender scanning every file as it is opened; the
-      # runners don't.  Turn it on and time the same launches.
-      - name: Startup time with Defender real-time protection (frozen)
-        continue-on-error: true
-        shell: pwsh
-        run: |
-          Set-MpPreference -DisableRealtimeMonitoring $false
-          Start-Sleep 5
-          Get-MpComputerStatus | Select-Object AMServiceEnabled, AntivirusEnabled, RealTimeProtectionEnabled, OnAccessProtectionEnabled | Format-List
-          foreach ($run in 1..3) {
-            $out = (& ./dist/View/view-app.exe --startup-trace 2>&1 | Out-String)
-            $out
-            "::notice title=Startup with Defender: run $run::" + ($out -replace "`r", "" -replace "`n", "%0A")
-          }
-          Set-MpPreference -DisableRealtimeMonitoring $true
+          for f in "" sample.pdf sample.stl sample.webm sample.jpg; do
+            fresh
+            trace "fresh profile ${f:-(empty window)}" ${f:+build/t/$f}
+          done
+          for f in sample.pdf sample.webm; do
+            trace "again $f" build/t/$f
+          done
 
       - name: Code signing (app files)
         if: ${{ env.SIGN }}

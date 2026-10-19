@@ -1,0 +1,153 @@
+"""Windows: fall back to Mesa's software OpenGL when there is no real driver.
+
+The 3D viewer needs OpenGL 3.2+.  Virtual machines, Remote Desktop sessions
+and PCs on the "Microsoft Basic Display Adapter" only have Windows' built-in
+OpenGL 1.1, so GTK's GLArea fails there (and then reports its EGL fallback:
+"libEGL not available").  The Windows build bundles Mesa (llvmpipe, a fast
+software renderer) in ``mesa\\``; ``ensure()`` loads it in place of the
+system's opengl32.dll when no OpenGL driver is installed.  It must run before
+GTK or PyOpenGL first use OpenGL: both load "opengl32.dll" by name, and
+Windows hands them whichever module of that name is already loaded.  (So we
+can't simply try the system driver first: even choosing a pixel format loads
+the system opengl32.dll for good.)
+
+If the system driver is used and still fails, ``remember_failure()`` makes
+the next start use Mesa.  VIEW_SOFTWARE_GL=1 always uses Mesa, =0 never.
+"""
+from __future__ import annotations
+
+import os
+import sys
+
+_state: str | None = None          # what ensure() decided, for About → Troubleshooting
+DISPLAY_CLASS = r"SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
+
+
+def mesa_dir() -> str | None:
+    base = getattr(sys, "_MEIPASS", None)
+    d = os.path.join(base, "mesa") if base else None
+    return d if d and os.path.exists(os.path.join(d, "opengl32.dll")) else None
+
+
+def _flag_path() -> str:
+    local = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
+    return os.path.join(local, "View", "software-gl")
+
+
+def opengl_drivers() -> list[str]:
+    """OpenGL drivers (ICDs) the display adapters register; empty when only
+    Windows' OpenGL 1.1 is available."""
+    import winreg
+    found = []
+
+    def values(key):
+        i = 0
+        while True:
+            try:
+                yield winreg.EnumValue(key, i)
+            except OSError:
+                return
+            i += 1
+    try:
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, DISPLAY_CLASS) as cls:
+            i = 0
+            while True:
+                try:
+                    sub = winreg.EnumKey(cls, i)
+                except OSError:
+                    break
+                i += 1
+                try:
+                    with winreg.OpenKey(cls, sub) as k:
+                        for name, val, _t in values(k):
+                            if name.startswith("OpenGLDriverName") and val:
+                                found.append(val[0] if isinstance(val, list) else str(val))
+                except OSError:
+                    pass
+    except OSError:
+        pass
+    try:                                   # older drivers register here instead
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                            r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\OpenGLDrivers") as k:
+            i = 0
+            while True:
+                try:
+                    found.append(winreg.EnumKey(k, i))
+                except OSError:
+                    break
+                i += 1
+    except OSError:
+        pass
+    return [d for d in found if d]
+
+
+def _remote_session() -> bool:
+    import ctypes
+    return bool(ctypes.windll.user32.GetSystemMetrics(0x1000))      # SM_REMOTESESSION
+
+
+def load_mesa(folder: str) -> bool:
+    import ctypes
+    from ctypes import wintypes as wt
+    k32 = ctypes.windll.kernel32
+    k32.LoadLibraryExW.restype = wt.HMODULE
+    k32.LoadLibraryExW.argtypes = [wt.LPCWSTR, wt.HANDLE, wt.DWORD]
+    k32.GetModuleHandleW.restype = wt.HMODULE
+    k32.GetModuleHandleW.argtypes = [wt.LPCWSTR]
+    if k32.GetModuleHandleW("opengl32.dll"):
+        return False                  # an opengl32.dll is loaded already; too late to swap
+    os.environ.setdefault("GALLIUM_DRIVER", "llvmpipe")
+    # LOAD_WITH_ALTERED_SEARCH_PATH: look for libgallium_wgl.dll next to it first
+    return bool(k32.LoadLibraryExW(os.path.join(folder, "opengl32.dll"), None, 0x8))
+
+
+def ensure() -> str:
+    """Pick the OpenGL implementation before anything uses OpenGL; returns
+    what is in use (shown in About → Troubleshooting)."""
+    global _state
+    if _state is not None:
+        return _state
+    if sys.platform != "win32":
+        _state = "system"
+        return _state
+    force = os.environ.get("VIEW_SOFTWARE_GL", "")
+    folder = mesa_dir()
+    drivers = remote = None
+    if force == "1":
+        why = "VIEW_SOFTWARE_GL=1"
+    elif os.path.exists(_flag_path()):
+        why = "the system driver failed before"
+    else:
+        try:
+            drivers, remote = opengl_drivers(), _remote_session()
+        except Exception:  # noqa: BLE001
+            drivers, remote = ["?"], False
+        why = "no OpenGL driver installed" if not drivers else \
+            "Remote Desktop" if remote else None
+    if why is None or force == "0":
+        _state = "system driver" + (f" ({', '.join(os.path.basename(d) for d in drivers)})"
+                                    if drivers else "")
+    elif folder and load_mesa(folder):
+        _state = f"Mesa software rendering ({why})"
+    else:
+        _state = f"system driver (wanted Mesa: {why}; " + \
+            ("not bundled)" if not folder else "could not load it)")
+    return _state
+
+
+def using_mesa() -> bool:
+    return (_state or "").startswith("Mesa")
+
+
+def remember_failure() -> bool:
+    """The system driver couldn't give us OpenGL 3.2: use Mesa from the next
+    start on.  True if that will help (Mesa is bundled and not in use yet)."""
+    if sys.platform != "win32" or using_mesa() or not mesa_dir() or \
+            os.environ.get("VIEW_SOFTWARE_GL") == "0":
+        return False
+    try:
+        os.makedirs(os.path.dirname(_flag_path()), exist_ok=True)
+        open(_flag_path(), "w").close()
+        return True
+    except OSError:
+        return False

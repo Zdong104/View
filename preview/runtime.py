@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import shutil
 import sys
+import time
 
 from . import __version__
 
@@ -129,6 +130,34 @@ def process_age() -> float | None:
 
 
 startup_seconds: float | None = None     # process start -> first window shown (set by the app)
+
+# ---- startup timing --------------------------------------------------------
+# Seconds since the process started at named points on the way to the first
+# window, shown in About → Troubleshooting and by ``view-app --startup-trace``.
+# The first mark is taken when this module is imported, so it covers the
+# PyInstaller bootloader and Python's own startup.
+startup_trace = False                     # --startup-trace: print the marks, then quit
+startup_marks: list[tuple[str, float]] = []
+_age_offset = (process_age() or 0.0) - time.perf_counter()
+
+
+def mark(label: str):
+    """Record that startup reached `label` (once the first window is up,
+    further marks are ignored)."""
+    if startup_seconds is None:
+        startup_marks.append((label, time.perf_counter() + _age_offset))
+
+
+mark("Python started")
+
+
+def startup_report() -> str:
+    """The marks as a table: seconds since process start, and each step."""
+    lines, prev = [], 0.0
+    for label, t in startup_marks:
+        lines.append(f"{t:7.2f} s  +{t - prev:5.2f}  {label}")
+        prev = t
+    return "\n".join(lines)
 
 
 def package_root() -> str:

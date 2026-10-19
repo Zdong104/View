@@ -129,10 +129,17 @@ SHORTCUT_SECTIONS = [
 ]
 
 
-def _note_startup(_widget, _clock):
+def _note_startup(widget, _clock):
     """First frame of the first window: how long startup took (About → Troubleshooting)."""
     if runtime.startup_seconds is None:
-        runtime.startup_seconds = runtime.process_age()
+        runtime.mark("first frame")
+        runtime.startup_seconds = runtime.startup_marks[-1][1]
+        if runtime.startup_trace:
+            print(f"{APP_NAME} {runtime.VERSION} startup trace "
+                  "(seconds since the process started):", flush=True)
+            print(runtime.startup_report(), flush=True)
+            app = widget.get_application()
+            GLib.timeout_add(300, lambda: (app.quit(), False)[1])
     return GLib.SOURCE_REMOVE
 
 
@@ -149,6 +156,7 @@ def debug_info(window=None) -> str:
              f"{Adw.get_micro_version()}, GLib {GLib.MAJOR_VERSION}.{GLib.MINOR_VERSION}"]
     if runtime.startup_seconds is not None:
         lines.append(f"Startup: {runtime.startup_seconds:.1f} s to the first window")
+        lines += ["  " + ln for ln in runtime.startup_report().splitlines()]
     display = Gdk.Display.get_default()
     if display is not None:
         lines.append(f"Display: {type(display).__name__}")
@@ -363,6 +371,7 @@ class MainWindow(Adw.ApplicationWindow):
             from .text_view import TextViewer as cls
         else:
             raise ValueError(f"Unsupported file type: {kind}")
+        runtime.mark(f"{kind} viewer imported")
         viewer = cls(self)
         self.viewer = viewer
         self.bin.set_child(viewer)
@@ -384,6 +393,7 @@ class MainWindow(Adw.ApplicationWindow):
         try:
             viewer = self.ensure_viewer(kind)
             viewer.load(files)
+            runtime.mark(f"{kind} loaded")
             app = self.get_application()
             for f in files[:10]:          # don't flood Recent when opening a whole folder
                 app.add_recent(f)
@@ -537,7 +547,9 @@ class PreviewApp(Adw.Application):
         return m
 
     def do_startup(self):
+        runtime.mark("application registered")
         Adw.Application.do_startup(self)
+        runtime.mark("GTK and libadwaita initialized")
         prov = Gtk.CssProvider()
         prov.load_from_string(CSS)
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), prov,
@@ -569,6 +581,7 @@ class PreviewApp(Adw.Application):
         self.set_accels_for_action("app.new-from-clipboard", ["<Control><Shift>n"])
         self.set_accels_for_action("win.close", ["<Control>w"])
         self.set_accels_for_action("win.fullscreen", ["F11"])
+        runtime.mark("menus and actions set up")
 
     # ---- recent files ------------------------------------------------------------
     def add_recent(self, gfile):
@@ -640,7 +653,10 @@ class PreviewApp(Adw.Application):
         if wins:
             (self.get_active_window() or wins[0]).present()
         else:
-            MainWindow(self).present()
+            win = MainWindow(self)
+            runtime.mark("window built")
+            win.present()
+            runtime.mark("window shown")
         if self._want_signature:
             self._want_signature = False
             GLib.idle_add(lambda: (self._new_signature(), False)[1])

@@ -138,6 +138,16 @@ def _note_startup(widget, _clock):
             print(f"{APP_NAME} {runtime.VERSION} startup trace "
                   "(seconds since the process started):", flush=True)
             print(runtime.startup_report(), flush=True)
+            mods = runtime.loaded_modules()
+            if mods:
+                ours = [m for m in mods if m.lower().startswith(
+                    os.path.dirname(sys.executable).lower())]
+                mb = sum(os.path.getsize(m) for m in ours if os.path.exists(m)) / 1e6
+                print(f"{len(mods)} DLLs loaded, {len(ours)} of them View's own "
+                      f"({mb:.0f} MB)", flush=True)
+                if os.environ.get("VIEW_STARTUP_TRACE_DLLS"):
+                    for m in sorted(ours, key=lambda m: -os.path.getsize(m)):
+                        print(f"  {os.path.getsize(m) / 1e6:6.1f} MB  {m}", flush=True)
             app = widget.get_application()
             GLib.timeout_add(300, lambda: (app.quit(), False)[1])
     return GLib.SOURCE_REMOVE

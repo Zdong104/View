@@ -160,6 +160,30 @@ def startup_report() -> str:
     return "\n".join(lines)
 
 
+def loaded_modules() -> list[str]:
+    """Paths of the DLLs loaded in this process (Windows; an antivirus scans
+    each of them on first load, so their number and size matter)."""
+    if not IS_WINDOWS:
+        return []
+    import ctypes
+    from ctypes import wintypes as wt
+    psapi, k32 = ctypes.WinDLL("psapi"), ctypes.windll.kernel32
+    k32.GetCurrentProcess.restype = wt.HANDLE
+    proc = k32.GetCurrentProcess()
+    mods = (wt.HMODULE * 4096)()
+    need = wt.DWORD()
+    psapi.EnumProcessModules.argtypes = [wt.HANDLE, ctypes.c_void_p, wt.DWORD,
+                                         ctypes.POINTER(wt.DWORD)]
+    if not psapi.EnumProcessModules(proc, mods, ctypes.sizeof(mods), ctypes.byref(need)):
+        return []
+    psapi.GetModuleFileNameExW.argtypes = [wt.HANDLE, wt.HMODULE, wt.LPWSTR, wt.DWORD]
+    out, buf = [], ctypes.create_unicode_buffer(1024)
+    for h in mods[:need.value // ctypes.sizeof(wt.HMODULE)]:
+        if psapi.GetModuleFileNameExW(proc, h, buf, 1024):
+            out.append(buf.value)
+    return out
+
+
 def package_root() -> str:
     """Directory that contains the ``preview`` package (for ``-m preview`` fallbacks)."""
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

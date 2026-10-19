@@ -1,6 +1,7 @@
 """Application shell: windows, file routing, drag & drop, menus."""
 import os
 import sys
+import threading
 import traceback
 
 import gi
@@ -36,13 +37,13 @@ row.drop-before, .drop-before { box-shadow: inset 0 3px @accent_bg_color; }
 """
 
 
-def _recent_files(limit=10):
-    """Recently used local files of types we can open: [(uri, Gio.File), ...]."""
-    out = []
+def _recent_uris():
+    """Recently used URIs, newest first (main thread: GtkRecentManager isn't
+    thread-safe)."""
     try:
         infos = Gtk.RecentManager.get_default().get_items()
     except Exception:  # noqa: BLE001
-        return out
+        return []
 
     def stamp(i):
         best = 0
@@ -53,8 +54,15 @@ def _recent_files(limit=10):
             except Exception:  # noqa: BLE001
                 pass
         return best
-    for info in sorted(infos, key=stamp, reverse=True):
-        uri = info.get_uri()
+    return [i.get_uri() for i in sorted(infos, key=stamp, reverse=True)]
+
+
+def _existing_files(uris, limit=10):
+    """The first `limit` of `uris` that are local files of a type we can open:
+    [(uri, Gio.File), ...].  Touches the files (a missing network share can
+    take many seconds), so run it in a thread."""
+    out = []
+    for uri in uris:
         if not uri or not uri.startswith("file://"):
             continue
         f = Gio.File.new_for_uri(uri)
@@ -140,8 +148,9 @@ def _note_startup(widget, _clock):
             print(runtime.startup_report(), flush=True)
             mods = runtime.loaded_modules()
             if mods:
-                ours = [m for m in mods if m.lower().startswith(
-                    os.path.dirname(sys.executable).lower())]
+                windir = os.path.normcase(os.environ.get("SystemRoot", r"C:\Windows"))
+                ours = [m for m in mods if not os.path.normcase(
+                    m.removeprefix("\\\\?\\")).startswith(windir)]
                 mb = sum(os.path.getsize(m) for m in ours if os.path.exists(m)) / 1e6
                 print(f"{len(mods)} DLLs loaded, {len(ours)} of them View's own "
                       f"({mb:.0f} MB)", flush=True)
@@ -279,7 +288,21 @@ class MainWindow(Adw.ApplicationWindow):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18, halign=Gtk.Align.CENTER)
         box.append(Gtk.Button(label="Open…", halign=Gtk.Align.CENTER,
                               css_classes=["pill", "suggested-action"], action_name="win.open"))
-        recents = _recent_files(5)
+        self._recent_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
+        box.append(self._recent_box)
+        self.show_recents(self.get_application().recent_items)
+        page.set_child(box)
+        return page
+
+    def show_recents(self, items):
+        """Fill the empty page's Recent list (the app finds the files in the
+        background and calls this again when it has them)."""
+        box = getattr(self, "_recent_box", None)
+        if box is None:
+            return
+        while (child := box.get_first_child()) is not None:
+            box.remove(child)
+        recents = items[:5]
         if recents:
             box.append(Gtk.Label(label="Recent", css_classes=["heading"], halign=Gtk.Align.START))
             lb = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=["boxed-list"],
@@ -294,8 +317,6 @@ class MainWindow(Adw.ApplicationWindow):
                 row.connect("activated", lambda _r, f=f: self.open_files([f]))
                 lb.append(row)
             box.append(lb)
-        page.set_child(box)
-        return page
 
     def _paste_shortcut(self, *_):
         if self.viewer is not None and not hasattr(self.viewer, "add_untitled"):
@@ -513,6 +534,8 @@ class PreviewApp(Adw.Application):
             flags |= Gio.ApplicationFlags.NON_UNIQUE
         super().__init__(application_id=APP_ID, flags=flags)
         self.recent_menu = Gio.Menu()
+        self.recent_items = []          # [(uri, Gio.File)], found by _refresh_recent
+        self._recent_gen = 0
         self.primary_menu = self._build_menu()
         self._want_signature = False
         self.updater = None
@@ -587,8 +610,9 @@ class PreviewApp(Adw.Application):
         a.connect("activate", lambda _a, p: self.route_files([Gio.File.new_for_uri(p.get_string())]))
         self.add_action(a)
         self._recent_mgr = Gtk.RecentManager.get_default()
-        self._recent_mgr.connect("changed", lambda *_: self._rebuild_recent())
+        self._recent_mgr.connect("changed", lambda *_: self._refresh_recent())
         self._rebuild_recent()
+        self._refresh_recent()
         self.set_accels_for_action("win.open", ["<Control>o"])
         self.set_accels_for_action("win.inspector", ["<Control>i"])
         self.set_accels_for_action("app.new-from-clipboard", ["<Control><Shift>n"])
@@ -604,9 +628,30 @@ class PreviewApp(Adw.Application):
         except Exception:  # noqa: BLE001
             pass
 
+    def _refresh_recent(self):
+        """Find which recent files still exist in a thread (never delay the
+        first window on a slow or missing drive), then update the Open Recent
+        menu and the Recent list of empty windows."""
+        self._recent_gen += 1
+        gen, uris = self._recent_gen, _recent_uris()
+
+        def work():
+            items = _existing_files(uris, 10)
+
+            def done():
+                if gen == self._recent_gen:
+                    self.recent_items = items
+                    self._rebuild_recent()
+                    for w in self.get_windows():
+                        if isinstance(w, MainWindow) and w.is_empty():
+                            w.show_recents(items)
+                return GLib.SOURCE_REMOVE
+            GLib.idle_add(done)
+        threading.Thread(target=work, daemon=True, name="view-recent").start()
+
     def _rebuild_recent(self):
         self.recent_menu.remove_all()
-        items = _recent_files(10)
+        items = self.recent_items
         sec = Gio.Menu()
         for uri, f in items:
             item = Gio.MenuItem.new(f.get_basename() or uri, None)
@@ -622,11 +667,12 @@ class PreviewApp(Adw.Application):
 
     def _clear_recent(self):
         mgr = Gtk.RecentManager.get_default()
-        for uri, _f in _recent_files(1000):
+        for uri, _f in _existing_files(_recent_uris(), 1000):
             try:
                 mgr.remove_item(uri)
             except GLib.Error:
                 pass
+        self.recent_items = []
         self._rebuild_recent()
 
     def _new_from_clipboard(self):

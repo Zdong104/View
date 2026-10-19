@@ -163,12 +163,15 @@ jobs:
       - name: Startup time (frozen)
         continue-on-error: true
         run: |
-          for run in 1 2 3; do
-            echo "== empty window, run $run"
-            timeout 120 ./dist/View/view-app.exe --startup-trace
-          done
-          echo "== with an image"
-          timeout 120 ./dist/View/view-app.exe --startup-trace build/ocr-test.png
+          trace() {   # title, args...: print the trace and keep it as an annotation
+            local title=$1; shift
+            echo "== $title"
+            timeout 120 ./dist/View/view-app.exe --startup-trace "$@" 2>&1 | tee build/trace.txt
+            echo "::notice title=Startup: $title::$(sed -z 's/\r//g; s/\n/%0A/g' build/trace.txt)"
+          }
+          for run in 1 2 3; do trace "empty window, run $run"; done
+          trace "with an image" build/ocr-test.png
+          VIEW_NO_DCOMP=1 trace "without Direct Composition"
 
       - name: Code signing (app files)
         if: ${{ env.SIGN }}
@@ -202,7 +205,7 @@ jobs:
           if ($env:SIGN) {
             $sign = @("/DSign", "/Sviewsign=pwsh -NoProfile -File $PWD\packaging\windows\sign.ps1 -Path `$f")
           }
-          & $iscc "/DAppVersion=$env:VERSION" @sign packaging\windows\preview.iss
+          & $iscc /Q "/DAppVersion=$env:VERSION" @sign packaging\windows\preview.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Get-ChildItem dist
 

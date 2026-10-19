@@ -388,8 +388,12 @@ class Updater:
                 _message(parent, "Update Failed", out)
             elif what == "exe":
                 if not self._unsaved(parent):
-                    _run_windows_installer(path)
-                    self.app.quit()
+                    try:
+                        _run_windows_installer(path)
+                    except OSError as e:        # e.g. the UAC prompt was declined
+                        _message(parent, "Update Not Installed", _short_error(e))
+                    else:
+                        self.app.quit()
             elif rc == 0:
                 self._restart_dialog(parent, rel)
             elif rc in (126, 127) and _have("pkexec"):

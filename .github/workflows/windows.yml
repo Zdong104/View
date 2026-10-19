@@ -145,6 +145,8 @@ jobs:
           GSK_RENDERER: cairo
         run: |
           ./dist/View/view-app.exe --version
+          # HTTPS to GitHub works from the frozen build (0 = up to date, 2 = newer exists)
+          ./dist/View/view-app.exe --check-updates || [ $? -eq 2 ]
           ./dist/View/ocr/view-ocr.exe --test build/ocr-test.png "Hello View"
           # --ocr: View recognizes text through the helper (fails if it is missing)
           ./dist/View/view-app.exe --selftest --no-ui --ocr

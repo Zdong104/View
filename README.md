@@ -90,6 +90,19 @@ make run
 
 `make install` adds this checkout to your app grid as **View (Dev)**, next to any snap or .deb copy; `make uninstall` removes it again (`make purge` also deletes its Python venv).
 
+### Updating
+
+View checks GitHub for a new release once a day (turn it off in **Preferences → Updates**), and every time you open **About View** or **Check for Updates…** in the main menu. When there is one, it shows what's new and can install it for you:
+
+| Installed with | Update |
+| --- | --- |
+| Windows installer | **Install and Restart** downloads the new installer, updates View in place and starts it again |
+| .deb | **Install…** downloads the new .deb and installs it with `apt` (asks for your password) |
+| Snap | The Snap Store updates View automatically; `sudo snap refresh view` updates now |
+| Windows portable zip, source | **Download** opens the new download in your browser |
+
+Downloads are checked against the release's `SHA256SUMS` before they are installed. From a terminal, `view-app --check-updates` tells you whether a newer version exists. Every version, including older ones, stays on the [Releases page](https://github.com/Zdong104/View/releases); install an older .deb with `sudo apt install --allow-downgrades ./view_<version>_all.deb`, or run an older Windows installer over the current one.
+
 ## Touchpad signing
 
 On Windows it works out of the box with a Precision Touchpad: open **New Signature...** and press **Start**. While you sign, the mouse pointer is paused; press any key to finish. On Linux:

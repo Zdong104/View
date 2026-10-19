@@ -26,6 +26,8 @@ class PreferencesDialog(Adw.PreferencesDialog):
                                   subtitle=reason, subtitle_selectable=True))
             page.add(grp)
 
+        page.add(self._updates_group())
+
         self.ocr_group = Adw.PreferencesGroup(title="Text Recognition")
         page.add(self.ocr_group)
         self._ocr_row = None
@@ -56,6 +58,33 @@ class PreferencesDialog(Adw.PreferencesDialog):
         sc.connect("notify::active", toggled, "sc")
         grp.add(ql)
         grp.add(sc)
+        return grp
+
+    # ---- updates ----
+    def _updates_group(self):
+        from . import updates
+        grp = Adw.PreferencesGroup(title="Updates")
+        if updates.install_kind() == "snap":
+            grp.add(Adw.ActionRow(title="Updates come from the Snap Store",
+                                  subtitle="snapd installs new versions automatically"))
+        else:
+            row = Adw.SwitchRow(title="Check for updates automatically",
+                                subtitle="Once a day, from GitHub",
+                                active=updates.auto_check_enabled())
+            row.connect("notify::active", lambda r, _p: updates.set_auto_check(r.get_active()))
+            grp.add(row)
+            check = Adw.ButtonRow(title="Check for Updates Now") \
+                if hasattr(Adw, "ButtonRow") else None
+            if check is not None:
+                check.connect("activated", lambda *_: self.app._get_updater().check_now(
+                    self.app._any_window(), toast=self))
+                grp.add(check)
+        versions = Adw.ActionRow(title="All versions", subtitle="Download any release, "
+                                 "including older ones", activatable=True)
+        versions.add_suffix(Gtk.Image(icon_name="adw-external-link-symbolic"))
+        versions.connect("activated", lambda *_: Gtk.UriLauncher.new(
+            updates.RELEASES).launch(self.app._any_window(), None, None, None))
+        grp.add(versions)
         return grp
 
     # ---- OCR ----

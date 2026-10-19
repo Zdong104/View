@@ -30,6 +30,14 @@ Print the version and exit.
 Check that every viewer and library works and exit with status 0 or 1.
 With \fB\-\-no\-ui\fR no windows are opened (no display needed).
 .TP
+.B \-\-check\-updates
+Check GitHub for a newer release and print where to get it. Exit status 0
+when up to date, 2 when an update is available, 1 on error.
+.TP
+.B \-\-startup\-trace \fR[\fIFILE\fR...]
+Start normally, print how long each startup step took once the first
+window is drawn, and quit.
+.TP
 .B \-\-combine\-pdf
 Combine images into one PDF without opening a window; see
 \fBview-app \-\-combine\-pdf \-\-help\fR.
@@ -43,7 +51,14 @@ Undo \fB\-\-enable\-files\-integration\fR.
 .TP
 .B \-\-quicklook
 Run the Quick Look D\-Bus service (started by the session bus).
+.SH ENVIRONMENT
+.TP
+.B VIEW_NO_UPDATE_CHECK
+When set, View does not check for updates in the background.
 .SH FILES
+.TP
+.I ~/.config/view/updates.json
+Update settings: automatic checks, last check, skipped version.
 .TP
 .I ~/.local/share/view-app/ocr-venv
 Optional text recognition engine, downloaded on request.

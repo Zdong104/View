@@ -3,6 +3,7 @@
 Options handled here (before GTK starts, no display needed):
   --version                      print the version and exit
   --startup-trace [FILE…]        time each startup step to the first window, then quit
+  --check-updates                print whether a newer release is available
   --selftest [--no-ui]           check that every viewer works, exit 0/1
   --quicklook [--debug] [FILE…]  run the Quick Look service for GNOME Files
   --combine-pdf -o OUT IMG…      combine images into a PDF (see --combine-pdf --help)
@@ -22,6 +23,7 @@ def _usage_extra():
     return ("\nPreview options:\n"
             "  --version                     Show the version and exit\n"
             "  --startup-trace [FILE...]     Time each startup step, print it and quit\n"
+            "  --check-updates               Check GitHub for a newer release\n"
             "  --new-signature               Draw a new signature\n"
             "  --selftest [--no-ui]          Check that all viewers work and exit\n"
             "  --combine-pdf -o OUT IMG...   Combine images into one PDF\n"
@@ -61,6 +63,9 @@ def main(argv=None):
     if first in ("--enable-files-integration", "--disable-files-integration"):
         from . import integration
         return integration.cli(first == "--enable-files-integration")
+    if first == "--check-updates":
+        from .updates import cli as updates_cli
+        return updates_cli()
     if first == "--startup-trace":
         runtime.startup_trace = True
         return _run_app([argv[0], *args[1:]])

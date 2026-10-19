@@ -505,6 +505,7 @@ class PreviewApp(Adw.Application):
         self.recent_menu = Gio.Menu()
         self.primary_menu = self._build_menu()
         self._want_signature = False
+        self.updater = None
         self.add_main_option("new-signature", 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE,
                              "Draw a new signature with the touchpad", None)
         self.connect("handle-local-options", self._on_local_options)
@@ -541,6 +542,7 @@ class PreviewApp(Adw.Application):
         s3 = Gio.Menu()
         s3.append("Preferences", "app.preferences")
         s3.append("Keyboard Shortcuts", "app.shortcuts")
+        s3.append("Check for Updates…", "app.check-updates")
         s3.append("About View", "app.about")
         s3.append("Quit", "app.quit")
         m.append_section(None, s3)
@@ -562,6 +564,7 @@ class PreviewApp(Adw.Application):
                          ("new-signature", self._new_signature),
                          ("new-from-clipboard", self._new_from_clipboard),
                          ("preferences", self._preferences),
+                         ("check-updates", self._check_updates),
                          ("clear-recent", self._clear_recent)):
             a = Gio.SimpleAction.new(name, None)
             a.connect("activate", lambda _a, _p, cb=cb: cb())
@@ -657,12 +660,30 @@ class PreviewApp(Adw.Application):
             runtime.mark("window built")
             win.present()
             runtime.mark("window shown")
+        self._start_updater()
         if self._want_signature:
             self._want_signature = False
             GLib.idle_add(lambda: (self._new_signature(), False)[1])
 
     def do_open(self, files, n_files, hint):
         self.route_files(list(files), None)
+        self._start_updater()
+
+    def _start_updater(self):
+        """Background update checks, only for the real app (not --selftest
+        or --startup-trace)."""
+        if self.updater is not None or runtime.startup_trace or \
+                self.get_application_id() != APP_ID:
+            return
+        from .updates import Updater
+        self.updater = Updater(self)
+        self.updater.start()
+
+    def _get_updater(self):
+        if self.updater is None:
+            from .updates import Updater
+            self.updater = Updater(self)
+        return self.updater
 
     # ---- routing -------------------------------------------------------------------
     def _active_main(self):
@@ -755,11 +776,18 @@ class PreviewApp(Adw.Application):
                                       "noncommercial use. Commercial use requires a separate "
                                       "license from the author.\n\n"
                                       "https://polyformproject.org/licenses/noncommercial/1.0.0/")
+        dlg.add_link("All Versions", runtime.HOMEPAGE + "/releases")
         dlg.add_link("Support Development", runtime.DONATE)
         win = self._any_window()
         dlg.set_debug_info(debug_info(win))
         dlg.set_debug_info_filename("view-debug-info.txt")
         dlg.present(win)
+        self._get_updater().check_now(win, toast=dlg)      # result as a toast in About
+
+    def _check_updates(self):
+        win = self._any_window()
+        win.present()
+        self._get_updater().check_now(win)
 
     def _preferences(self):
         from .preferences import PreferencesDialog

@@ -167,6 +167,8 @@ class StallWatch:
 
     def __init__(self, threshold=0.5):
         import threading
+        import traceback                     # here: importing it in the thread races
+        self._format = traceback.format_stack
         self.threshold = threshold
         self.stalls = []                     # (start, seconds, most common stack)
         self._beat = time.perf_counter()
@@ -190,14 +192,12 @@ class StallWatch:
     _looping = False                         # False until the main loop's first beat
 
     def _watch(self):
-        import traceback
         while True:
             time.sleep(0.1)
             if time.perf_counter() - self._beat > self.threshold:
                 frame = sys._current_frames().get(self._main)
                 if frame is not None:
-                    self._samples = self._samples + ["".join(
-                        traceback.format_stack(frame)[-8:])]
+                    self._samples = self._samples + ["".join(self._format(frame)[-8:])]
 
     def report(self) -> str:
         if not self.stalls:

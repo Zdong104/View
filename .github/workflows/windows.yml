@@ -192,9 +192,11 @@ jobs:
             fresh
             trace "fresh profile ${f:-(empty window)}" ${f:+build/t/$f}
           done
-          for f in sample.pdf sample.webm; do
+          for f in sample.pdf sample.webm sample.stl; do
             trace "again $f" build/t/$f
           done
+          VIEW_STARTUP_TRACE_DLLS=1 VIEW_STARTUP_TRACE_WAIT=3 timeout 180 \
+            ./dist/View/view-app.exe --startup-trace build/t/sample.stl 2>&1 | tail -n 80
 
       - name: Code signing (app files)
         if: ${{ env.SIGN }}

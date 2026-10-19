@@ -17,7 +17,7 @@ from . import opengl_win
 from .runtime import configure_gl_env
 
 configure_gl_env()
-opengl_win.ensure()          # Windows without an OpenGL driver: Mesa, before PyOpenGL loads
+opengl_win.ensure()          # normally done at startup (preview.__main__)
 
 import ctypes
 import math

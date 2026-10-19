@@ -5,11 +5,12 @@ and PCs on the "Microsoft Basic Display Adapter" only have Windows' built-in
 OpenGL 1.1, so GTK's GLArea fails there (and then reports its EGL fallback:
 "libEGL not available").  The Windows build bundles Mesa (llvmpipe, a fast
 software renderer) in ``mesa\\``; ``ensure()`` loads it in place of the
-system's opengl32.dll when no OpenGL driver is installed.  It must run before
-GTK or PyOpenGL first use OpenGL: both load "opengl32.dll" by name, and
-Windows hands them whichever module of that name is already loaded.  (So we
-can't simply try the system driver first: even choosing a pixel format loads
-the system opengl32.dll for good.)
+system's opengl32.dll when no OpenGL driver is installed.  It runs at startup
+(preview.__main__), before GTK loads: GTK and PyOpenGL load "opengl32.dll" by
+name, and Windows hands them whichever module of that name is already loaded.
+(So we can't simply try the system driver first: even choosing a pixel format
+loads the system opengl32.dll for good.)  Checking costs a few registry reads;
+Mesa itself is only loaded on PCs that need it.
 
 If the system driver is used and still fails, ``remember_failure()`` makes
 the next start use Mesa.  VIEW_SOFTWARE_GL=1 always uses Mesa, =0 never.
@@ -86,19 +87,26 @@ def _remote_session() -> bool:
     return bool(ctypes.windll.user32.GetSystemMetrics(0x1000))      # SM_REMOTESESSION
 
 
-def load_mesa(folder: str) -> bool:
+def load_mesa(folder: str) -> str | None:
+    """Load Mesa's opengl32.dll; None on success, else why not."""
     import ctypes
     from ctypes import wintypes as wt
-    k32 = ctypes.windll.kernel32
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
     k32.LoadLibraryExW.restype = wt.HMODULE
     k32.LoadLibraryExW.argtypes = [wt.LPCWSTR, wt.HANDLE, wt.DWORD]
     k32.GetModuleHandleW.restype = wt.HMODULE
     k32.GetModuleHandleW.argtypes = [wt.LPCWSTR]
-    if k32.GetModuleHandleW("opengl32.dll"):
-        return False                  # an opengl32.dll is loaded already; too late to swap
+    k32.GetModuleFileNameW.argtypes = [wt.HMODULE, wt.LPWSTR, wt.DWORD]
+    loaded = k32.GetModuleHandleW("opengl32.dll")
+    if loaded:
+        buf = ctypes.create_unicode_buffer(1024)
+        k32.GetModuleFileNameW(loaded, buf, 1024)
+        return f"{buf.value} was loaded first"
     os.environ.setdefault("GALLIUM_DRIVER", "llvmpipe")
     # LOAD_WITH_ALTERED_SEARCH_PATH: look for libgallium_wgl.dll next to it first
-    return bool(k32.LoadLibraryExW(os.path.join(folder, "opengl32.dll"), None, 0x8))
+    if not k32.LoadLibraryExW(os.path.join(folder, "opengl32.dll"), None, 0x8):
+        return f"loading it failed: {ctypes.WinError(ctypes.get_last_error())}"
+    return None
 
 
 def ensure() -> str:
@@ -127,11 +135,11 @@ def ensure() -> str:
     if why is None or force == "0":
         _state = "system driver" + (f" ({', '.join(os.path.basename(d) for d in drivers)})"
                                     if drivers else "")
-    elif folder and load_mesa(folder):
+    elif folder and (err := load_mesa(folder)) is None:
         _state = f"Mesa software rendering ({why})"
     else:
         _state = f"system driver (wanted Mesa: {why}; " + \
-            ("not bundled)" if not folder else "could not load it)")
+            ("not bundled)" if not folder else f"{err})")
     return _state
 
 

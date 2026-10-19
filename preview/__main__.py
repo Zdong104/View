@@ -17,6 +17,10 @@ from . import runtime
 
 runtime.configure_gl_env()
 runtime.configure_frozen_env()
+if runtime.IS_WINDOWS and runtime.FROZEN:
+    from . import opengl_win
+    opengl_win.ensure()      # no OpenGL driver: bundled Mesa, before GTK loads opengl32.dll
+    runtime.mark("OpenGL chosen")
 
 
 def _usage_extra():

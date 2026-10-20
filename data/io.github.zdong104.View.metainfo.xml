@@ -77,6 +77,16 @@
     <keyword>STL</keyword>
   </keywords>
   <releases>
+    <release version="0.1.6" date="2026-10-20">
+      <description>
+        <p>Screenshots open in View for quick markup.</p>
+        <ul>
+          <li>Take a screenshot (Print Screen on Linux; Snipping Tool or Win+Print Screen on Windows) and View opens it with the markup tools ready. Done (or Ctrl+Enter / Ctrl+S) saves it back into the Screenshots folder and copies the edited image to the clipboard; Esc closes. On by default; turn it off in Preferences → Screenshots.</li>
+          <li>Copy Image now puts a picture on the clipboard that other apps can paste.</li>
+          <li>README in Chinese (中文).</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.5" date="2026-10-20">
       <description>
         <p>Sharper images on every screen.</p>

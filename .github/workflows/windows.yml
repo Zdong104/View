@@ -201,6 +201,15 @@ jobs:
           # does GTK load the system's opengl32.dll by itself (could Mesa load later)?
           VIEW_SOFTWARE_GL=0 trace "system OpenGL only sample.stl" build/t/sample.stl
 
+      # The runners have no GPU, like many VMs: 3D must work through the
+      # bundled Mesa, with a user's PATH (no MSYS2 on it).
+      - name: 3D models without a GPU (frozen)
+        run: |
+          VIEW_STARTUP_TRACE_WAIT=4 timeout 180 env PATH=/c/Windows/system32:/c/Windows \
+            ./dist/View/view-app.exe --startup-trace build/t/sample.stl 2>&1 | tee build/gl.txt
+          grep -q "^OpenGL: Mesa" build/gl.txt
+          ! grep -q "OpenGL failed" build/gl.txt
+
       - name: Code signing (app files)
         if: ${{ env.SIGN }}
         shell: pwsh

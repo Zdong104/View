@@ -107,7 +107,10 @@ def load_mesa(folder: str) -> str | None:
         return f"{buf.value} was loaded first"
     os.environ.setdefault("GALLIUM_DRIVER", "llvmpipe")
     # Its dependencies are in mesa\ (Mesa, LLVM), in _internal\ (shared with
-    # the rest of View) and in System32: search exactly those
+    # the rest of View) and in System32.  Both folders must be registered:
+    # LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR covers only opengl32.dll's direct
+    # imports, not libgallium_wgl.dll's (LLVM).
+    k32.AddDllDirectory(folder)
     k32.AddDllDirectory(os.path.dirname(folder))
     flags = 0x100 | 0x1000      # LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | _DEFAULT_DIRS
     if not k32.LoadLibraryExW(os.path.join(folder, "opengl32.dll"), None, flags):
@@ -153,70 +156,31 @@ def _imports(path: str) -> list[str]:
 
 
 def _missing_imports(folder: str) -> list[str]:
-    """Imports of the Mesa DLLs found neither next to them, in the bundle nor
-    in Windows (to explain a failed load)."""
-    places = [folder, os.path.dirname(folder),
-              os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32")]
-    missing = set()
+    """Ask the loader itself which Mesa DLL fails, and which of its imports it
+    can't load (to explain a failed load)."""
+    import ctypes
+    from ctypes import wintypes as wt
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.LoadLibraryExW.restype = wt.HMODULE
+    k32.LoadLibraryExW.argtypes = [wt.LPCWSTR, wt.HANDLE, wt.DWORD]
+    flags = 0x100 | 0x1000
+    out = []
     try:
-        for name in os.listdir(folder):
-            if name.lower().endswith(".dll"):
-                for imp in _imports(os.path.join(folder, name)):
-                    if not imp.lower().startswith(("api-ms-win-", "ext-ms-")) and \
-                            not any(os.path.exists(os.path.join(p, imp)) for p in places):
-                        missing.add(f"{imp} (for {name})")
+        for name in sorted(os.listdir(folder)):
+            if not name.lower().endswith(".dll"):
+                continue
+            path = os.path.join(folder, name)
+            if k32.LoadLibraryExW(path, None, flags):
+                continue
+            code = ctypes.get_last_error()
+            bad = []
+            for imp in _imports(path):
+                local = os.path.join(folder, imp)
+                ok = k32.LoadLibraryExW(local, None, flags) if os.path.exists(local) else \
+                    k32.LoadLibraryExW(imp, None, 0x1000)
+                if not ok:
+                    bad.append(f"{imp} [{ctypes.get_last_error()}]")
+            out.append(f"{name} [{code}]" + (f" needs {', '.join(bad)}" if bad else ""))
     except Exception as e:  # noqa: BLE001
-        missing.add(f"? ({e})")
-    return sorted(missing)
-
-
-def ensure() -> str:
-    """Pick the OpenGL implementation before anything uses OpenGL; returns
-    what is in use (shown in About → Troubleshooting)."""
-    global _state
-    if _state is not None:
-        return _state
-    if sys.platform != "win32":
-        _state = "system"
-        return _state
-    force = os.environ.get("VIEW_SOFTWARE_GL", "")
-    folder = mesa_dir()
-    drivers = remote = None
-    if force == "1":
-        why = "VIEW_SOFTWARE_GL=1"
-    elif os.path.exists(_flag_path()):
-        why = "the system driver failed before"
-    else:
-        try:
-            drivers, remote = opengl_drivers(), _remote_session()
-        except Exception:  # noqa: BLE001
-            drivers, remote = ["?"], False
-        why = "no OpenGL driver installed" if not drivers else \
-            "Remote Desktop" if remote else None
-    if why is None or force == "0":
-        _state = "system driver" + (f" ({', '.join(os.path.basename(d) for d in drivers)})"
-                                    if drivers else "")
-    elif folder and (err := load_mesa(folder)) is None:
-        _state = f"Mesa software rendering ({why})"
-    else:
-        _state = f"system driver (wanted Mesa: {why}; " + \
-            ("not bundled)" if not folder else f"{err})")
-    return _state
-
-
-def using_mesa() -> bool:
-    return (_state or "").startswith("Mesa")
-
-
-def remember_failure() -> bool:
-    """The system driver couldn't give us OpenGL 3.2: use Mesa from the next
-    start on.  True if that will help (Mesa is bundled and not in use yet)."""
-    if sys.platform != "win32" or using_mesa() or not mesa_dir() or \
-            os.environ.get("VIEW_SOFTWARE_GL") == "0":
-        return False
-    try:
-        os.makedirs(os.path.dirname(_flag_path()), exist_ok=True)
-        open(_flag_path(), "w").close()
-        return True
-    except OSError:
-        return False
+        out.append(f"? ({e})")
+    return out

@@ -29,13 +29,15 @@ from .image_ops import (ALPHA_FORMATS, ANIM_EXTS, COLOR_DEFAULTS, PIXBUF_SAVE, W
                         adjust_color, anim_dest_ok, anim_probe, iter_frames, save_animated,
                         apply_ops, color_is_neutral, fit_size, image_info_sections, load_base,
                         load_thumb, ops_need_alpha, oriented_size, quick_preview, save_any)
-from .viewer_base import IMAGE_EXTS, Viewer, file_info_section, kind_of
+from .viewer_base import (IMAGE_EXTS, Viewer, device_scale, file_info_section, kind_of,
+                          surface_origin)
 
 MAX_ZOOM = 32.0
 THUMB_PX = 208            # sidebar rows are 104 logical px tall (2x displays)
 PREVIEW_PX = 1600         # colour-adjust live preview
 DISPLAY_MAX = 4096        # display texture; full-res tiles are used when zoomed in
-TILE_MAX = 4096           # longest side of a zoomed-in detail tile
+TILE_MAX = 4096           # longest side of a detail tile
+TILE_CACHE = 96 * 2**20   # bytes of recent detail tiles kept for re-use
 _loader = concurrent.futures.ThreadPoolExecutor(max_workers=1)    # full decodes
 
 
@@ -226,6 +228,7 @@ class ImageCanvas(Gtk.Widget):
             self.sel = None
         self.queue_draw()
         self.emit("view-changed")
+        self._schedule_detail()
 
     def clear(self):
         self.texture = None
@@ -245,7 +248,7 @@ class ImageCanvas(Gtk.Widget):
 
     # ---- geometry ------------------------------------------------------
     def _sf(self):
-        return max(1, self.get_scale_factor())
+        return device_scale(self)            # fractional on scaled monitors
 
     def fit_zoom(self):
         """Zoom that fits the image in the view, never above 100 %.
@@ -307,16 +310,30 @@ class ImageCanvas(Gtk.Widget):
         self.ox = self.oy = 0.0
         self.queue_draw()
         self.emit("view-changed")
+        self._schedule_detail()
+
+    def _snap(self, x, y):
+        """Widget point moved onto the nearest device pixel corner."""
+        ds = self._sf()
+        sx, sy = surface_origin(self)
+        return round((sx + x) * ds) / ds - sx, round((sy + y) * ds) / ds - sy
+
+    def _origin(self):
+        """Image top-left in widget coordinates. Centring and panning are
+        fractional; on a half device pixel LINEAR filtering blurs even 1:1."""
+        s = self._scale()
+        return self._snap(self.get_width() / 2 + self.ox - self.iw * s / 2,
+                          self.get_height() / 2 + self.oy - self.ih * s / 2)
 
     def to_img(self, x, y):
         s = self._scale()
-        return ((x - self.get_width() / 2 - self.ox) / s + self.iw / 2,
-                (y - self.get_height() / 2 - self.oy) / s + self.ih / 2)
+        x0, y0 = self._origin()
+        return (x - x0) / s, (y - y0) / s
 
     def to_widget(self, ix, iy):
         s = self._scale()
-        return ((ix - self.iw / 2) * s + self.get_width() / 2 + self.ox,
-                (iy - self.ih / 2) * s + self.get_height() / 2 + self.oy)
+        x0, y0 = self._origin()
+        return x0 + ix * s, y0 + iy * s
 
     def _clamp_img(self, p):
         return (min(max(p[0], 0.0), float(self.iw)), min(max(p[1], 0.0), float(self.ih)))
@@ -590,16 +607,32 @@ class ImageCanvas(Gtk.Widget):
         self.queue_draw()
 
     def _wanted_detail(self):
-        """(box, scale) needed for a sharp view, or None if the texture suffices."""
+        """(box, scale) needed for a sharp view, or None if the texture suffices.
+        Zoomed out (scale < 1) the tile is a high-quality downscale at exactly
+        device resolution, drawn 1:1: its box spans whole device pixels from
+        the (device-aligned) image origin."""
         if not (self.texture and self.iw and self.detail_enabled):
             return None
         need = self.eff_zoom() * self._sf()                 # device px per image px
         have = self.texture.get_width() / self.iw
-        if need <= have * 1.05:
-            return None
         x0, y0 = self.to_img(0, 0)
         x1, y1 = self.to_img(self.get_width(), self.get_height())
-        scale = min(need, 1.0)
+        if need < 1:
+            dw, dh = round(self.iw * need), round(self.ih * need)
+            i0, j0 = max(0, math.floor(x0 * need)), max(0, math.floor(y0 * need))
+            i1, j1 = min(dw, math.ceil(x1 * need)), min(dh, math.ceil(y1 * need))
+            if max(i1 - i0, j1 - j0) > TILE_MAX:
+                return None                # huge view: GPU mipmaps it is
+            room = min(TILE_MAX / max(i1 - i0, 1), TILE_MAX / max(j1 - j0, 1))
+            f = min(0.25, (room - 1) / 2)
+            mi, mj = int((i1 - i0) * f), int((j1 - j0) * f)
+            i0, j0 = max(0, i0 - mi), max(0, j0 - mj)
+            i1, j1 = min(dw, i1 + mi), min(dh, j1 + mj)
+            return (i0 / need, j0 / need, min(i1 / need, float(self.iw)),
+                    min(j1 / need, float(self.ih))), need
+        if have >= 1 or need <= have * 1.05:
+            return None                    # the texture is already full resolution
+        scale = 1.0
         # margin for panning, but keep the tile within GPU texture limits
         bw, bh = (x1 - x0), (y1 - y0)
         room = min(TILE_MAX / max(bw * scale, 1), TILE_MAX / max(bh * scale, 1))
@@ -623,16 +656,34 @@ class ImageCanvas(Gtk.Widget):
             return False
         (bx0, by0, bx1, by1), scale = want
         d = self.detail
-        if d is not None:
-            _t, x0, y0, x1, y1, sc = d
-            vx0, vy0 = self.to_img(0, 0)
-            vx1, vy1 = self.to_img(self.get_width(), self.get_height())
-            covers = (x0 <= max(vx0, 0) + 0.5 and y0 <= max(vy0, 0) + 0.5 and
-                      x1 >= min(vx1, self.iw) - 0.5 and y1 >= min(vy1, self.ih) - 0.5)
-            if covers and sc >= scale * 0.95:
-                return False
+        if d is not None and self._covers(d) and (
+                abs(d[5] - scale) <= scale * 1e-3 if scale < 1 else d[5] >= scale * 0.95):
+            return False
         self.emit("need-detail", bx0, by0, bx1, by1, scale)
         return False
+
+    def _covers(self, d):
+        """Does detail tile `d` cover the visible part of the image?"""
+        _t, x0, y0, x1, y1, _sc = d
+        tol = max(0.5, 1 / (self.eff_zoom() * self._sf()))  # downscales end on a device px
+        vx0, vy0 = self.to_img(0, 0)
+        vx1, vy1 = self.to_img(self.get_width(), self.get_height())
+        return (x0 <= max(vx0, 0) + tol and y0 <= max(vy0, 0) + tol and
+                x1 >= min(vx1, self.iw) - tol and y1 >= min(vy1, self.ih) - tol)
+
+    @staticmethod
+    def _append(snapshot, tex, z, rect):
+        """Draw `tex` at `z` device px per texel. Zoomed out, GSK's own choice
+        (LINEAR down to 1/2, mipmaps below) is sharper than TRILINEAR, which
+        blends in the half-size mip level from the first step down. Whole
+        magnifications (100 % on a 2x screen) repeat pixels exactly, as sharp
+        as the image on a 1x screen; LINEAR would smear them."""
+        if z >= 4 or z >= 1.999 and abs(z - round(z)) < 1e-3:
+            snapshot.append_scaled_texture(tex, Gsk.ScalingFilter.NEAREST, rect)
+        elif z < 1:
+            snapshot.append_texture(tex, rect)
+        else:
+            snapshot.append_scaled_texture(tex, Gsk.ScalingFilter.LINEAR, rect)
 
     def do_snapshot(self, snapshot):
         if not self.texture:
@@ -640,22 +691,35 @@ class ImageCanvas(Gtk.Widget):
         vw, vh = self.get_width(), self.get_height()
         self._clamp()
         s = self._scale()
-        z = self.eff_zoom() * self._sf() * self.texture.get_width() / max(1, self.iw)
-        filt = (Gsk.ScalingFilter.NEAREST if z >= 4 else
-                Gsk.ScalingFilter.TRILINEAR if z < 1 else Gsk.ScalingFilter.LINEAR)
+        ds = self._sf()
+        if ds != getattr(self, "_last_ds", ds):    # moved to a monitor with another scale
+            self._schedule_detail()
+        self._last_ds = ds
+        need = self.eff_zoom() * ds                 # device px per image px
+        have = self.texture.get_width() / max(1, self.iw)
+        d, exact = self.detail, False
+        if d is not None:
+            exact = d[5] < 1 and abs(d[5] - need) <= need * 1e-3
+            if not (exact or d[5] > have * 1.05):
+                d = None                # stale downscale: the texture is as good meanwhile
         r = Graphene.Rect()
         # Draw in widget coordinates (no snapshot.scale): GSK in GTK 4.22 crashes
         # rendering textures under very small scale transforms (e.g. 0.03).
-        x0, y0 = self.to_widget(0, 0)
-        snapshot.append_scaled_texture(self.texture, filt,
-                                       r.init(x0, y0, self.iw * s, self.ih * s))
-        if self.detail is not None:
-            dt, dx0, dy0, dx1, dy1, _sc = self.detail
-            wx0, wy0 = self.to_widget(dx0, dy0)
-            snapshot.append_scaled_texture(
-                dt, Gsk.ScalingFilter.NEAREST if self.eff_zoom() * self._sf() >= 4 else
-                Gsk.ScalingFilter.LINEAR,
-                r.init(wx0, wy0, (dx1 - dx0) * s, (dy1 - dy0) * s))
+        x0, y0 = self.to_widget(0, 0)              # on a device pixel (_origin)
+        if d is None or not self._covers(d):
+            self._append(snapshot, self.texture, need / have,
+                         r.init(x0, y0, self.iw * s, self.ih * s))
+        if d is not None:
+            dt, dx0, dy0, dx1, dy1, sc = d
+            if exact:
+                # device-resolution downscale: 1:1 on whole device pixels
+                wx0, wy0 = self._snap(*self.to_widget(dx0, dy0))
+                snapshot.append_texture(dt, r.init(wx0, wy0, dt.get_width() / ds,
+                                                   dt.get_height() / ds))
+            else:
+                wx0, wy0 = self.to_widget(dx0, dy0)
+                self._append(snapshot, dt, need / sc,
+                             r.init(wx0, wy0, (dx1 - dx0) * s, (dy1 - dy0) * s))
         ov = self.overlay
         if ov:
             ox0, oy0 = self.to_widget(ov["cx"] - ov["w"] / 2, ov["cy"] - ov["h"] / 2)
@@ -781,6 +845,7 @@ class ImageViewer(Viewer):
         self.canvas.connect("selection-changed", lambda *_: self._update_actions())
         self.canvas.connect("need-detail", self._on_need_detail)
         self._detail_gen = 0
+        self._tiles = None         # (rendered image, [(key, texture)]) newest first
 
         overlay = Gtk.Overlay(child=self.canvas, hexpand=True)
         overlay.add_css_class("view")
@@ -1516,6 +1581,7 @@ class ImageViewer(Viewer):
 
     def _shown(self, item, rendered, display, tex, keep_view):
         item.rendered, item.display, item.texture = rendered, display, tex
+        self._tiles = None
         self.canvas.set_content(tex, rendered.size[0], rendered.size[1], overlay=item.overlay,
                                 keep_view=keep_view)
         self.canvas._schedule_detail()
@@ -1604,16 +1670,30 @@ class ImageViewer(Viewer):
         self._detail_gen += 1
         gen = self._detail_gen
         im = it.rendered
-        box = (int(x0), int(y0), int(math.ceil(x1)), int(math.ceil(y1)))
+        if scale < 1:      # downscale to exactly this many device px (canvas draws it 1:1)
+            box = (x0, y0, x1, y1)
+            size = (max(1, round((x1 - x0) * scale)), max(1, round((y1 - y0) * scale)))
+        else:
+            box = (int(x0), int(y0), int(math.ceil(x1)), int(math.ceil(y1)))
+        key = (tuple(round(v, 4) for v in box), round(scale, 6))
+        if self._tiles is None or self._tiles[0] is not im:
+            self._tiles = (im, [])             # tiles of the current render only
+        tiles = self._tiles[1]
+        for i, (k, tex) in enumerate(tiles):
+            if k == key:
+                tiles.insert(0, tiles.pop(i))
+                self.canvas.set_detail(tex, box, scale)
+                return
 
         def work():
             if gen != self._detail_gen:
                 return
-            tile = im.crop(box)
             if scale < 1:
-                tile = tile.resize((max(1, round(tile.width * scale)),
-                                    max(1, round(tile.height * scale))), Image.BILINEAR,
-                                   reducing_gap=2.0)
+                src = im if im.mode in ("RGB", "RGBA", "L", "LA") else \
+                    im.convert("RGBA" if "A" in im.mode else "RGB")
+                tile = src.resize(size, Image.LANCZOS, box=box, reducing_gap=3.0)
+            else:
+                tile = im.crop(box)
             tex = pil_to_texture(tile)
             GLib.idle_add(done, tex)
 
@@ -1621,10 +1701,21 @@ class ImageViewer(Viewer):
             if (gen == self._detail_gen and self.current is it and it.rendered is im and
                     not getattr(self, "_anim_playing", False)):
                 self.canvas.set_detail(tex, box, scale)
+                if self._tiles is not None and self._tiles[0] is im:
+                    tiles = self._tiles[1]
+                    tiles.insert(0, (key, tex))
+                    used = 0
+                    for i, (_k, t) in enumerate(tiles):
+                        used += t.get_width() * t.get_height() * 4
+                        if used > TILE_CACHE:
+                            del tiles[max(i, 1):]
+                            break
             return False
         _loader.submit(work)
 
     def _release(self, item):
+        if self._tiles is not None and self._tiles[0] is item.rendered:
+            self._tiles = None
         item.rendered = item.display = item.texture = None
         if not item.keep_base:
             item.base = None

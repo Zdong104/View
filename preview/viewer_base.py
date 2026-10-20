@@ -7,7 +7,8 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gio, GLib, Gtk
+gi.require_version("Graphene", "1.0")
+from gi.repository import Adw, Gio, GLib, Graphene, Gtk
 
 IMAGE_EXTS = {
     ".png", ".jpg", ".jpeg", ".jpe", ".webp", ".gif", ".bmp", ".tif", ".tiff",
@@ -157,6 +158,29 @@ def file_info_section(gfile: Gio.File):
         ("Last opened", _fmt_dt(opened)),
     ]
     return ("File", rows)
+
+
+def device_scale(widget):
+    """Device pixels per logical pixel of the widget's surface (fractional-aware)."""
+    native = widget.get_native()
+    surf = native.get_surface() if native else None
+    if surf is not None and hasattr(surf, "get_scale"):
+        return surf.get_scale() or 1
+    return widget.get_scale_factor() or 1
+
+
+def surface_origin(widget):
+    """The widget's top-left in its surface's logical coordinates."""
+    native = widget.get_native()
+    if native is None:
+        return 0.0, 0.0
+    pt = Graphene.Point()
+    pt.init(0, 0)
+    ok, p = widget.compute_point(native, pt)
+    if not ok:
+        return 0.0, 0.0
+    nx, ny = native.get_surface_transform()
+    return p.x + nx, p.y + ny
 
 
 class Viewer(Gtk.Box):

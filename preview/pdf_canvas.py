@@ -13,7 +13,9 @@ import math
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gdk, GLib, GObject, Graphene, Gtk
+from gi.repository import Gdk, GLib, GObject, Gtk
+
+from .viewer_base import device_scale, surface_origin
 
 GAP = 14
 MARGIN = 18
@@ -161,24 +163,11 @@ class PageCanvas(Gtk.Widget, Gtk.Scrollable):
 
     # ------------------------------------------------------- layout ----
     def device_scale(self):
-        native = self.get_native()
-        surf = native.get_surface() if native else None
-        if surf is not None and hasattr(surf, "get_scale"):
-            return surf.get_scale() or 1
-        return self.get_scale_factor() or 1
+        return device_scale(self)
 
     def surface_origin(self):
         """This widget's top-left in its surface's logical coordinates."""
-        native = self.get_native()
-        if native is None:
-            return 0.0, 0.0
-        pt = Graphene.Point()
-        pt.init(0, 0)
-        ok, p = self.compute_point(native, pt)
-        if not ok:
-            return 0.0, 0.0
-        nx, ny = native.get_surface_transform()
-        return p.x + nx, p.y + ny
+        return surface_origin(self)
 
     def fit_zoom(self, mode):
         sizes = self.v.sizes

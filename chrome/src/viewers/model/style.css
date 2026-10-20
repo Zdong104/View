@@ -1,0 +1,20 @@
+/* 3D model viewer. Colours come from the shell's theme tokens. */
+.model-view { position: absolute; inset: 0; overflow: hidden; outline: none; background: var(--canvas-bg); color: var(--window-fg);
+  font-family: var(--font); }
+.model-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+.model-canvas.dragging { cursor: grabbing; }
+.model-canvas.panning { cursor: move; }
+.model-stats { position: absolute; left: 12px; bottom: 12px; padding: 8px 10px; border-radius: var(--radius);
+  background: var(--toast-bg); color: var(--toast-fg); font-size: 12px; line-height: 1.45; white-space: pre;
+  font-variant-numeric: tabular-nums; pointer-events: none; }
+.model-stats[hidden] { display: none; }
+.model-status { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; text-align: center; padding: 24px; pointer-events: none; }
+.model-status[hidden] { display: none; }
+.model-status h2 { margin: 0; font-size: 1.25rem; font-weight: 700; }
+.model-status p { margin: 0; max-width: 46ch; color: var(--dim-fg); white-space: pre-line; }
+.model-status.error { background: var(--canvas-bg); pointer-events: auto; }
+.model-spinner { width: 40px; height: 40px; border-radius: 50%; border: 3px solid var(--border);
+  border-top-color: var(--accent); animation: model-spin 0.9s linear infinite; }
+@keyframes model-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .model-spinner { animation-duration: 3s; } }

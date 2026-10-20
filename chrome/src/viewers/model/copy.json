@@ -1,0 +1,4 @@
+[
+  { "from": "src/viewers/model/mesh-core.js", "to": "vendor/model/mesh-core.js" },
+  { "from": "src/viewers/model/mesh-worker.js", "to": "vendor/model/mesh-worker.js" }
+]

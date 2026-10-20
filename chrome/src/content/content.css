@@ -1,0 +1,5 @@
+/* Injected into every page by the content script. Any <object>/<embed> that gets
+   rendered fires `animationstart`, which detect.ts filters for PDFs. Same
+   technique as pdf.js extensions/chromium/contentstyle.css. */
+@keyframes view-detect-object-or-embed { from {} }
+object, embed, iframe[src^="data:application/pdf" i] { animation: 1ms view-detect-object-or-embed !important; }

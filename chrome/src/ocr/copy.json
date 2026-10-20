@@ -1,0 +1,6 @@
+[
+  { "from": "node_modules/onnxruntime-web/dist/ort.wasm.min.mjs", "to": "vendor/ort/ort.wasm.min.mjs" },
+  { "from": "node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs", "to": "vendor/ort/ort-wasm-simd-threaded.mjs" },
+  { "from": "node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm", "to": "vendor/ort/ort-wasm-simd-threaded.wasm" },
+  { "from": "src/ocr/models", "to": "ocr/models" }
+]

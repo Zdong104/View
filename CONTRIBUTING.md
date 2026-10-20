@@ -43,6 +43,20 @@ All code lives in `preview/`:
 | `inspector.py` | Get Info window |
 | `quicklook.py`, `quicklook_renderers.py` | Quick Look service for GNOME Files |
 
+## Chrome extension
+
+The Chrome version lives in `chrome/` (TypeScript, esbuild, Manifest V3). It needs Node 22+ and takes its version from `preview/__init__.py`.
+
+```bash
+cd chrome
+npm install        # also downloads Chrome for Testing for the tests
+npm run build      # unpacked extension in chrome/dist/ (fetches the OCR models on first build)
+npm test           # typecheck, licence check, unit and end-to-end tests
+npm run package    # view-chrome-<version>.zip for the Chrome Web Store
+```
+
+Load `chrome/dist/` with **Load unpacked** on `chrome://extensions`. [chrome/ARCHITECTURE.md](chrome/ARCHITECTURE.md) explains the layout, the viewer contract and how each desktop feature maps to the browser. Only permissively licensed dependencies (MIT, Apache-2.0, BSD, ISC) are allowed; `npm test` checks this.
+
 ## Coding style
 
 - Match the surrounding code: naming, formatting, comment density.

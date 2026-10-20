@@ -1,6 +1,6 @@
 # View
 
-**A macOS-Preview-style viewer for Linux (GNOME) and Windows.** View, annotate and sign PDFs, images, 3D models, tables and video in one fast GTK4 + libadwaita app, including signing with your laptop touchpad.
+**A macOS-Preview-style viewer for Linux (GNOME) and Windows, also available as a Chrome extension.** View, annotate and sign PDFs, images, 3D models, tables and video in one fast GTK4 + libadwaita app, including signing with your laptop touchpad.
 
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Zdong104/View?include_prereleases)](https://github.com/Zdong104/View/releases)
@@ -80,6 +80,14 @@ Download [`View-Setup-0.1.4.exe`](https://github.com/Zdong104/View/releases/down
 
 Text recognition (OCR) is included from 0.1.1 on. It runs in a small helper program, `ocr\view-ocr.exe`, which View starts in the background.
 
+### Chrome extension
+
+View is also supported in Chrome as an extension.
+
+1. Download [`view-chrome-0.1.4.zip`](https://github.com/Zdong104/View/releases/download/v0.1.4/view-chrome-0.1.4.zip) and unzip it.
+2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and choose the unzipped folder.
+3. To open local files, click **Details** on View and turn on **Allow access to file URLs**.
+
 ### From source
 
 ```bash
@@ -120,6 +128,7 @@ On Windows it works out of the box with a Precision Touchpad: open **New Signatu
 | Ubuntu 24.04 | Tested on the snap install |
 | Fedora, Arch, other distros | ❓ Untested |
 | Windows | ✅ Tested, feedback wanted |
+| Chrome extension | ✅ Tested |
 | macOS | Use Mac Preview 🙂 |
 
 ## 🙏 Feedback wanted

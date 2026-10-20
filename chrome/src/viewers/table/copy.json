@@ -1,0 +1,5 @@
+[
+  { "from": "src/viewers/table/worker.js", "to": "vendor/table/worker.js" },
+  { "from": "node_modules/papaparse/papaparse.min.js", "to": "vendor/table/papaparse.min.js" },
+  { "from": "node_modules/papaparse/LICENSE", "to": "vendor/table/LICENSE-papaparse" }
+]

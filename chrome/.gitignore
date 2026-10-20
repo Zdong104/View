@@ -1,0 +1,10 @@
+node_modules/
+dist/
+dist-*/
+.cache/
+*.zip
+# Chrome for Testing download (Puppeteer) and unit-test bundles live in .cache/
+
+# OCR models are fetched and hash-checked by scripts/models.mjs at build time
+src/ocr/models/*.onnx
+src/ocr/models/*.part

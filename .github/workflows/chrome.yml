@@ -1,0 +1,47 @@
+name: Chrome extension
+
+on:
+  push:
+    branches: [main]
+    paths: ["chrome/**", "preview/__init__.py", ".github/workflows/chrome.yml"]
+  pull_request:
+    paths: ["chrome/**", "preview/__init__.py", ".github/workflows/chrome.yml"]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: chrome/package-lock.json
+      # OCR models are fetched (and hash-checked) by the build; keep them between runs
+      - uses: actions/cache@v4
+        with:
+          path: chrome/src/ocr/models/*.onnx
+          key: ocr-models-${{ hashFiles('chrome/scripts/models.mjs') }}
+      # Puppeteer downloads Chrome for Testing into chrome/.cache/puppeteer on install
+      - name: Install
+        run: npm ci
+      # Ubuntu 24.04+ runners block unprivileged user namespaces, which Chrome's sandbox needs
+      - name: Allow the Chrome sandbox
+        run: echo 0 | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns
+      - name: Typecheck, licences, build, unit and e2e tests
+        run: npm test
+      - name: Package for the Chrome Web Store
+        run: npm run package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chrome
+          path: chrome/view-chrome-*.zip
+          if-no-files-found: error

@@ -28,9 +28,12 @@ jobs:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
 
+  chrome:
+    uses: ./.github/workflows/chrome.yml
+
   release:
-    needs: [deb, snap, windows]
-    # publish whatever built: a failed snap or Windows build must not block the .deb
+    needs: [deb, snap, windows, chrome]
+    # publish whatever built: a failed snap, Windows or Chrome build must not block the .deb
     if: ${{ !cancelled() && needs.deb.result == 'success' && startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     permissions:
@@ -44,7 +47,7 @@ jobs:
         run: |
           mkdir -p upload
           find artifacts -type f \( -name '*.deb' -o -name '*.snap' -o -name 'View-Setup-*.exe' \
-               -o -name 'View-*-windows-portable.zip' \) -exec cp {} upload/ \;
+               -o -name 'View-*-windows-portable.zip' -o -name 'view-chrome-*.zip' \) -exec cp {} upload/ \;
           cd upload && sha256sum * > SHA256SUMS && cat SHA256SUMS
       - name: Create GitHub release
         env:

@@ -1,0 +1,54 @@
+/* Table viewer. Colours come from the shared theme tokens. */
+.tbl-root { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--view-bg); font-size: 13px; }
+.tbl-grid { position: relative; flex: 1; min-height: 0; }
+.tbl-scroll { position: absolute; inset: 0; overflow: auto; outline: none; contain: strict; background: var(--view-bg); }
+.tbl-sizer { position: relative; min-width: 100%; }
+.tbl-head { position: sticky; top: 0; z-index: 3; height: 28px; background: var(--window-bg); border-bottom: 1px solid var(--border); }
+.tbl-body { position: absolute; left: 0; top: 28px; }
+.tbl-corner { position: sticky; left: 0; z-index: 4; height: 28px; background: var(--window-bg); border-right: 1px solid var(--border); }
+.tbl-th { position: absolute; top: 0; height: 28px; display: flex; align-items: center; gap: 4px; padding: 0 4px 0 8px;
+  border-right: 1px solid var(--border); font-weight: 600; user-select: none; overflow: hidden; background: var(--window-bg); }
+.tbl-th.sel { background: var(--selected); }
+.tbl-th .th-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tbl-th .dim { color: var(--dim-fg); font-weight: 500; }
+.th-sort { border: 0; background: none; padding: 2px 4px; border-radius: 4px; font-size: 10px; color: var(--dim-fg); opacity: 0; cursor: default; }
+.tbl-th:hover .th-sort, .th-sort.on, .th-sort:focus-visible { opacity: 1; }
+.th-sort:hover { background: var(--hover); }
+.th-sort.on { color: var(--accent-text); }
+.th-rz { position: absolute; right: -3px; top: 0; bottom: 0; width: 7px; cursor: col-resize; z-index: 2; }
+.th-rz:hover { background: var(--accent); opacity: 0.4; }
+.th-edit { width: 100%; height: 22px; font: inherit; color: inherit; background: var(--view-bg); border: 1px solid var(--accent); border-radius: 4px; padding: 0 4px; }
+
+.tbl-row { position: absolute; left: 0; height: 24px; width: 100%; contain: layout style; }
+.tbl-rn { position: sticky; left: 0; z-index: 2; height: 24px; line-height: 24px; text-align: right; padding-right: 8px; color: var(--dim-fg);
+  background: var(--window-bg); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; user-select: none; font-size: 11px; }
+.tbl-rn.sel { background: var(--selected); color: inherit; }
+.tbl-cell { position: absolute; top: 0; height: 24px; line-height: 23px; padding: 0 8px; overflow: hidden; white-space: pre; text-overflow: ellipsis;
+  border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+.tbl-cell.num { text-align: right; }
+.tbl-row.odd .tbl-cell { background: color-mix(in srgb, var(--window-fg) 2.5%, transparent); }
+.tbl-cell.sel { background: var(--selected) !important; }
+.tbl-cell.hit { background: color-mix(in srgb, var(--warning) 35%, transparent) !important; }
+.tbl-cell.hit-cur { background: color-mix(in srgb, var(--warning) 65%, transparent) !important; }
+.tbl-cell.cur { box-shadow: inset 0 0 0 2px var(--accent); }
+.tbl-row.loading .tbl-cell { background-image: linear-gradient(90deg, transparent, color-mix(in srgb, var(--window-fg) 5%, transparent), transparent); }
+.tbl-edit { position: absolute; z-index: 5; margin: 0; resize: none; overflow: hidden; font: inherit; line-height: 22px; padding: 0 7px; color: inherit;
+  background: var(--view-bg); border: 2px solid var(--accent); border-radius: 0; outline: none; white-space: pre; box-shadow: var(--shadow); }
+
+.tbl-find { display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: var(--window-bg); border-bottom: 1px solid var(--border); }
+.tbl-find-input { flex: 0 1 280px; min-width: 120px; height: 30px; font: inherit; color: inherit; background: var(--view-bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 0 8px; }
+.tbl-find-input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.tbl-find-count { color: var(--dim-fg); min-width: 80px; font-variant-numeric: tabular-nums; }
+
+.tbl-status { display: flex; justify-content: space-between; gap: 16px; padding: 3px 10px; min-height: 24px; font-size: 12px; color: var(--dim-fg);
+  background: var(--window-bg); border-top: 1px solid var(--border); }
+.tbl-status-l, .tbl-status-r { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tbl-busy { position: absolute; left: 0; right: 0; bottom: 24px; display: flex; align-items: center; gap: 10px; padding: 4px 10px; background: var(--popover-bg);
+  border-top: 1px solid var(--border); font-size: 12px; z-index: 10; }
+.tbl-busy-bar { height: 3px; background: var(--accent); border-radius: 2px; position: absolute; left: 0; top: 0; transition: width 0.15s; }
+.tbl-busy.indeterminate .tbl-busy-bar { animation: tbl-pulse 1.1s ease-in-out infinite alternate; }
+@keyframes tbl-pulse { from { margin-left: 0; } to { margin-left: 70%; } }
+.menu-heading { padding: 6px 10px 2px; font-size: 11px; font-weight: 700; color: var(--dim-fg); }
+.popover.pm { max-height: calc(100vh - 16px); overflow: auto; }
+.popover.pm .menu-item:disabled { opacity: 0.4; }

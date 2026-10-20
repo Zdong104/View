@@ -1,0 +1,63 @@
+/* Video and audio viewer: a black stage with an auto-hiding OSD control bar. */
+.media-view { position: absolute; inset: 0; overflow: hidden; outline: none; background: #000; color: #fff; font-family: var(--font);
+  user-select: none; -webkit-user-select: none; }
+.media-view.is-audio { background: var(--canvas-bg); color: var(--window-fg); }
+.mv-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+.is-audio .mv-video { visibility: hidden; height: 1px; width: 1px; }
+.mv-audio { position: absolute; inset: 0 0 72px; display: none; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; padding: 0 48px; text-align: center; pointer-events: none; }
+.is-audio .mv-audio { display: flex; }
+.mv-audio .icon { width: 160px; height: 160px; color: var(--dim-fg); }
+.mv-audio-title { font-size: 1.4rem; font-weight: 700; overflow-wrap: anywhere; }
+.mv-audio-sub { color: var(--dim-fg); }
+
+.mv-osd { position: absolute; left: 50%; top: 18%; transform: translateX(-50%); padding: 8px 16px; border-radius: 999px;
+  background: rgba(0, 0, 0, 0.7); color: #fff; font-size: 1.1rem; font-variant-numeric: tabular-nums; pointer-events: none;
+  opacity: 0; transition: opacity 0.15s; }
+.mv-osd.show { opacity: 1; }
+
+.mv-bar { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 4px;
+  padding: 4px 8px; border-radius: 14px; background: rgba(30, 30, 33, 0.88); color: #fff; backdrop-filter: blur(8px);
+  transition: opacity 0.2s; }
+.mv-bar .btn { color: inherit; }
+.mv-bar .btn:hover { background: rgba(255, 255, 255, 0.14); }
+.mv-bar .btn:active, .mv-bar .btn[aria-pressed="true"] { background: rgba(255, 255, 255, 0.26); }
+.mv-bar .btn-label { font-variant-numeric: tabular-nums; min-width: 2.4em; }
+.mv-time { font-size: 0.9rem; font-variant-numeric: tabular-nums; min-width: 3.2em; }
+.mv-time.cur { text-align: right; }
+.hide-controls .mv-bar { opacity: 0; pointer-events: none; }
+.hide-controls { cursor: none; }
+
+.mv-slider { position: relative; height: 22px; display: flex; align-items: center; cursor: pointer; touch-action: none; outline: none; }
+.mv-slider.seek { flex: 1; min-width: 60px; }
+.mv-slider.vol { width: 80px; flex: none; }
+.mv-track { position: relative; width: 100%; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.25); }
+.mv-buf, .mv-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; }
+.mv-buf { background: rgba(255, 255, 255, 0.3); }
+.mv-fill { background: var(--accent); }
+.mv-thumb { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: #fff;
+  transform: scale(0); transition: transform 0.1s; }
+.mv-slider:hover .mv-thumb, .mv-slider:focus-visible .mv-thumb, .mv-slider.drag .mv-thumb { transform: scale(1); }
+.mv-slider:focus-visible .mv-track { outline: 2px solid var(--accent); outline-offset: 3px; }
+.is-audio .mv-bar { background: var(--header-bg); color: var(--header-fg); box-shadow: var(--shadow); }
+.is-audio .mv-track { background: var(--hover); }
+.is-audio .mv-buf { background: var(--active); }
+.is-audio .mv-bar .btn:hover { background: var(--hover); }
+.is-audio .mv-bar .btn:active, .is-audio .mv-bar .btn[aria-pressed="true"] { background: var(--active); }
+.is-audio .mv-thumb { background: var(--accent); }
+
+.mv-error { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; padding: 24px; text-align: center; background: var(--canvas-bg); color: var(--window-fg); }
+.mv-error.show { display: flex; }
+.mv-error .icon { width: 64px; height: 64px; color: var(--dim-fg); }
+.mv-error h2 { margin: 0; font-size: 1.25rem; font-weight: 700; }
+.mv-error p { margin: 0; max-width: 52ch; color: var(--dim-fg); white-space: pre-line; }
+
+.mv-spinner { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.25); border-top-color: #fff; animation: mv-spin 0.9s linear infinite; pointer-events: none; display: none; }
+.waiting .mv-spinner { display: block; }
+@keyframes mv-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .mv-spinner { animation-duration: 3s; } }
+
+.mv-menu { position: fixed; z-index: 60; min-width: 110px; padding: 6px; border-radius: var(--radius-lg); background: var(--popover-bg);
+  color: var(--window-fg); box-shadow: var(--shadow); border: 1px solid var(--border); }

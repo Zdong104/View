@@ -33,6 +33,9 @@ jobs:
       # Puppeteer downloads Chrome for Testing into chrome/.cache/puppeteer on install
       - name: Install
         run: npm ci
+      # The OCR tests draw Chinese text; without a CJK font it renders as empty boxes
+      - name: Fonts for the OCR tests
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-noto-cjk
       # Ubuntu 24.04+ runners block unprivileged user namespaces, which Chrome's sandbox needs
       - name: Allow the Chrome sandbox
         run: echo 0 | sudo tee /proc/sys/kernel/apparmor_restrict_unprivileged_userns

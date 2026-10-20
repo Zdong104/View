@@ -77,6 +77,17 @@
     <keyword>STL</keyword>
   </keywords>
   <releases>
+    <release version="0.1.5" date="2026-10-20">
+      <description>
+        <p>Sharper images on every screen.</p>
+        <ul>
+          <li>Big photos fitted to the window are scaled down at full quality to exactly your screen's resolution instead of by the graphics card, which looked soft.</li>
+          <li>Images sit exactly on screen pixels while centred, panned or zoomed, and 100 % on a high-DPI (2x) screen repeats pixels exactly, as sharp as on a regular screen (Linux and Windows).</li>
+          <li>Images stay sharp after moving the window to a screen with different scaling.</li>
+          <li>Opening a folder shows the images in it, sorted by name.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.4" date="2026-10-20">
       <description>
         <p>Software updates: View checks for a new version once a day, when you open About and from Check for Updates in the menu, and installs it for you (Windows installer and .deb). Older versions stay on the Releases page.</p>

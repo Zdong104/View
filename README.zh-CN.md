@@ -5,7 +5,7 @@
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Zdong104/View?include_prereleases)](https://github.com/Zdong104/View/releases)
 [![Downloads](https://img.shields.io/github/downloads/Zdong104/View/total)](https://github.com/Zdong104/View/releases)
-[![English](https://img.shields.io/badge/lang-English-blue)](README.md)
+[![English](https://img.shields.io/badge/English-blue)](README.md)
 
 ![在 View 中签署 PDF](docs/screenshots/pdf-sign.png)
 

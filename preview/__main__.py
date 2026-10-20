@@ -6,6 +6,7 @@ Options handled here (before GTK starts, no display needed):
   --check-updates                print whether a newer release is available
   --selftest [--no-ui]           check that every viewer works, exit 0/1
   --quicklook [--debug] [FILE…]  run the Quick Look service for GNOME Files
+  --screenshot-watcher           open new GNOME screenshots for quick markup
   --combine-pdf -o OUT IMG…      combine images into a PDF (see --combine-pdf --help)
   --enable-files-integration     Space-bar previews + "Combine Images into PDF" in Files
   --disable-files-integration    undo the above
@@ -61,6 +62,9 @@ def main(argv=None):
     if first == "--quicklook":
         from .quicklook import main as ql_main
         return ql_main([argv[0], *args[1:]])
+    if first == "--screenshot-watcher":
+        from .screenshot import main as screenshot_main
+        return screenshot_main(args[1:])
     if first == "--combine-pdf":
         from .convert import main as convert_main
         return convert_main(args[1:])

@@ -2020,13 +2020,15 @@ class ImageViewer(Viewer):
         self._edit(it, it.ops + [("alpha", int(x), int(y), float(self.tol_scale.get_value()))])
 
     def _cancel(self):
+        """Escape: back out of the innermost tool or state.  Returns False when
+        there was nothing to cancel (the screenshot editor then closes)."""
         if self.mk is not None and self.mk.escape():
             self.canvas.queue_draw()
-            return
+            return True
         if self.canvas.text is not None and self.canvas.text.has_selection():
             self.canvas.text.clear()
             self.canvas.queue_draw()
-            return
+            return True
         if self._slideshow is not None:
             self._stop_slideshow()
         elif self._color is not None:
@@ -2041,6 +2043,9 @@ class ImageViewer(Viewer):
             self._set_tool("pan")
         elif isinstance(self.window, Gtk.Window) and self.window.is_fullscreen():
             self.window.unfullscreen()
+        else:
+            return False
+        return True
 
     def _place_signature(self, sig):
         it = self.current
@@ -2382,7 +2387,10 @@ class ImageViewer(Viewer):
 
     # ---- copy ---------------------------------------------------------------------------------
     def _set_clip(self, texture):
-        self.get_clipboard().set_content(Gdk.ContentProvider.new_for_value(texture))
+        # typed as GdkTexture: a GdkMemoryTexture GValue finds no serializers,
+        # so other apps would see an empty clipboard
+        self.get_clipboard().set_content(
+            Gdk.ContentProvider.new_for_value(GObject.Value(Gdk.Texture, texture)))
 
     def _copy(self):
         t = self.canvas.text

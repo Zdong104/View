@@ -172,13 +172,13 @@ def _reload_bus():
         pass
 
 
-def _owner_pid():
+def _owner_pid(name=BUS_NAME):
     from gi.repository import GLib, Gio
     try:
         bus = _session_bus()
         owner = bus.call_sync("org.freedesktop.DBus", "/org/freedesktop/DBus",
                               "org.freedesktop.DBus", "GetNameOwner",
-                              GLib.Variant("(s)", (BUS_NAME,)), GLib.VariantType("(s)"),
+                              GLib.Variant("(s)", (name,)), GLib.VariantType("(s)"),
                               Gio.DBusCallFlags.NONE, 2000, None).unpack()[0]
         pid = bus.call_sync("org.freedesktop.DBus", "/org/freedesktop/DBus",
                             "org.freedesktop.DBus", "GetConnectionUnixProcessID",

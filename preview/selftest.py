@@ -132,7 +132,7 @@ MODULES = ["app", "viewer_base", "image_view", "image_ops", "pdf_view", "pdf_ops
            "pdf_render", "pdf_canvas", "markup", "signature", "stl_view", "mesh_io",
            "table_view", "table_data", "text_view", "syntax", "video_view", "media_player",
            "inspector", "convert", "ocr", "ocr_install", "preferences", "touchpad"]
-LINUX_MODULES = ["integration", "quicklook", "quicklook_renderers"]
+LINUX_MODULES = ["integration", "quicklook", "quicklook_renderers", "screenshot"]
 
 
 def _import_all():

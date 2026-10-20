@@ -26,6 +26,10 @@ class PreferencesDialog(Adw.PreferencesDialog):
                                   subtitle=reason, subtitle_selectable=True))
             page.add(grp)
 
+        from . import screenshot
+        if screenshot.supported():
+            page.add(self._screenshots_group())
+
         page.add(self._updates_group())
 
         self.ocr_group = Adw.PreferencesGroup(title="Text Recognition")
@@ -58,6 +62,24 @@ class PreferencesDialog(Adw.PreferencesDialog):
         sc.connect("notify::active", toggled, "sc")
         grp.add(ql)
         grp.add(sc)
+        return grp
+
+    # ---- screenshots ----
+    def _screenshots_group(self):
+        from . import screenshot
+        grp = Adw.PreferencesGroup(title="Screenshots")
+        row = Adw.SwitchRow(title="Edit screenshots after capture",
+                            subtitle="Press Print Screen and the screenshot opens in View for "
+                                     "quick markup; Done saves it and copies it to the clipboard",
+                            active=screenshot.enabled())
+
+        def toggled(r, _pspec):
+            try:
+                screenshot.set_enabled(r.get_active())
+            except OSError as e:
+                self.add_toast(Adw.Toast(title=f"Could not change the setting: {e}"))
+        row.connect("notify::active", toggled)
+        grp.add(row)
         return grp
 
     # ---- updates ----

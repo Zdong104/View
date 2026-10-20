@@ -776,6 +776,7 @@ class PreviewApp(Adw.Application):
         """Open files: all images in one window, each PDF/model in its own.
         An empty `target` (or empty active window) is reused for the first group."""
         images, pdfs, models, tables, videos, texts, unknown = [], [], [], [], [], [], []
+        files, empty = self._expand_folders(files)
         for f in files:
             k = kind_of(f, sniff=True)
             {"image": images, "pdf": pdfs, "model": models, "table": tables,
@@ -819,6 +820,35 @@ class PreviewApp(Adw.Application):
             anchor = first[0] or target or self._active_main() or MainWindow(self)
             anchor.present()
             anchor.show_toast(msg)
+        if empty:
+            anchor = first[0] or target or self._active_main() or MainWindow(self)
+            anchor.present()
+            anchor.show_toast(f"No images in {empty[0].get_basename() or 'this folder'}")
+
+    @staticmethod
+    def _expand_folders(files):
+        """A folder opens the images directly in it, sorted by name, like
+        Preview. Folders without images come back separately."""
+        out, empty = [], []
+        for f in files:
+            if f.query_file_type(Gio.FileQueryInfoFlags.NONE, None) != Gio.FileType.DIRECTORY:
+                out.append(f)
+                continue
+            names = []
+            try:
+                for info in f.enumerate_children("standard::name,standard::type",
+                                                 Gio.FileQueryInfoFlags.NONE, None):
+                    if info.get_file_type() == Gio.FileType.REGULAR:
+                        names.append(info.get_name())
+            except GLib.Error:
+                pass
+            imgs = [f.get_child(n) for n in sorted(names, key=str.casefold)]
+            imgs = [c for c in imgs if kind_of(c) == "image"]
+            if imgs:
+                out += imgs
+            else:
+                empty.append(f)
+        return out, empty
 
     @staticmethod
     def _pdf_multi():

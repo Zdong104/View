@@ -77,6 +77,16 @@
     <keyword>STL</keyword>
   </keywords>
   <releases>
+    <release version="0.1.4" date="2026-10-20">
+      <description>
+        <p>Software updates: View checks for a new version once a day, when you open About and from Check for Updates in the menu, and installs it for you (Windows installer and .deb). Older versions stay on the Releases page.</p>
+        <ul>
+          <li>Windows: 3D models work on PCs without an OpenGL driver, such as virtual machines and Remote Desktop, with built-in software rendering.</li>
+          <li>The first window no longer waits for the recent-files list (slow or missing network drives).</li>
+          <li>view-app --startup-trace times each startup step; About → Troubleshooting shows the same.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.3" date="2026-10-17">
       <description>
         <p>Snap: touchpad signing works again (View could not find the touchpad inside the sandbox even with raw-input connected), and the signature dialog now says which permission is missing.</p>

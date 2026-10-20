@@ -1,6 +1,7 @@
 """Application shell: windows, file routing, drag & drop, menus."""
 import os
 import sys
+import threading
 import traceback
 
 import gi
@@ -36,13 +37,13 @@ row.drop-before, .drop-before { box-shadow: inset 0 3px @accent_bg_color; }
 """
 
 
-def _recent_files(limit=10):
-    """Recently used local files of types we can open: [(uri, Gio.File), ...]."""
-    out = []
+def _recent_uris():
+    """Recently used URIs, newest first (main thread: GtkRecentManager isn't
+    thread-safe)."""
     try:
         infos = Gtk.RecentManager.get_default().get_items()
     except Exception:  # noqa: BLE001
-        return out
+        return []
 
     def stamp(i):
         best = 0
@@ -53,8 +54,15 @@ def _recent_files(limit=10):
             except Exception:  # noqa: BLE001
                 pass
         return best
-    for info in sorted(infos, key=stamp, reverse=True):
-        uri = info.get_uri()
+    return [i.get_uri() for i in sorted(infos, key=stamp, reverse=True)]
+
+
+def _existing_files(uris, limit=10):
+    """The first `limit` of `uris` that are local files of a type we can open:
+    [(uri, Gio.File), ...].  Touches the files (a missing network share can
+    take many seconds), so run it in a thread."""
+    out = []
+    for uri in uris:
         if not uri or not uri.startswith("file://"):
             continue
         f = Gio.File.new_for_uri(uri)
@@ -129,10 +137,44 @@ SHORTCUT_SECTIONS = [
 ]
 
 
-def _note_startup(_widget, _clock):
+def _note_startup(widget, _clock):
     """First frame of the first window: how long startup took (About → Troubleshooting)."""
     if runtime.startup_seconds is None:
-        runtime.startup_seconds = runtime.process_age()
+        runtime.mark("first frame")
+        runtime.startup_seconds = runtime.startup_marks[-1][1]
+        if runtime.startup_trace:
+            print(f"{APP_NAME} {runtime.VERSION} startup trace "
+                  "(seconds since the process started):", flush=True)
+            print(runtime.startup_report(), flush=True)
+            mods = runtime.loaded_modules()
+            if mods:
+                windir = os.path.normcase(os.environ.get("SystemRoot", r"C:\Windows"))
+                ours = [m for m in mods if not os.path.normcase(
+                    m.removeprefix("\\\\?\\")).startswith(windir)]
+                mb = sum(os.path.getsize(m) for m in ours if os.path.exists(m)) / 1e6
+                print(f"{len(mods)} DLLs loaded, {len(ours)} of them View's own "
+                      f"({mb:.0f} MB)", flush=True)
+                gl = [m for m in mods if os.path.basename(m).lower() == "opengl32.dll"]
+                print("opengl32.dll: " + (", ".join(gl) or "not loaded"), flush=True)
+                if os.environ.get("VIEW_STARTUP_TRACE_DLLS"):
+                    for m in sorted(ours, key=lambda m: -os.path.getsize(m)):
+                        print(f"  {os.path.getsize(m) / 1e6:6.1f} MB  {m}", flush=True)
+            # keep running a little: loading often goes on after the first frame
+            app = widget.get_application()
+            wait = float(os.environ.get("VIEW_STARTUP_TRACE_WAIT", "5"))
+
+            def done():
+                if runtime.stall_watch is not None:
+                    print(runtime.stall_watch.report(), flush=True)
+                for w in app.get_windows():
+                    failed = getattr(getattr(w, "viewer", None), "_gl_failed", None)
+                    if failed:
+                        print(f"3D viewer: OpenGL failed: {failed}", flush=True)
+                if "preview.opengl_win" in sys.modules:
+                    print("OpenGL: " + str(sys.modules["preview.opengl_win"]._state), flush=True)
+                app.quit()
+                return GLib.SOURCE_REMOVE
+            GLib.timeout_add(int(wait * 1000), done)
     return GLib.SOURCE_REMOVE
 
 
@@ -149,12 +191,16 @@ def debug_info(window=None) -> str:
              f"{Adw.get_micro_version()}, GLib {GLib.MAJOR_VERSION}.{GLib.MINOR_VERSION}"]
     if runtime.startup_seconds is not None:
         lines.append(f"Startup: {runtime.startup_seconds:.1f} s to the first window")
+        lines += ["  " + ln for ln in runtime.startup_report().splitlines()]
     display = Gdk.Display.get_default()
     if display is not None:
         lines.append(f"Display: {type(display).__name__}")
     if window is not None and window.get_native() is not None:
         r = window.get_native().get_renderer()
         lines.append(f"Renderer: {type(r).__name__ if r is not None else '?'}")
+    if runtime.IS_WINDOWS:
+        from . import opengl_win
+        lines.append("OpenGL (3D): " + (opengl_win._state or "not used yet"))
     for var in ("GSK_RENDERER", "GDK_BACKEND", "GDK_DEBUG", "GDK_SCALE"):
         if os.environ.get(var):
             lines.append(f"{var}={os.environ[var]}")
@@ -261,7 +307,21 @@ class MainWindow(Adw.ApplicationWindow):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18, halign=Gtk.Align.CENTER)
         box.append(Gtk.Button(label="Open…", halign=Gtk.Align.CENTER,
                               css_classes=["pill", "suggested-action"], action_name="win.open"))
-        recents = _recent_files(5)
+        self._recent_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
+        box.append(self._recent_box)
+        self.show_recents(self.get_application().recent_items)
+        page.set_child(box)
+        return page
+
+    def show_recents(self, items):
+        """Fill the empty page's Recent list (the app finds the files in the
+        background and calls this again when it has them)."""
+        box = getattr(self, "_recent_box", None)
+        if box is None:
+            return
+        while (child := box.get_first_child()) is not None:
+            box.remove(child)
+        recents = items[:5]
         if recents:
             box.append(Gtk.Label(label="Recent", css_classes=["heading"], halign=Gtk.Align.START))
             lb = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=["boxed-list"],
@@ -276,8 +336,6 @@ class MainWindow(Adw.ApplicationWindow):
                 row.connect("activated", lambda _r, f=f: self.open_files([f]))
                 lb.append(row)
             box.append(lb)
-        page.set_child(box)
-        return page
 
     def _paste_shortcut(self, *_):
         if self.viewer is not None and not hasattr(self.viewer, "add_untitled"):
@@ -363,6 +421,7 @@ class MainWindow(Adw.ApplicationWindow):
             from .text_view import TextViewer as cls
         else:
             raise ValueError(f"Unsupported file type: {kind}")
+        runtime.mark(f"{kind} viewer imported")
         viewer = cls(self)
         self.viewer = viewer
         self.bin.set_child(viewer)
@@ -384,6 +443,7 @@ class MainWindow(Adw.ApplicationWindow):
         try:
             viewer = self.ensure_viewer(kind)
             viewer.load(files)
+            runtime.mark(f"{kind} loaded")
             app = self.get_application()
             for f in files[:10]:          # don't flood Recent when opening a whole folder
                 app.add_recent(f)
@@ -493,8 +553,11 @@ class PreviewApp(Adw.Application):
             flags |= Gio.ApplicationFlags.NON_UNIQUE
         super().__init__(application_id=APP_ID, flags=flags)
         self.recent_menu = Gio.Menu()
+        self.recent_items = []          # [(uri, Gio.File)], found by _refresh_recent
+        self._recent_gen = 0
         self.primary_menu = self._build_menu()
         self._want_signature = False
+        self.updater = None
         self.add_main_option("new-signature", 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE,
                              "Draw a new signature with the touchpad", None)
         self.connect("handle-local-options", self._on_local_options)
@@ -531,13 +594,18 @@ class PreviewApp(Adw.Application):
         s3 = Gio.Menu()
         s3.append("Preferences", "app.preferences")
         s3.append("Keyboard Shortcuts", "app.shortcuts")
+        s3.append("Check for Updates…", "app.check-updates")
         s3.append("About View", "app.about")
         s3.append("Quit", "app.quit")
         m.append_section(None, s3)
         return m
 
     def do_startup(self):
+        runtime.mark("application registered")
+        if runtime.stall_watch is not None:
+            GLib.timeout_add(50, runtime.stall_watch.beat)
         Adw.Application.do_startup(self)
+        runtime.mark("GTK and libadwaita initialized")
         prov = Gtk.CssProvider()
         prov.load_from_string(CSS)
         Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), prov,
@@ -550,6 +618,7 @@ class PreviewApp(Adw.Application):
                          ("new-signature", self._new_signature),
                          ("new-from-clipboard", self._new_from_clipboard),
                          ("preferences", self._preferences),
+                         ("check-updates", self._check_updates),
                          ("clear-recent", self._clear_recent)):
             a = Gio.SimpleAction.new(name, None)
             a.connect("activate", lambda _a, _p, cb=cb: cb())
@@ -562,13 +631,15 @@ class PreviewApp(Adw.Application):
         a.connect("activate", lambda _a, p: self.route_files([Gio.File.new_for_uri(p.get_string())]))
         self.add_action(a)
         self._recent_mgr = Gtk.RecentManager.get_default()
-        self._recent_mgr.connect("changed", lambda *_: self._rebuild_recent())
+        self._recent_mgr.connect("changed", lambda *_: self._refresh_recent())
         self._rebuild_recent()
+        self._refresh_recent()
         self.set_accels_for_action("win.open", ["<Control>o"])
         self.set_accels_for_action("win.inspector", ["<Control>i"])
         self.set_accels_for_action("app.new-from-clipboard", ["<Control><Shift>n"])
         self.set_accels_for_action("win.close", ["<Control>w"])
         self.set_accels_for_action("win.fullscreen", ["F11"])
+        runtime.mark("menus and actions set up")
 
     # ---- recent files ------------------------------------------------------------
     def add_recent(self, gfile):
@@ -578,9 +649,30 @@ class PreviewApp(Adw.Application):
         except Exception:  # noqa: BLE001
             pass
 
+    def _refresh_recent(self):
+        """Find which recent files still exist in a thread (never delay the
+        first window on a slow or missing drive), then update the Open Recent
+        menu and the Recent list of empty windows."""
+        self._recent_gen += 1
+        gen, uris = self._recent_gen, _recent_uris()
+
+        def work():
+            items = _existing_files(uris, 10)
+
+            def done():
+                if gen == self._recent_gen:
+                    self.recent_items = items
+                    self._rebuild_recent()
+                    for w in self.get_windows():
+                        if isinstance(w, MainWindow) and w.is_empty():
+                            w.show_recents(items)
+                return GLib.SOURCE_REMOVE
+            GLib.idle_add(done)
+        threading.Thread(target=work, daemon=True, name="view-recent").start()
+
     def _rebuild_recent(self):
         self.recent_menu.remove_all()
-        items = _recent_files(10)
+        items = self.recent_items
         sec = Gio.Menu()
         for uri, f in items:
             item = Gio.MenuItem.new(f.get_basename() or uri, None)
@@ -596,11 +688,12 @@ class PreviewApp(Adw.Application):
 
     def _clear_recent(self):
         mgr = Gtk.RecentManager.get_default()
-        for uri, _f in _recent_files(1000):
+        for uri, _f in _existing_files(_recent_uris(), 1000):
             try:
                 mgr.remove_item(uri)
             except GLib.Error:
                 pass
+        self.recent_items = []
         self._rebuild_recent()
 
     def _new_from_clipboard(self):
@@ -640,13 +733,34 @@ class PreviewApp(Adw.Application):
         if wins:
             (self.get_active_window() or wins[0]).present()
         else:
-            MainWindow(self).present()
+            win = MainWindow(self)
+            runtime.mark("window built")
+            win.present()
+            runtime.mark("window shown")
+        self._start_updater()
         if self._want_signature:
             self._want_signature = False
             GLib.idle_add(lambda: (self._new_signature(), False)[1])
 
     def do_open(self, files, n_files, hint):
         self.route_files(list(files), None)
+        self._start_updater()
+
+    def _start_updater(self):
+        """Background update checks, only for the real app (not --selftest
+        or --startup-trace)."""
+        if self.updater is not None or runtime.startup_trace or \
+                self.get_application_id() != APP_ID:
+            return
+        from .updates import Updater
+        self.updater = Updater(self)
+        self.updater.start()
+
+    def _get_updater(self):
+        if self.updater is None:
+            from .updates import Updater
+            self.updater = Updater(self)
+        return self.updater
 
     # ---- routing -------------------------------------------------------------------
     def _active_main(self):
@@ -739,11 +853,18 @@ class PreviewApp(Adw.Application):
                                       "noncommercial use. Commercial use requires a separate "
                                       "license from the author.\n\n"
                                       "https://polyformproject.org/licenses/noncommercial/1.0.0/")
+        dlg.add_link("All Versions", runtime.HOMEPAGE + "/releases")
         dlg.add_link("Support Development", runtime.DONATE)
         win = self._any_window()
         dlg.set_debug_info(debug_info(win))
         dlg.set_debug_info_filename("view-debug-info.txt")
         dlg.present(win)
+        self._get_updater().check_now(win, toast=dlg)      # result as a toast in About
+
+    def _check_updates(self):
+        win = self._any_window()
+        win.present()
+        self._get_updater().check_now(win)
 
     def _preferences(self):
         from .preferences import PreferencesDialog

@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import shutil
 import sys
+import time
 
 from . import __version__
 
@@ -129,6 +130,127 @@ def process_age() -> float | None:
 
 
 startup_seconds: float | None = None     # process start -> first window shown (set by the app)
+
+# ---- startup timing --------------------------------------------------------
+# Seconds since the process started at named points on the way to the first
+# window, shown in About → Troubleshooting and by ``view-app --startup-trace``.
+# The first mark is taken when this module is imported, so it covers the
+# PyInstaller bootloader and Python's own startup.
+startup_trace = False                     # --startup-trace: print the marks, then quit
+startup_marks: list[tuple[str, float]] = []
+_age_offset = (process_age() or 0.0) - time.perf_counter()
+
+
+def mark(label: str):
+    """Record that startup reached `label` (once the first window is up,
+    further marks are ignored)."""
+    if startup_seconds is None:
+        startup_marks.append((label, time.perf_counter() + _age_offset))
+        if startup_trace and IS_WINDOWS:
+            _note_opengl32(label)
+
+
+_opengl32_seen = False
+
+
+def _note_opengl32(label):
+    """--startup-trace: name the step during which opengl32.dll got loaded
+    (decides how late Mesa could still replace it, see opengl_win)."""
+    global _opengl32_seen
+    if not _opengl32_seen:
+        import ctypes
+        if ctypes.windll.kernel32.GetModuleHandleW("opengl32.dll"):
+            _opengl32_seen = True
+            startup_marks.append(("  (opengl32.dll was loaded by now)", startup_marks[-1][1]))
+
+
+mark("Python started")
+
+
+def startup_report() -> str:
+    """The marks as a table: seconds since process start, and each step."""
+    lines, prev = [], 0.0
+    for label, t in startup_marks:
+        lines.append(f"{t:7.2f} s  +{t - prev:5.2f}  {label}")
+        prev = t
+    return "\n".join(lines)
+
+
+class StallWatch:
+    """--startup-trace: notice when the main thread stops running its main
+    loop for more than `threshold` seconds (Windows shows "Not Responding"
+    after 5) and sample what Python code it is in meanwhile."""
+
+    def __init__(self, threshold=0.5):
+        import threading
+        import traceback                     # here: importing it in the thread races
+        self._format = traceback.format_stack
+        self.threshold = threshold
+        self.stalls = []                     # (start, seconds, most common stack)
+        self._beat = time.perf_counter()
+        self._main = threading.main_thread().ident
+        threading.Thread(target=self._watch, daemon=True, name="view-stallwatch").start()
+
+    def beat(self):
+        """Call from the main loop (a short GLib timeout)."""
+        now = time.perf_counter()
+        gap = now - self._beat
+        if gap > self.threshold and self._samples:
+            stack = max(set(self._samples), key=self._samples.count)
+            self.stalls.append((self._beat + _age_offset if self._looping else None,
+                                gap, stack))
+        self._looping = True
+        self._samples = []
+        self._beat = now
+        return True
+
+    _samples: list = []
+    _looping = False                         # False until the main loop's first beat
+
+    def _watch(self):
+        while True:
+            time.sleep(0.1)
+            if time.perf_counter() - self._beat > self.threshold:
+                frame = sys._current_frames().get(self._main)
+                if frame is not None:
+                    self._samples = self._samples + ["".join(self._format(frame)[-8:])]
+
+    def report(self) -> str:
+        if not self.stalls:
+            return f"No main-thread stalls over {self.threshold:.1f} s."
+        out = []
+        for start, secs, stack in self.stalls:
+            when = (f"blocked {secs:.1f} s from {start:.1f} s" if start is not None else
+                    f"busy {secs:.1f} s before the main loop ran")
+            out.append(f"Main thread {when}, mostly in:\n{stack}")
+        return "\n".join(out)
+
+
+stall_watch: StallWatch | None = None
+
+
+def loaded_modules() -> list[str]:
+    """Paths of the DLLs loaded in this process (Windows; an antivirus scans
+    each of them on first load, so their number and size matter)."""
+    if not IS_WINDOWS:
+        return []
+    import ctypes
+    from ctypes import wintypes as wt
+    psapi, k32 = ctypes.WinDLL("psapi"), ctypes.windll.kernel32
+    k32.GetCurrentProcess.restype = wt.HANDLE
+    proc = k32.GetCurrentProcess()
+    mods = (wt.HMODULE * 4096)()
+    need = wt.DWORD()
+    psapi.EnumProcessModules.argtypes = [wt.HANDLE, ctypes.c_void_p, wt.DWORD,
+                                         ctypes.POINTER(wt.DWORD)]
+    if not psapi.EnumProcessModules(proc, mods, ctypes.sizeof(mods), ctypes.byref(need)):
+        return []
+    psapi.GetModuleFileNameExW.argtypes = [wt.HANDLE, wt.HMODULE, wt.LPWSTR, wt.DWORD]
+    out, buf = [], ctypes.create_unicode_buffer(1024)
+    for h in mods[:need.value // ctypes.sizeof(wt.HMODULE)]:
+        if psapi.GetModuleFileNameExW(proc, h, buf, 1024):
+            out.append(buf.value)
+    return out
 
 
 def package_root() -> str:

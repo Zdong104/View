@@ -51,6 +51,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
-          notes="Downloads: .deb (Ubuntu 25.10+/26.04, Debian 13), .snap, Windows installer and portable zip (experimental). Verify with SHA256SUMS."
-          gh release create "$TAG" upload/* --title "View ${TAG#v}" --notes "$notes" \
+          # the notes come from the metainfo; View's updater shows them
+          python3 packaging/release-notes.py "$TAG" > notes.md && cat notes.md
+          gh release create "$TAG" upload/* --title "View ${TAG#v}" --notes-file notes.md \
             $([[ "$TAG" == *-* ]] && echo --prerelease)

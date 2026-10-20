@@ -2,6 +2,8 @@
 
 Options handled here (before GTK starts, no display needed):
   --version                      print the version and exit
+  --startup-trace [FILE…]        time each startup step to the first window, then quit
+  --check-updates                print whether a newer release is available
   --selftest [--no-ui]           check that every viewer works, exit 0/1
   --quicklook [--debug] [FILE…]  run the Quick Look service for GNOME Files
   --combine-pdf -o OUT IMG…      combine images into a PDF (see --combine-pdf --help)
@@ -15,11 +17,17 @@ from . import runtime
 
 runtime.configure_gl_env()
 runtime.configure_frozen_env()
+if runtime.IS_WINDOWS and runtime.FROZEN:
+    from . import opengl_win
+    opengl_win.ensure()      # no OpenGL driver: bundled Mesa, before GTK loads opengl32.dll
+    runtime.mark("OpenGL chosen")
 
 
 def _usage_extra():
     return ("\nPreview options:\n"
             "  --version                     Show the version and exit\n"
+            "  --startup-trace [FILE...]     Time each startup step, print it and quit\n"
+            "  --check-updates               Check GitHub for a newer release\n"
             "  --new-signature               Draw a new signature\n"
             "  --selftest [--no-ui]          Check that all viewers work and exit\n"
             "  --combine-pdf -o OUT IMG...   Combine images into one PDF\n"
@@ -59,6 +67,13 @@ def main(argv=None):
     if first in ("--enable-files-integration", "--disable-files-integration"):
         from . import integration
         return integration.cli(first == "--enable-files-integration")
+    if first == "--check-updates":
+        from .updates import cli as updates_cli
+        return updates_cli()
+    if first == "--startup-trace":
+        runtime.startup_trace = True
+        runtime.stall_watch = runtime.StallWatch()
+        return _run_app([argv[0], *args[1:]])
     if first in ("-h", "--help", "--help-all"):
         # let GApplication print its help, then ours
         rc = _run_app([argv[0], first])
@@ -68,7 +83,18 @@ def main(argv=None):
 
 
 def _run_app(argv):
+    # loaded one by one only to time them (runtime.mark); app.py needs them all
+    import gi
+    gi.require_version("Gtk", "4.0")
+    gi.require_version("Adw", "1")
+    from gi.repository import Gio  # noqa: F401
+    runtime.mark("GLib and GIO loaded")
+    from gi.repository import Gtk  # noqa: F401  (also opens the display)
+    runtime.mark("GTK loaded, display opened")
+    from gi.repository import Adw  # noqa: F401
+    runtime.mark("libadwaita loaded")
     from .app import PreviewApp
+    runtime.mark("app code imported")
     return PreviewApp().run(argv)
 
 

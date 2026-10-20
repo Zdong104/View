@@ -78,6 +78,7 @@ jobs:
             python-pygments:p
             python-openpyxl:p
             python-pikepdf:p
+            python-certifi:p
             pyinstaller:p
             pyinstaller-hooks-contrib:p
 
@@ -101,7 +102,15 @@ jobs:
       - name: PyInstaller
         run: |
           pyinstaller --noconfirm --clean --distpath dist --workpath build/pyi packaging/windows/preview.spec
+          # Mesa's software OpenGL for PCs without an OpenGL driver (VMs, Remote
+          # Desktop; preview/opengl_win.py).  Installed only now so PyInstaller
+          # can't mistake its opengl32.dll for the system's.
+          pacman -S --noconfirm --needed mingw-w64-ucrt-x86_64-mesa
+          gl=$(pacman -Ql mingw-w64-ucrt-x86_64-mesa | awk '{print $2}' | grep -i '/bin/opengl32\.dll$')
+          python packaging/windows/bundle-mesa.py "$(cygpath -w "$gl")" dist/View
           bash packaging/windows/collect-licenses.sh dist/View
+          # gone again, so no test below can pick up MSYS2's opengl32.dll from PATH
+          pacman -Rdd --noconfirm mingw-w64-ucrt-x86_64-mesa
           du -sh dist/View
 
       # Text recognition runs in a helper process, view-ocr.exe, built with
@@ -145,6 +154,8 @@ jobs:
           GSK_RENDERER: cairo
         run: |
           ./dist/View/view-app.exe --version
+          # HTTPS to GitHub works from the frozen build (0 = up to date, 2 = newer exists)
+          ./dist/View/view-app.exe --check-updates || [ $? -eq 2 ]
           ./dist/View/ocr/view-ocr.exe --test build/ocr-test.png "Hello View"
           # --ocr: View recognizes text through the helper (fails if it is missing)
           ./dist/View/view-app.exe --selftest --no-ui --ocr
@@ -153,7 +164,52 @@ jobs:
         continue-on-error: true
         env:
           GSK_RENDERER: cairo
-        run: timeout 300 ./dist/View/view-app.exe --selftest
+        run: timeout 300 env PATH=/c/Windows/system32:/c/Windows ./dist/View/view-app.exe --selftest
+
+      # Time from launch to the first window, step by step (see runtime.mark).
+      # The first run is the cold one; GitHub's runners have no real-time
+      # antivirus scan, so a user's first launch can still be slower.
+      # Time from launch to the first window, step by step (runtime.mark), and
+      # any main-thread stall afterwards (runtime.StallWatch).  "fresh profile"
+      # deletes every per-user cache first, like a user's very first start:
+      # earlier steps here have already built the font and GStreamer caches.
+      - name: Startup time (frozen)
+        continue-on-error: true
+        run: |
+          python packaging/windows/test-files.py build/t
+          gst-launch-1.0 -q videotestsrc num-buffers=90 ! video/x-raw,width=640,height=360 \
+            ! vp8enc deadline=1 ! webmmux ! filesink location=build/t/sample.webm || true
+          local_app=$(cygpath -u "$LOCALAPPDATA")
+          fresh() {
+            rm -rf "$local_app/fontconfig" "$local_app/View" "$local_app/gstreamer-1.0" \
+                   "$local_app/recently-used.xbel" "$local_app/Microsoft/Windows/INetCache/view"
+          }
+          trace() {   # title, args...: print the trace and keep it as an annotation
+            local title=$1; shift
+            echo "== $title"
+            # a user's PATH: Windows only, no MSYS2
+            VIEW_STARTUP_TRACE_WAIT=6 timeout 180 env PATH=/c/Windows/system32:/c/Windows \
+              ./dist/View/view-app.exe --startup-trace "$@" 2>&1 | tee build/trace.txt
+            echo "::notice title=Startup: $title::$(sed -z 's/\r//g; s/\n/%0A/g' build/trace.txt)"
+          }
+          for f in "" sample.pdf sample.stl sample.webm sample.jpg; do
+            fresh
+            trace "fresh profile ${f:-(empty window)}" ${f:+build/t/$f}
+          done
+          for f in sample.pdf sample.webm sample.stl; do
+            trace "again $f" build/t/$f
+          done
+          # does GTK load the system's opengl32.dll by itself (could Mesa load later)?
+          VIEW_SOFTWARE_GL=0 trace "system OpenGL only sample.stl" build/t/sample.stl
+
+      # The runners have no GPU, like many VMs: 3D must work through the
+      # bundled Mesa, with a user's PATH (no MSYS2 on it).
+      - name: 3D models without a GPU (frozen)
+        run: |
+          VIEW_STARTUP_TRACE_WAIT=4 timeout 180 env PATH=/c/Windows/system32:/c/Windows \
+            ./dist/View/view-app.exe --startup-trace build/t/sample.stl 2>&1 | tee build/gl.txt
+          grep -q "^OpenGL: Mesa" build/gl.txt
+          ! grep -q "OpenGL failed" build/gl.txt
 
       - name: Code signing (app files)
         if: ${{ env.SIGN }}
@@ -187,7 +243,7 @@ jobs:
           if ($env:SIGN) {
             $sign = @("/DSign", "/Sviewsign=pwsh -NoProfile -File $PWD\packaging\windows\sign.ps1 -Path `$f")
           }
-          & $iscc "/DAppVersion=$env:VERSION" @sign packaging\windows\preview.iss
+          & $iscc /Q "/DAppVersion=$env:VERSION" @sign packaging\windows\preview.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Get-ChildItem dist
 

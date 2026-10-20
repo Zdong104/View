@@ -13,9 +13,11 @@ Interaction (turntable camera, Z up):
 """
 import os
 
+from . import opengl_win
 from .runtime import configure_gl_env
 
 configure_gl_env()
+opengl_win.ensure()          # normally done at startup (preview.__main__)
 
 import ctypes
 import math
@@ -48,6 +50,24 @@ DEBUG = bool(os.environ.get("PREVIEW_DEBUG"))
 # one parse at a time: flipping quickly through big files (Quick Look) must
 # not run several multi-GB parses concurrently; superseded loads are skipped
 _LOAD_LOCK = threading.Lock()
+
+
+def _context_info(area) -> str:
+    """Which OpenGL the failing context is, for the error page."""
+    parts = []
+    try:
+        ctx = area.get_context()
+        if ctx is not None:
+            major, minor = ctx.get_version()
+            parts.append(f"GTK context {major}.{minor}" + (" ES" if ctx.get_use_es() else ""))
+        for name, enum in (("version", GL.GL_VERSION), ("renderer", GL.GL_RENDERER)):
+            v = GL.glGetString(enum)
+            parts.append(f"{name} {v.decode('ascii', 'replace') if v else '?'}")
+    except Exception as e:  # noqa: BLE001
+        parts.append(f"no context info ({e})")
+    if sys.platform == "win32":
+        parts.append(f"implementation: {opengl_win._state}")
+    return "; ".join(parts)
 
 
 def _weak(method):
@@ -1190,6 +1210,9 @@ class ModelViewer(Viewer):
         self._gl_failed = message or "Unknown error"
         desc = ("View couldn't start OpenGL 3.3, which is needed to display 3D models.\n\n"
                 f"<small>{GLib.markup_escape_text(self._gl_failed)}</small>")
+        if opengl_win.remember_failure():
+            desc += ("\n\nThis PC's graphics driver has no OpenGL 3.3. Close and reopen "
+                     "View to show 3D models with software rendering instead.")
         if self._mesh is not None and not self._compact:
             desc += "\n\nThe model's details are still available in the Inspector (Ctrl+I)."
         self.gl_error_page.set_description(desc)
@@ -1227,7 +1250,7 @@ class ModelViewer(Viewer):
         except Exception as exc:  # noqa: BLE001
             import traceback
             traceback.print_exc()
-            GLib.idle_add(self._show_gl_error, str(exc))
+            GLib.idle_add(self._show_gl_error, f"{exc}\n{_context_info(area)}")
 
     def _on_unrealize(self, area):
         if not self._gl_ready:

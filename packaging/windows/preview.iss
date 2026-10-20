@@ -79,3 +79,17 @@ Root: HKA; Subkey: "Software\Classes\.jpg\OpenWithList\View.exe"; ValueType: non
 
 [Run]
 Filename: "{app}\View.exe"; Description: "{cm:LaunchProgram,View}"; Flags: nowait postinstall skipifsilent
+; In-app updates (preview/updates.py) run  View-Setup-<v>.exe /SILENT ... /RELAUNCH
+; and expect View to start again afterwards, as the user, not elevated.
+Filename: "{app}\View.exe"; Flags: nowait runasoriginaluser; Check: RelaunchRequested
+
+[Code]
+function RelaunchRequested: Boolean;
+var
+  I: Integer;
+begin
+  Result := False;
+  for I := 1 to ParamCount do
+    if CompareText(ParamStr(I), '/RELAUNCH') = 0 then
+      Result := True;
+end;

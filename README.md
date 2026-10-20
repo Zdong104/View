@@ -36,22 +36,22 @@
 
 ### Ubuntu / Debian (.deb)
 
-Download [`view_0.1.3_all.deb`](https://github.com/Zdong104/View/releases/download/v0.1.3/view_0.1.3_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
+Download [`view_0.1.4_all.deb`](https://github.com/Zdong104/View/releases/download/v0.1.4/view_0.1.4_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
 
 ```bash
-sudo apt install ./view_0.1.3_all.deb
+sudo apt install ./view_0.1.4_all.deb
 ```
 
 Or in one go:
 
 ```bash
-wget https://github.com/Zdong104/View/releases/download/v0.1.3/view_0.1.3_all.deb && sudo apt install ./view_0.1.3_all.deb
+wget https://github.com/Zdong104/View/releases/download/v0.1.4/view_0.1.4_all.deb && sudo apt install ./view_0.1.4_all.deb
 ```
 
 `apt` is recommended because it also installs the dependencies. If you prefer `dpkg`:
 
 ```bash
-sudo dpkg -i view_0.1.3_all.deb && sudo apt -f install
+sudo dpkg -i view_0.1.4_all.deb && sudo apt -f install
 ```
 
 ### Snap (edge channel)
@@ -66,15 +66,13 @@ From a terminal, start it with `snap run view` (plain `view` is usually Vim's re
 
 ### Windows (**experimental**)
 
-Download [`View-Setup-0.1.3.exe`](https://github.com/Zdong104/View/releases/download/v0.1.3/View-Setup-0.1.3.exe) (installer) or [`View-0.1.3-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.1.3/View-0.1.3-windows-portable.zip) (no install). It is now tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: press **Space** (or **Start**) and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
+Download [`View-Setup-0.1.4.exe`](https://github.com/Zdong104/View/releases/download/v0.1.4/View-Setup-0.1.4.exe) (installer) or [`View-0.1.4-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.1.4/View-0.1.4-windows-portable.zip) (no install). It is now tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: press **Space** (or **Start**) and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
 
-**New in 0.1.1:**
+**New in 0.1.4:**
 
-- **Touchpad signing and touchpad drawing in Markup** now work on Windows (0.1.0 said they were Linux-only).
-- **The Markup toolbar button** (and the notes sidebar tab) showed no icon on Windows, so markup looked missing.
-- **Videos open at once.** 0.1.0 could spend over a minute retrying a failing Direct3D decoder; Windows now decodes in software (FFmpeg, dav1d, libvpx). Set `PREVIEW_VIDEO_HW=1` to try hardware decoding.
-- **Smoother drawing**: rendering goes through Direct Composition (about 50% more frames per second at 4K). `VIEW_NO_DCOMP=1` turns it off.
-- **Set as Wallpaper** works on Windows.
+- **Software updates**: View tells you when a new version is out and installs it for you (see [Updating](#updating)).
+- **3D models in virtual machines and over Remote Desktop**: PCs without an OpenGL driver now use built-in software rendering instead of showing "3D Rendering Unavailable".
+- The **first start after installing** can take 20 seconds or more while Windows checks each new file (the build isn't code-signed yet, see below). Later starts take about a second.
 
 **Known problem:** the Windows build isn't code-signed yet, so on PCs with **Smart App Control** turned on (or a work PC with an App Control policy) it stops at startup with *"DLL load failed … An Application Control policy has blocked this file"* ([#3](https://github.com/Zdong104/View/issues/3)). Signed builds fix this; until then it only runs where Smart App Control is off (Windows Security → App & browser control → Smart App Control settings). Without Smart App Control, Windows may show a SmartScreen warning instead: click **More info → Run anyway**.
 
@@ -89,6 +87,19 @@ make run
 ```
 
 `make install` adds this checkout to your app grid as **View (Dev)**, next to any snap or .deb copy; `make uninstall` removes it again (`make purge` also deletes its Python venv).
+
+### Updating
+
+View checks GitHub for a new release once a day (turn it off in **Preferences → Updates**), and every time you open **About View** or **Check for Updates…** in the main menu. When there is one, it shows what's new and can install it for you:
+
+| Installed with | Update |
+| --- | --- |
+| Windows installer | **Install and Restart** downloads the new installer, updates View in place and starts it again |
+| .deb | **Install…** downloads the new .deb and installs it with `apt` (asks for your password) |
+| Snap | The Snap Store updates View automatically; `sudo snap refresh view` updates now |
+| Windows portable zip, source | **Download** opens the new download in your browser |
+
+Downloads are checked against the release's `SHA256SUMS` before they are installed. From a terminal, `view-app --check-updates` tells you whether a newer version exists. Every version, including older ones, stays on the [Releases page](https://github.com/Zdong104/View/releases); install an older .deb with `sudo apt install --allow-downgrades ./view_<version>_all.deb`, or run an older Windows installer over the current one.
 
 ## Touchpad signing
 

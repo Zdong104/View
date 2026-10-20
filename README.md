@@ -72,6 +72,8 @@ Download [`View-Setup-0.1.4.exe`](https://github.com/Zdong104/View/releases/down
 
 - **Software updates**: View tells you when a new version is out and installs it for you (see [Updating](#updating)).
 - **3D models in virtual machines and over Remote Desktop**: PCs without an OpenGL driver now use built-in software rendering instead of showing "3D Rendering Unavailable".
+- **Sharper PDFs**: text no longer looks soft after scrolling, zooming or moving the window to a screen with different scaling.
+- **Faster start**: the first window no longer waits for the recent-files list (slow or missing network drives).
 - The **first start after installing** can take 20 seconds or more while Windows checks each new file (the build isn't code-signed yet, see below). Later starts take about a second.
 
 **Known problem:** the Windows build isn't code-signed yet, so on PCs with **Smart App Control** turned on (or a work PC with an App Control policy) it stops at startup with *"DLL load failed … An Application Control policy has blocked this file"* ([#3](https://github.com/Zdong104/View/issues/3)). Signed builds fix this; until then it only runs where Smart App Control is off (Windows Security → App & browser control → Smart App Control settings). Without Smart App Control, Windows may show a SmartScreen warning instead: click **More info → Run anyway**.

@@ -81,8 +81,9 @@
       <description>
         <p>Software updates: View checks for a new version once a day, when you open About and from Check for Updates in the menu, and installs it for you (Windows installer and .deb). Older versions stay on the Releases page.</p>
         <ul>
-          <li>Windows: 3D models work on PCs without an OpenGL driver, such as virtual machines and Remote Desktop, with built-in software rendering.</li>
-          <li>The first window no longer waits for the recent-files list (slow or missing network drives).</li>
+          <li>Windows: 3D models (STL / OBJ / PLY) work on PCs without an OpenGL driver, such as virtual machines and Remote Desktop, with built-in software rendering.</li>
+          <li>Sharper PDFs: pages are drawn on whole screen pixels, so text no longer looks soft after scrolling, zooming or moving the window between screens with different scaling (Linux and Windows).</li>
+          <li>Faster start on Windows: the first window no longer waits for the recent-files list (slow or missing network drives).</li>
           <li>view-app --startup-trace times each startup step; About → Troubleshooting shows the same.</li>
         </ul>
       </description>

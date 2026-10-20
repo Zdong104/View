@@ -56,5 +56,10 @@ jobs:
         run: |
           # the notes come from the metainfo; View's updater shows them
           python3 packaging/release-notes.py "$TAG" > notes.md && cat notes.md
-          gh release create "$TAG" upload/* --title "View ${TAG#v}" --notes-file notes.md \
-            $([[ "$TAG" == *-* ]] && echo --prerelease)
+          # a re-run (after a flaky job) adds the missing files to the release
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" upload/* --clobber
+          else
+            gh release create "$TAG" upload/* --title "View ${TAG#v}" --notes-file notes.md \
+              $([[ "$TAG" == *-* ]] && echo --prerelease)
+          fi

@@ -184,3 +184,55 @@ def _missing_imports(folder: str) -> list[str]:
     except Exception as e:  # noqa: BLE001
         out.append(f"? ({e})")
     return out
+
+
+def ensure() -> str:
+    """Pick the OpenGL implementation before anything uses OpenGL; returns
+    what is in use (shown in About → Troubleshooting)."""
+    global _state
+    if _state is not None:
+        return _state
+    if sys.platform != "win32":
+        _state = "system"
+        return _state
+    force = os.environ.get("VIEW_SOFTWARE_GL", "")
+    folder = mesa_dir()
+    drivers = remote = None
+    if force == "1":
+        why = "VIEW_SOFTWARE_GL=1"
+    elif os.path.exists(_flag_path()):
+        why = "the system driver failed before"
+    else:
+        try:
+            drivers, remote = opengl_drivers(), _remote_session()
+        except Exception:  # noqa: BLE001
+            drivers, remote = ["?"], False
+        why = "no OpenGL driver installed" if not drivers else \
+            "Remote Desktop" if remote else None
+    if why is None or force == "0":
+        _state = "system driver" + (f" ({', '.join(os.path.basename(d) for d in drivers)})"
+                                    if drivers else "")
+    elif folder and (err := load_mesa(folder)) is None:
+        _state = f"Mesa software rendering ({why})"
+    else:
+        _state = f"system driver (wanted Mesa: {why}; " + \
+            ("not bundled)" if not folder else f"{err})")
+    return _state
+
+
+def using_mesa() -> bool:
+    return (_state or "").startswith("Mesa")
+
+
+def remember_failure() -> bool:
+    """The system driver couldn't give us OpenGL 3.2: use Mesa from the next
+    start on.  True if that will help (Mesa is bundled and not in use yet)."""
+    if sys.platform != "win32" or using_mesa() or not mesa_dir() or \
+            os.environ.get("VIEW_SOFTWARE_GL") == "0":
+        return False
+    try:
+        os.makedirs(os.path.dirname(_flag_path()), exist_ok=True)
+        open(_flag_path(), "w").close()
+        return True
+    except OSError:
+        return False

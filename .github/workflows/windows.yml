@@ -108,6 +108,8 @@ jobs:
           gl=$(pacman -Ql mingw-w64-ucrt-x86_64-mesa | awk '{print $2}' | grep -i '/bin/opengl32\.dll$')
           python packaging/windows/bundle-mesa.py "$(cygpath -w "$gl")" dist/View
           bash packaging/windows/collect-licenses.sh dist/View
+          # gone again, so no test below can pick up MSYS2's opengl32.dll from PATH
+          pacman -Rdd --noconfirm mingw-w64-ucrt-x86_64-mesa
           du -sh dist/View
 
       # Text recognition runs in a helper process, view-ocr.exe, built with
@@ -161,7 +163,7 @@ jobs:
         continue-on-error: true
         env:
           GSK_RENDERER: cairo
-        run: timeout 300 ./dist/View/view-app.exe --selftest
+        run: timeout 300 env PATH=/c/Windows/system32:/c/Windows ./dist/View/view-app.exe --selftest
 
       # Time from launch to the first window, step by step (see runtime.mark).
       # The first run is the cold one; GitHub's runners have no real-time
@@ -184,8 +186,9 @@ jobs:
           trace() {   # title, args...: print the trace and keep it as an annotation
             local title=$1; shift
             echo "== $title"
-            VIEW_STARTUP_TRACE_WAIT=6 timeout 180 ./dist/View/view-app.exe --startup-trace "$@" \
-              2>&1 | tee build/trace.txt
+            # a user's PATH: Windows only, no MSYS2
+            VIEW_STARTUP_TRACE_WAIT=6 timeout 180 env PATH=/c/Windows/system32:/c/Windows \
+              ./dist/View/view-app.exe --startup-trace "$@" 2>&1 | tee build/trace.txt
             echo "::notice title=Startup: $title::$(sed -z 's/\r//g; s/\n/%0A/g' build/trace.txt)"
           }
           for f in "" sample.pdf sample.stl sample.webm sample.jpg; do
@@ -195,8 +198,8 @@ jobs:
           for f in sample.pdf sample.webm sample.stl; do
             trace "again $f" build/t/$f
           done
-          VIEW_STARTUP_TRACE_DLLS=1 VIEW_STARTUP_TRACE_WAIT=3 timeout 180 \
-            ./dist/View/view-app.exe --startup-trace build/t/sample.stl 2>&1 | tail -n 80
+          # does GTK load the system's opengl32.dll by itself (could Mesa load later)?
+          VIEW_SOFTWARE_GL=0 trace "system OpenGL only sample.stl" build/t/sample.stl
 
       - name: Code signing (app files)
         if: ${{ env.SIGN }}

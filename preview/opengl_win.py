@@ -7,7 +7,8 @@ OpenGL 1.1, so GTK's GLArea fails there (and then reports its EGL fallback:
 software renderer) in ``mesa\\``; ``ensure()`` loads it in place of the
 system's opengl32.dll when no OpenGL driver is installed.  It runs at startup
 (preview.__main__), before GTK loads: GTK and PyOpenGL load "opengl32.dll" by
-name, and Windows hands them whichever module of that name is already loaded.
+name, and Windows hands them whichever module of that name is already loaded
+(PyOpenGL by the path it finds on PATH, hence the PATH change).
 (So we can't simply try the system driver first: even choosing a pixel format
 loads the system opengl32.dll for good.)  Checking costs a few registry reads;
 Mesa itself is only loaded on PCs that need it.
@@ -106,6 +107,10 @@ def load_mesa(folder: str) -> str | None:
     # LOAD_WITH_ALTERED_SEARCH_PATH: look for libgallium_wgl.dll next to it first
     if not k32.LoadLibraryExW(os.path.join(folder, "opengl32.dll"), None, 0x8):
         return f"loading it failed: {ctypes.WinError(ctypes.get_last_error())}"
+    # PyOpenGL doesn't load "opengl32" by name but by the full path that
+    # ctypes.util.find_library() finds on PATH (System32's), which would be a
+    # second, Mesa-less opengl32.dll: make it find Mesa's
+    os.environ["PATH"] = folder + os.pathsep + os.environ.get("PATH", "")
     return None
 
 

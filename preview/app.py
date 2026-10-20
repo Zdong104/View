@@ -154,6 +154,8 @@ def _note_startup(widget, _clock):
                 mb = sum(os.path.getsize(m) for m in ours if os.path.exists(m)) / 1e6
                 print(f"{len(mods)} DLLs loaded, {len(ours)} of them View's own "
                       f"({mb:.0f} MB)", flush=True)
+                gl = [m for m in mods if os.path.basename(m).lower() == "opengl32.dll"]
+                print("opengl32.dll: " + (", ".join(gl) or "not loaded"), flush=True)
                 if os.environ.get("VIEW_STARTUP_TRACE_DLLS"):
                     for m in sorted(ours, key=lambda m: -os.path.getsize(m)):
                         print(f"  {os.path.getsize(m) / 1e6:6.1f} MB  {m}", flush=True)

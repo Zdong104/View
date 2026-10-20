@@ -37,6 +37,10 @@ fi
 
 if [ "$UNINSTALL" = 1 ]; then
     [ -x "$BIN" ] && "$BIN" --disable-files-integration || true
+    # screenshot quick edit: stop the watcher, drop its login entry (if it is ours)
+    [ -x "$BIN" ] && "$BIN" --screenshot-watcher --stop || true
+    AUTOSTART="${XDG_CONFIG_HOME:-$HOME/.config}/autostart/$APP_ID.ScreenshotEditor.desktop"
+    grep -qs "Installed by View" "$AUTOSTART" && rm -f "$AUTOSTART"
     rm -f "$BIN" "$HOME/.local/bin/preview-app" "$DATA/applications/$APP_ID.desktop" \
           "$DATA/icons/hicolor/scalable/apps/$APP_ID.svg" \
           "$DATA/metainfo/$APP_ID.metainfo.xml"

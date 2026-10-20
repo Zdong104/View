@@ -71,7 +71,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
         row = Adw.SwitchRow(title="Edit screenshots after capture",
                             subtitle="Press Print Screen and the screenshot opens in View for "
                                      "quick markup; Done saves it and copies it to the clipboard",
-                            active=screenshot.enabled())
+                            active=screenshot.chosen())
 
         def toggled(r, _pspec):
             try:

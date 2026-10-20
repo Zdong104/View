@@ -738,6 +738,7 @@ class PreviewApp(Adw.Application):
             win.present()
             runtime.mark("window shown")
         self._start_updater()
+        self._start_screenshots()
         if self._want_signature:
             self._want_signature = False
             GLib.idle_add(lambda: (self._new_signature(), False)[1])
@@ -745,6 +746,7 @@ class PreviewApp(Adw.Application):
     def do_open(self, files, n_files, hint):
         self.route_files(list(files), None)
         self._start_updater()
+        self._start_screenshots()
 
     def _start_updater(self):
         """Background update checks, only for the real app (not --selftest
@@ -755,6 +757,25 @@ class PreviewApp(Adw.Application):
         from .updates import Updater
         self.updater = Updater(self)
         self.updater.start()
+
+    def _start_screenshots(self):
+        """Screenshot quick edit: once, a little after the first window, make
+        the login autostart and the watcher match Preferences (on by default),
+        only for the real app (not --selftest or --startup-trace)."""
+        if getattr(self, "_screenshots_synced", False) or runtime.startup_trace or \
+                self.get_application_id() != APP_ID:
+            return
+        self._screenshots_synced = True
+
+        def go():
+            try:
+                from . import screenshot
+                if screenshot.supported():
+                    screenshot.sync()
+            except Exception:  # noqa: BLE001
+                traceback.print_exc()
+            return GLib.SOURCE_REMOVE
+        GLib.timeout_add_seconds(3, go)
 
     def _get_updater(self):
         if self.updater is None:

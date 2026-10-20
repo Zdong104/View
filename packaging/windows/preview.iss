@@ -76,14 +76,35 @@ Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; Valu
 Root: HKA; Subkey: "Software\Classes\.pdf\OpenWithList\View.exe"; ValueType: none; Flags: uninsdeletekey
 Root: HKA; Subkey: "Software\Classes\.png\OpenWithList\View.exe"; ValueType: none; Flags: uninsdeletekey
 Root: HKA; Subkey: "Software\Classes\.jpg\OpenWithList\View.exe"; ValueType: none; Flags: uninsdeletekey
+; Screenshot quick edit: the watcher adds this login entry itself (on by default,
+; View > Preferences turns it off); only removed here, on uninstall.
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: none; ValueName: "View Screenshot Editor"; Flags: dontcreatekey uninsdeletevalue
 
 [Run]
 Filename: "{app}\View.exe"; Description: "{cm:LaunchProgram,View}"; Flags: nowait postinstall skipifsilent
 ; In-app updates (preview/updates.py) run  View-Setup-<v>.exe /SILENT ... /RELAUNCH
 ; and expect View to start again afterwards, as the user, not elevated.
 Filename: "{app}\View.exe"; Flags: nowait runasoriginaluser; Check: RelaunchRequested
+; Screenshot quick edit: start watching Pictures\Screenshots now (it exits at
+; once if the user turned the feature off, and registers its login entry if not).
+Filename: "{app}\View.exe"; Parameters: "--screenshot-watcher"; Flags: nowait runasoriginaluser
+
+[UninstallRun]
+Filename: "{app}\view-app.exe"; Parameters: "--screenshot-watcher --stop"; Flags: runhidden waituntilterminated; RunOnceId: "StopScreenshotWatcher"
 
 [Code]
+// Stop a running screenshot watcher before its files are replaced (an
+// older View without the feature just exits on the unknown option).
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  Code: Integer;
+begin
+  if FileExists(ExpandConstant('{app}\view-app.exe')) then
+    Exec(ExpandConstant('{app}\view-app.exe'), '--screenshot-watcher --stop', '',
+         SW_HIDE, ewWaitUntilTerminated, Code);
+  Result := '';
+end;
+
 function RelaunchRequested: Boolean;
 var
   I: Integer;

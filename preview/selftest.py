@@ -131,8 +131,9 @@ def _versions():
 MODULES = ["app", "viewer_base", "image_view", "image_ops", "pdf_view", "pdf_ops",
            "pdf_render", "pdf_canvas", "markup", "signature", "stl_view", "mesh_io",
            "table_view", "table_data", "text_view", "syntax", "video_view", "media_player",
-           "inspector", "convert", "ocr", "ocr_install", "preferences", "touchpad"]
-LINUX_MODULES = ["integration", "quicklook", "quicklook_renderers", "screenshot"]
+           "inspector", "convert", "ocr", "ocr_install", "preferences", "touchpad",
+           "integration", "screenshot"]
+LINUX_MODULES = ["quicklook", "quicklook_renderers"]
 
 
 def _import_all():
@@ -224,6 +225,21 @@ def _combine(paths, d):
     if n != 2:
         raise RuntimeError(f"{n} pages")
     return "2 images → 2-page PDF"
+
+
+def _screenshots(paths, d):
+    from . import screenshot
+    cut = os.path.join(d, "half.png")
+    with open(paths["png"], "rb") as f, open(cut, "wb") as out:
+        out.write(f.read()[:-20])
+    if not screenshot._complete(paths["png"]) or screenshot._complete(cut):
+        raise RuntimeError("cannot tell a complete PNG from a partly written one")
+    if not screenshot.supported():
+        return "not available here"
+    return (f"watching {screenshot.screenshot_dir()}, "
+            f"{'on' if screenshot.chosen() else 'off'}, {screenshot._mode()} autostart "
+            f"{'set' if screenshot.autostart_on() else 'not set'}, "
+            f"watcher {'running' if screenshot.running() else 'not running'}")
 
 
 def _gst():
@@ -477,6 +493,7 @@ def main(argv=()):
         res.check("CSV parse", lambda: _csv(paths))
         res.check("syntax highlighting", lambda: _code(paths))
         res.check("combine images into PDF (img2pdf)", lambda: _combine(paths, d))
+        res.check("screenshot editing", lambda: _screenshots(paths, d))
         res.check("video (GStreamer)", _gst)
         res.check("OpenGL (PyOpenGL)", _gl)
         res.check("update check certificates", _certs,

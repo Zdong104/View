@@ -50,6 +50,10 @@ EOF
 chmod 755 "$P/usr/bin/$CMD"
 
 install -m644 "data/$APP_ID.desktop" "$P/usr/share/applications/$APP_ID.desktop"
+# screenshot quick edit, on by default for every user; Preferences turns it
+# off per user with a Hidden=true copy in ~/.config/autostart (survives upgrades)
+install -Dm644 "data/$APP_ID.ScreenshotEditor.desktop" \
+    "$P/etc/xdg/autostart/$APP_ID.ScreenshotEditor.desktop"
 install -m644 "data/$APP_ID.svg" "$P/usr/share/icons/hicolor/scalable/apps/$APP_ID.svg"
 install -m644 "data/$APP_ID.metainfo.xml" "$P/usr/share/metainfo/$APP_ID.metainfo.xml"
 install -d "$P/usr/share/man/man1"
@@ -120,6 +124,9 @@ Description: macOS Preview-style viewer for PDFs, images, video, text and 3D
  CSV/TSV spreadsheets, source code with syntax highlighting, and STL/OBJ/PLY
  3D models. Signatures can be drawn on the touchpad or with a mouse or pen.
  .
+ Press Print Screen and the screenshot opens in View for quick markup; Done
+ saves it and copies it to the clipboard (on by default, off in Preferences).
+ .
  Optional per-user extras, enabled from Preferences: Space-bar Quick Look
  for GNOME Files, a "Combine Images into PDF" Files script, and a downloadable
  text-recognition (OCR) engine.
@@ -141,6 +148,11 @@ EOF
 cat > "$P/DEBIAN/prerm" <<'EOF'
 #!/bin/sh
 set -e
+if [ "$1" = remove ]; then
+    # stop every user's screenshot watcher (an upgrade leaves it running:
+    # it has its code loaded; the next login starts the new one)
+    pkill -f -- '/usr/bin/view-app --screenshot-watcher' 2>/dev/null || true
+fi
 if command -v py3clean >/dev/null 2>&1; then
     py3clean -p view || true
 else
@@ -149,6 +161,10 @@ fi
 exit 0
 EOF
 chmod 755 "$P/DEBIAN/postinst" "$P/DEBIAN/prerm"
+# kept on "remove" (a conffile), removed on "purge"; TryExec makes a leftover
+# entry a no-op once /usr/bin/view-app is gone
+echo "/etc/xdg/autostart/$APP_ID.ScreenshotEditor.desktop" > "$P/DEBIAN/conffiles"
+chmod 644 "$P/DEBIAN/conffiles"
 
 ( cd "$P" && find . -path ./DEBIAN -prune -o -type f -printf '%P\0' | sort -z \
     | xargs -0 md5sum ) > "$P/DEBIAN/md5sums"

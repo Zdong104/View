@@ -1,0 +1,11 @@
+[Desktop Entry]
+# View's screenshot quick edit (installed to /etc/xdg/autostart by the .deb).
+# Turn it off in View > Preferences: that adds a per-user copy with Hidden=true.
+Type=Application
+Name=View Screenshot Editor
+Comment=Opens new screenshots in View for quick markup
+Exec=/usr/bin/view-app --screenshot-watcher
+TryExec=/usr/bin/view-app
+Icon=io.github.zdong104.View
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

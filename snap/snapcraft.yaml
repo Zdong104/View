@@ -19,6 +19,10 @@ description: |
   Touchpad signing reads the touchpad directly and needs:
     sudo snap connect view:raw-input
 
+  Press Print Screen and the screenshot opens in View for quick markup;
+  Done saves it and copies it to the clipboard (on by default, off in
+  Preferences).
+
   The GNOME Files integration (Space-bar Quick Look, "Combine Images into
   PDF" script) is not available in the snap; use the .deb for that.
 license: PolyForm-Noncommercial-1.0.0
@@ -59,6 +63,23 @@ apps:
       - gsettings           # must be explicit on core26 (wallpaper, GTK settings)
       - audio-playback
       - raw-input           # touchpad signing (evdev); manual: snap connect view:raw-input
+
+  # Screenshot quick edit: watches ~/Pictures/Screenshots (home plug) and opens
+  # new captures for markup.  snapd's userd starts it at login when View has
+  # written $SNAP_USER_DATA/.config/autostart/<autostart> (on by default; off in
+  # Preferences).  NON_UNIQUE + a lock file: no D-Bus name, so no dbus slot.
+  screenshot-watcher:
+    command: usr/bin/view-app --screenshot-watcher
+    autostart: io.github.zdong104.View.ScreenshotEditor.desktop
+    extensions: [gnome]
+    plugs:
+      - home
+      - opengl
+      - wayland
+      - x11
+      - desktop
+      - desktop-legacy
+      - gsettings
 
 parts:
   view:

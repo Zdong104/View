@@ -530,7 +530,7 @@ test("markup surfaces are attached per rendered page", async () => {
   await page.close();
 });
 
-test("Live Text: a scanned page is recognized, searchable and selectable", { timeout: 120000 }, async () => {
+test("Live Text: clicking a scanned page recognizes it; searchable and selectable", { timeout: 120000 }, async () => {
   const page = await openPdf("/five.pdf", 5);
   // A page that is only an image of text.
   await page.evaluate(async () => {
@@ -545,11 +545,15 @@ test("Live Text: a scanned page is recognized, searchable and selectable", { tim
     await v.insertFiles([{ name: "scan.png", mime: "image/png", blob }], 0);
   });
   await page.waitForFunction(() => document.querySelector('[data-viewer="pdf"]').dataset.pages === "6");
-  const ok = await page.evaluate(async () => {
+  // Clicking the scanned page starts recognition on its own, as on the desktop.
+  await page.waitForSelector('.pdf-slot[data-pos="0"]');
+  await page.click('.pdf-slot[data-pos="0"]');
+  const handle = await page.waitForFunction(() => {
     const v = globalThis.viewShell.viewer;
-    await v.recognize([v.model.pages[0]]);
-    return v.ocrLines.get(`${v.model.pages[0].src}:0`)?.map((l) => l.text).join(" ") ?? "";
-  });
+    const lines = v.ocrLines.get(`${v.model.pages[0].src}:0`);
+    return lines?.length ? lines.map((l) => l.text).join(" ") : false;
+  }, { timeout: 90000 });
+  const ok = await handle.jsonValue();
   assert.match(ok.toUpperCase(), /HELLO/, `OCR text: ${ok}`);
   await page.waitForSelector(".pdf-slot .pdf-ocr svg", { timeout: 10000 });
   await press(page, "Control", "f");

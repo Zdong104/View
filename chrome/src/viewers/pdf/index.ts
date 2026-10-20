@@ -66,7 +66,7 @@ class PdfViewer implements Viewer {
   private texts = new Map<string, Promise<PageText>>();
   private ocrLines = new Map<string, SurfaceLine[]>();
   private ocrResults = new Map<string, { result: import("../../ocr/api.ts").OcrResult; rot: number }>();
-  private ocrOffered = new Set<string>();
+  private ocrStarted = new Set<string>();
   private search: { query: string; gen: number; hits: Map<number, number[][]>; cur: [number, number] | null; count: number; done: boolean } | null = null;
   private mk: MarkupController | null = null;
   private mkBar!: HTMLDivElement;
@@ -214,7 +214,7 @@ class PdfViewer implements Viewer {
         v.paintHighlights(slot);
         if (slot.data.ocrRot !== slot.rotation) { slot.data.ocrRot = slot.rotation; v.paintOcr(slot); }
       },
-      onSlotPointerDown: (slot) => void v.maybeOfferOcr(slot),
+      onSlotPointerDown: (slot) => void v.autoOcr(slot),
       onDprChanged: () => { v.thumbs.relayout(); v.thumbs.invalidate(); },
     };
   }
@@ -927,8 +927,8 @@ class PdfViewer implements Viewer {
 
   private ocrService: Promise<OcrService> | null = null;
 
-  private async recognize(refs: PageRef[]): Promise<void> {
-    if (!refs.length) return;
+  private async recognize(refs: PageRef[]): Promise<boolean> {
+    if (!refs.length) return true;
     this.ocrService ??= this.ctx.services.ocr();
     let done = 0;
     try {
@@ -943,8 +943,10 @@ class PdfViewer implements Viewer {
         }
       });
       this.ctx.toast(`Recognized text on ${plural(done, "page")}`);
+      return true;
     } catch (e) {
       this.ctx.toast(`Text recognition failed: ${(e as Error).message}`, { timeout: 6000 });
+      return false;
     }
   }
 
@@ -972,14 +974,14 @@ class PdfViewer implements Viewer {
     return lines;
   }
 
-  private async maybeOfferOcr(slot: Slot): Promise<void> {
+  /** Clicking a scanned page recognizes its text right away, as the desktop does. */
+  private async autoOcr(slot: Slot): Promise<void> {
     const key = pageKey(slot.ref);
-    if (this.ocrOffered.has(key) || this.ocrLines.has(key)) return;
-    this.ocrOffered.add(key);
+    if (this.ocrStarted.has(key) || this.ocrLines.has(key)) return;
+    this.ocrStarted.add(key);
     const t = await this.pageText(slot.ref).catch(() => null);
-    if (t && !t.hasText) {
-      this.ctx.toast("This page is an image without text", { actionLabel: "Recognize Text", onAction: () => void this.recognize([slot.ref]) });
-    }
+    if (!t || t.hasText) return;
+    if (!await this.recognize([slot.ref])) this.ocrStarted.delete(key);
   }
 
   private textLayerMod: Promise<typeof import("../../ocr/text-layer.ts")> | null = null;

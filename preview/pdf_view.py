@@ -830,9 +830,18 @@ class PdfViewer(Viewer):
         sel_col = _rgba(acc[0], acc[1], acc[2], 0.32)
         hl = _rgba(1.0, 0.85, 0.1, 0.38)
         hl_cur = _rgba(1.0, 0.5, 0.0, 0.5)
+        # Page textures are rendered at device resolution, so they must land on
+        # whole device pixels or LINEAR filtering blurs them. Snap here, at paint
+        # time, against the current scale and the canvas's position in the
+        # surface: scroll offsets are fractional and the window can move between
+        # monitors with different scales after relayout() ran.
+        ox, oy = c.surface_origin()
+        snap_x = lambda v: (round((ox + v - hv) * ds) / ds) - ox + hv  # noqa: E731
+        snap_y = lambda v: (round((oy + v - vv) * ds) / ds) - oy + vv  # noqa: E731
         vis = c.visible_range()
         for pos in vis:
             x, y, w, h = c.rects[pos]
+            x, y = snap_x(x), snap_y(y)
             ref = self.pages[pos]
             rect = R(x, y, w, h)
             s.append_outset_shadow(RR(rect, 0), shadow, 0, 1, 0, 5)
@@ -840,10 +849,14 @@ class PdfViewer(Viewer):
             pk = _pk(ref)
             tiled = max(w, h) * ds > TILE_ABOVE
             tex = None if tiled else self.cache.get(pk + (skey,))
-            if tex is None:
-                tex = self.cache.best(pk) or self.thumbs.best(pk)
             if tex is not None:
-                s.append_scaled_texture(tex, Gsk.ScalingFilter.LINEAR, rect)
+                # exact-scale texture: draw 1:1 instead of stretching it into a
+                # rect that can be a fraction of a pixel off
+                s.append_texture(tex, R(x, y, tex.get_width() / ds, tex.get_height() / ds))
+            else:
+                tex = self.cache.best(pk) or self.thumbs.best(pk)
+                if tex is not None:
+                    s.append_scaled_texture(tex, Gsk.ScalingFilter.LINEAR, rect)
             if tiled:
                 for tx, ty, tr in self._visible_tiles(pos, ds):
                     t = self.cache.get(pk + (skey, tx, ty))

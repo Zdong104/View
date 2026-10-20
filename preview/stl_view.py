@@ -52,6 +52,24 @@ DEBUG = bool(os.environ.get("PREVIEW_DEBUG"))
 _LOAD_LOCK = threading.Lock()
 
 
+def _context_info(area) -> str:
+    """Which OpenGL the failing context is, for the error page."""
+    parts = []
+    try:
+        ctx = area.get_context()
+        if ctx is not None:
+            major, minor = ctx.get_version()
+            parts.append(f"GTK context {major}.{minor}" + (" ES" if ctx.get_use_es() else ""))
+        for name, enum in (("version", GL.GL_VERSION), ("renderer", GL.GL_RENDERER)):
+            v = GL.glGetString(enum)
+            parts.append(f"{name} {v.decode('ascii', 'replace') if v else '?'}")
+    except Exception as e:  # noqa: BLE001
+        parts.append(f"no context info ({e})")
+    if sys.platform == "win32":
+        parts.append(f"implementation: {opengl_win._state}")
+    return "; ".join(parts)
+
+
 def _weak(method):
     """Signal callback that doesn't keep the viewer alive: widget -> closure
     -> bound method -> viewer cycles are invisible to Python's GC, so strong
@@ -1232,7 +1250,7 @@ class ModelViewer(Viewer):
         except Exception as exc:  # noqa: BLE001
             import traceback
             traceback.print_exc()
-            GLib.idle_add(self._show_gl_error, str(exc))
+            GLib.idle_add(self._show_gl_error, f"{exc}\n{_context_info(area)}")
 
     def _on_unrealize(self, area):
         if not self._gl_ready:

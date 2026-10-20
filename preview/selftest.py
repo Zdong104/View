@@ -250,6 +250,17 @@ def _gl():
             f"({os.environ.get('PYOPENGL_PLATFORM', 'default')}), {gl}")
 
 
+def _certs():
+    """The Windows store may not hold GitHub's root yet: the build must bring
+    Mozilla's (certifi) for update checks."""
+    import certifi
+    from .updates import ssl_context
+    n = ssl_context().cert_store_stats()["x509_ca"]
+    if n < 100:
+        raise RuntimeError(f"only {n} root certificates")
+    return f"{n} root certificates incl. certifi {certifi.__version__}"
+
+
 def _touchpad():
     from .touchpad import Touchpad
     pad = Touchpad()
@@ -468,6 +479,8 @@ def main(argv=()):
         res.check("combine images into PDF (img2pdf)", lambda: _combine(paths, d))
         res.check("video (GStreamer)", _gst)
         res.check("OpenGL (PyOpenGL)", _gl)
+        res.check("update check certificates", _certs,
+                  required=runtime.IS_WINDOWS and runtime.FROZEN)
         res.check("touchpad (for signing)", _touchpad, required=False)
         ocr_ok = res.check("text recognition (OCR)", _ocr, required=runtime.OCR_BUNDLED)
         if ocr_ok and run_ocr:

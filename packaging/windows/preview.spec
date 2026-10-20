@@ -15,7 +15,7 @@ hiddenimports = collect_submodules("preview") + [
 ]
 hiddenimports += collect_submodules("pygments.lexers") + collect_submodules("pygments.styles")
 hiddenimports += collect_submodules("OpenGL.platform") + collect_submodules("OpenGL.arrays")
-hiddenimports += ["OpenGL.GL", "openpyxl", "img2pdf", "pypdf"]
+hiddenimports += ["OpenGL.GL", "openpyxl", "img2pdf", "pypdf", "certifi"]
 
 datas = [
     (os.path.join(ROOT, "data", APP_ID + ".svg"), "share/icons/hicolor/scalable/apps"),

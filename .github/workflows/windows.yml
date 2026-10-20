@@ -78,6 +78,7 @@ jobs:
             python-pygments:p
             python-openpyxl:p
             python-pikepdf:p
+            python-certifi:p
             pyinstaller:p
             pyinstaller-hooks-contrib:p
 

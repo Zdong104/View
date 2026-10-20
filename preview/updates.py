@@ -96,12 +96,33 @@ class Release:
         return self.assets.get(name) or f"{RELEASES}/download/{self.tag}/{name}"
 
 
+_ssl_ctx = None
+
+
+def ssl_context():
+    """The system's trusted roots plus Mozilla's (certifi, bundled on Windows).
+    Python only sees the roots already in the Windows store, and a fresh
+    Windows installs most of them on demand (when Edge first needs one), so
+    on its own it may not trust github.com yet."""
+    global _ssl_ctx
+    if _ssl_ctx is None:
+        import ssl
+        ctx = ssl.create_default_context()
+        try:
+            import certifi
+            ctx.load_verify_locations(certifi.where())
+        except Exception:  # noqa: BLE001 - optional on Linux: the system store is complete
+            pass
+        _ssl_ctx = ctx
+    return _ssl_ctx
+
+
 def _request(url, accept=None):
     headers = {"User-Agent": f"{runtime.APP_NAME}/{runtime.VERSION}"}
     if accept:
         headers["Accept"] = accept
     return urllib.request.urlopen(urllib.request.Request(url, headers=headers),
-                                  timeout=TIMEOUT)
+                                  timeout=TIMEOUT, context=ssl_context())
 
 
 def fetch_latest() -> Release:
@@ -489,6 +510,9 @@ class _ProgressDialog(Adw.Dialog):
 
 def _short_error(e) -> str:
     if isinstance(e, urllib.error.URLError) and not isinstance(e, urllib.error.HTTPError):
+        import ssl
+        if isinstance(e.reason, ssl.SSLCertVerificationError):
+            return f"GitHub's certificate could not be verified ({e.reason.verify_message})"
         return f"no connection to GitHub ({e.reason})"
     return str(e) or type(e).__name__
 

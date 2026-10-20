@@ -146,6 +146,22 @@ def mark(label: str):
     further marks are ignored)."""
     if startup_seconds is None:
         startup_marks.append((label, time.perf_counter() + _age_offset))
+        if startup_trace and IS_WINDOWS:
+            _note_opengl32(label)
+
+
+_opengl32_seen = False
+
+
+def _note_opengl32(label):
+    """--startup-trace: name the step during which opengl32.dll got loaded
+    (decides how late Mesa could still replace it, see opengl_win)."""
+    global _opengl32_seen
+    if not _opengl32_seen:
+        import ctypes
+        if ctypes.windll.kernel32.GetModuleHandleW("opengl32.dll"):
+            _opengl32_seen = True
+            startup_marks.append(("  (opengl32.dll was loaded by now)", startup_marks[-1][1]))
 
 
 mark("Python started")

@@ -98,20 +98,76 @@ def load_mesa(folder: str) -> str | None:
     k32.GetModuleHandleW.restype = wt.HMODULE
     k32.GetModuleHandleW.argtypes = [wt.LPCWSTR]
     k32.GetModuleFileNameW.argtypes = [wt.HMODULE, wt.LPWSTR, wt.DWORD]
+    k32.AddDllDirectory.restype = ctypes.c_void_p
+    k32.AddDllDirectory.argtypes = [wt.LPCWSTR]
     loaded = k32.GetModuleHandleW("opengl32.dll")
     if loaded:
         buf = ctypes.create_unicode_buffer(1024)
         k32.GetModuleFileNameW(loaded, buf, 1024)
         return f"{buf.value} was loaded first"
     os.environ.setdefault("GALLIUM_DRIVER", "llvmpipe")
-    # LOAD_WITH_ALTERED_SEARCH_PATH: look for libgallium_wgl.dll next to it first
-    if not k32.LoadLibraryExW(os.path.join(folder, "opengl32.dll"), None, 0x8):
-        return f"loading it failed: {ctypes.WinError(ctypes.get_last_error())}"
+    # Its dependencies are in mesa\ (Mesa, LLVM), in _internal\ (shared with
+    # the rest of View) and in System32: search exactly those
+    k32.AddDllDirectory(os.path.dirname(folder))
+    flags = 0x100 | 0x1000      # LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | _DEFAULT_DIRS
+    if not k32.LoadLibraryExW(os.path.join(folder, "opengl32.dll"), None, flags):
+        err = ctypes.WinError(ctypes.get_last_error())
+        missing = _missing_imports(folder)
+        return f"loading it failed: {err}" + (f" (missing {', '.join(missing)})"
+                                               if missing else "")
     # PyOpenGL doesn't load "opengl32" by name but by the full path that
     # ctypes.util.find_library() finds on PATH (System32's), which would be a
     # second, Mesa-less opengl32.dll: make it find Mesa's
     os.environ["PATH"] = folder + os.pathsep + os.environ.get("PATH", "")
     return None
+
+
+def _imports(path: str) -> list[str]:
+    """DLL names in a PE file's import table."""
+    import struct
+    with open(path, "rb") as f:
+        data = f.read()
+    pe = struct.unpack_from("<I", data, 0x3C)[0]
+    nsec, optsize = struct.unpack_from("<H", data, pe + 6)[0], struct.unpack_from(
+        "<H", data, pe + 20)[0]
+    opt = pe + 24
+    dirs = opt + (112 if struct.unpack_from("<H", data, opt)[0] == 0x20B else 96)
+    imp_rva = struct.unpack_from("<I", data, dirs + 8)[0]
+    secs = [struct.unpack_from("<IIII", data, opt + optsize + 40 * i + 8)
+            for i in range(nsec)]           # virtual size, address, raw size, raw offset
+
+    def off(rva):
+        for vsize, va, rsize, raw in secs:
+            if va <= rva < va + max(vsize, rsize):
+                return rva - va + raw
+        raise ValueError(rva)
+    names, d = [], off(imp_rva) if imp_rva else None
+    while d is not None:
+        name_rva = struct.unpack_from("<I", data, d + 12)[0]
+        if not name_rva:
+            break
+        n = off(name_rva)
+        names.append(data[n:data.index(b"\0", n)].decode("ascii", "replace"))
+        d += 20
+    return names
+
+
+def _missing_imports(folder: str) -> list[str]:
+    """Imports of the Mesa DLLs found neither next to them, in the bundle nor
+    in Windows (to explain a failed load)."""
+    places = [folder, os.path.dirname(folder),
+              os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32")]
+    missing = set()
+    try:
+        for name in os.listdir(folder):
+            if name.lower().endswith(".dll"):
+                for imp in _imports(os.path.join(folder, name)):
+                    if not imp.lower().startswith(("api-ms-win-", "ext-ms-")) and \
+                            not any(os.path.exists(os.path.join(p, imp)) for p in places):
+                        missing.add(f"{imp} (for {name})")
+    except Exception as e:  # noqa: BLE001
+        missing.add(f"? ({e})")
+    return sorted(missing)
 
 
 def ensure() -> str:

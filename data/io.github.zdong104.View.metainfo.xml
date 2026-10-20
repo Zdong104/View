@@ -77,6 +77,14 @@
     <keyword>STL</keyword>
   </keywords>
   <releases>
+    <release version="0.1.7" date="2026-10-20">
+      <description>
+        <p>Check for Updates works in the snap.</p>
+        <ul>
+          <li>The snap can now reach GitHub, so the update check no longer fails with a name-resolution error.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.6" date="2026-10-20">
       <description>
         <p>Screenshots open in View for quick markup.</p>

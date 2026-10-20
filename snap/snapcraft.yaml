@@ -1,6 +1,6 @@
 name: view
 title: View
-version: '0.1.6'
+version: '0.1.7'
 summary: View and annotate PDFs, images, videos, text and 3D models
 description: |
   View is a fast, macOS Preview-style viewer for GNOME. One app opens
@@ -62,6 +62,7 @@ apps:
       - desktop-legacy
       - gsettings           # must be explicit on core26 (wallpaper, GTK settings)
       - audio-playback
+      - network             # update check (About / Check for Updates…)
       - raw-input           # touchpad signing (evdev); manual: snap connect view:raw-input
 
   # Screenshot quick edit: watches ~/Pictures/Screenshots (home plug) and opens

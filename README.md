@@ -38,22 +38,22 @@
 
 ### Ubuntu / Debian (.deb)
 
-Download [`view_0.1.6_all.deb`](https://github.com/Zdong104/View/releases/download/v0.1.6/view_0.1.6_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
+Download [`view_0.1.7_all.deb`](https://github.com/Zdong104/View/releases/download/v0.1.7/view_0.1.7_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
 
 ```bash
-sudo apt install ./view_0.1.6_all.deb
+sudo apt install ./view_0.1.7_all.deb
 ```
 
 Or in one go:
 
 ```bash
-wget https://github.com/Zdong104/View/releases/download/v0.1.6/view_0.1.6_all.deb && sudo apt install ./view_0.1.6_all.deb
+wget https://github.com/Zdong104/View/releases/download/v0.1.7/view_0.1.7_all.deb && sudo apt install ./view_0.1.7_all.deb
 ```
 
 `apt` is recommended because it also installs the dependencies. If you prefer `dpkg`:
 
 ```bash
-sudo dpkg -i view_0.1.6_all.deb && sudo apt -f install
+sudo dpkg -i view_0.1.7_all.deb && sudo apt -f install
 ```
 
 ### Snap (edge channel)
@@ -68,13 +68,11 @@ From a terminal, start it with `snap run view` (plain `view` is usually Vim's re
 
 ### Windows (**experimental**)
 
-Download [`View-Setup-0.1.6.exe`](https://github.com/Zdong104/View/releases/download/v0.1.6/View-Setup-0.1.6.exe) (installer) or [`View-0.1.6-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.1.6/View-0.1.6-windows-portable.zip) (no install). It is now tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: press **Space** (or **Start**) and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
+Download [`View-Setup-0.1.7.exe`](https://github.com/Zdong104/View/releases/download/v0.1.7/View-Setup-0.1.7.exe) (installer) or [`View-0.1.7-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.1.7/View-0.1.7-windows-portable.zip) (no install). It is now tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: press **Space** (or **Start**) and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
 
-**New in 0.1.6:**
+**New in 0.1.7:**
 
-- **Screenshots open in View for quick markup**: take a screenshot (Print Screen on Linux; Snipping Tool or Win+Print Screen on Windows) and View opens it with the markup tools ready. **Done** (or Ctrl+Enter / Ctrl+S) saves it back into your Screenshots folder and copies the edited image to the clipboard. On by default; turn it off in Preferences → Screenshots.
-- **Copy Image** now puts a picture on the clipboard that other apps can paste.
-- **README in Chinese** (中文).
+- **Snap: Check for Updates works**: the snap couldn't reach GitHub before, so the update check failed with a name-resolution error.
 - The **first start after installing** can take 20 seconds or more while Windows checks each new file (the build isn't code-signed yet, see below). Later starts take about a second.
 
 **Known problem:** the Windows build isn't code-signed yet, so on PCs with **Smart App Control** turned on (or a work PC with an App Control policy) it stops at startup with *"DLL load failed … An Application Control policy has blocked this file"* ([#3](https://github.com/Zdong104/View/issues/3)). Signed builds fix this; until then it only runs where Smart App Control is off (Windows Security → App & browser control → Smart App Control settings). Without Smart App Control, Windows may show a SmartScreen warning instead: click **More info → Run anyway**.
@@ -85,7 +83,7 @@ Text recognition (OCR) is included from 0.1.1 on. It runs in a small helper prog
 
 View is also supported in Chrome as an extension.
 
-1. Download [`view-chrome-0.1.6.zip`](https://github.com/Zdong104/View/releases/download/v0.1.6/view-chrome-0.1.6.zip) and unzip it.
+1. Download [`view-chrome-0.1.7.zip`](https://github.com/Zdong104/View/releases/download/v0.1.7/view-chrome-0.1.7.zip) and unzip it.
 2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and choose the unzipped folder.
 3. To open local files, click **Details** on View and turn on **Allow access to file URLs**.
 

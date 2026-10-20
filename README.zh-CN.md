@@ -38,22 +38,22 @@
 
 ### Ubuntu / Debian（.deb）
 
-下载 [`view_0.1.6_all.deb`](https://github.com/Zdong104/View/releases/download/v0.1.6/view_0.1.6_all.deb)（也可以从 [Releases 页面](https://github.com/Zdong104/View/releases)获取），然后执行：
+下载 [`view_0.1.7_all.deb`](https://github.com/Zdong104/View/releases/download/v0.1.7/view_0.1.7_all.deb)（也可以从 [Releases 页面](https://github.com/Zdong104/View/releases)获取），然后执行：
 
 ```bash
-sudo apt install ./view_0.1.6_all.deb
+sudo apt install ./view_0.1.7_all.deb
 ```
 
 或者一条命令完成：
 
 ```bash
-wget https://github.com/Zdong104/View/releases/download/v0.1.6/view_0.1.6_all.deb && sudo apt install ./view_0.1.6_all.deb
+wget https://github.com/Zdong104/View/releases/download/v0.1.7/view_0.1.7_all.deb && sudo apt install ./view_0.1.7_all.deb
 ```
 
 推荐使用 `apt`，因为它会一并安装依赖。如果你更习惯用 `dpkg`：
 
 ```bash
-sudo dpkg -i view_0.1.6_all.deb && sudo apt -f install
+sudo dpkg -i view_0.1.7_all.deb && sudo apt -f install
 ```
 
 ### Snap（edge 通道）
@@ -68,13 +68,11 @@ sudo snap install view --edge && sudo snap connect view:raw-input
 
 ### Windows（**实验性**）
 
-下载 [`View-Setup-0.1.6.exe`](https://github.com/Zdong104/View/releases/download/v0.1.6/View-Setup-0.1.6.exe)（安装程序）或 [`View-0.1.6-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.1.6/View-0.1.6-windows-portable.zip)（免安装）。目前已在真实的 Windows 11 笔记本上测试过，但仍非常欢迎你的反馈。触控板签名的用法和 Linux 上一样：按 **Space**（或 **Start**），然后用一根手指签名，无需点击。它需要精确式触控板（Precision Touchpad，2016 年以来的大多数笔记本都有）；否则请用鼠标或手写笔书写。
+下载 [`View-Setup-0.1.7.exe`](https://github.com/Zdong104/View/releases/download/v0.1.7/View-Setup-0.1.7.exe)（安装程序）或 [`View-0.1.7-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.1.7/View-0.1.7-windows-portable.zip)（免安装）。目前已在真实的 Windows 11 笔记本上测试过，但仍非常欢迎你的反馈。触控板签名的用法和 Linux 上一样：按 **Space**（或 **Start**），然后用一根手指签名，无需点击。它需要精确式触控板（Precision Touchpad，2016 年以来的大多数笔记本都有）；否则请用鼠标或手写笔书写。
 
-**0.1.6 新增：**
+**0.1.7 新增：**
 
-- **截图直接在 View 中打开，快速标注**：截图后（Linux 上按 Print Screen；Windows 上用截图工具或 Win+Print Screen），View 会打开截图并备好标注工具。点击**完成**（或按 Ctrl+Enter / Ctrl+S）即可存回“截图”文件夹，并把编辑后的图片复制到剪贴板。默认开启；可在“偏好设置 → 截图”中关闭。
-- **复制图片**现在会把图片放到剪贴板，其他应用可以直接粘贴。
-- **README 新增中文版**。
+- **Snap 版“检查更新”恢复可用**：之前 Snap 版无法连接 GitHub，检查更新时会报域名解析错误。
 - **安装后的首次启动**可能需要 20 秒甚至更久，因为 Windows 会逐个检查新文件（该版本尚未进行代码签名，见下文）。之后的启动大约只需一秒。
 
 **已知问题：** Windows 版本尚未进行代码签名，因此在开启了**智能应用控制（Smart App Control）**的电脑上（或带有应用控制策略的工作电脑上），启动时会中断并提示 *"DLL load failed … An Application Control policy has blocked this file"*（[#3](https://github.com/Zdong104/View/issues/3)）。签名版本可以解决这个问题；在此之前，它只能在关闭智能应用控制的电脑上运行（Windows 安全中心 → 应用和浏览器控制 → 智能应用控制设置）。如果没有开启智能应用控制，Windows 可能会改为弹出 SmartScreen 警告：点击 **更多信息 → 仍要运行** 即可。
@@ -85,7 +83,7 @@ sudo snap install view --edge && sudo snap connect view:raw-input
 
 View 也以扩展的形式支持 Chrome。
 
-1. 下载 [`view-chrome-0.1.6.zip`](https://github.com/Zdong104/View/releases/download/v0.1.6/view-chrome-0.1.6.zip) 并解压。
+1. 下载 [`view-chrome-0.1.7.zip`](https://github.com/Zdong104/View/releases/download/v0.1.7/view-chrome-0.1.7.zip) 并解压。
 2. 打开 `chrome://extensions`，开启 **开发者模式**，点击 **加载已解压的扩展程序**，然后选择解压出的文件夹。
 3. 如需打开本地文件，请点击 View 的 **详细信息**，并开启 **允许访问文件网址**。
 

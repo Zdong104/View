@@ -3,7 +3,9 @@
 # Turn it off in View > Preferences: that adds a per-user copy with Hidden=true.
 Type=Application
 Name=View Screenshot Editor
+Name[zh_CN]=View 截图编辑
 Comment=Opens new screenshots in View for quick markup
+Comment[zh_CN]=在 View 中打开新截图以便快速标记
 Exec=/usr/bin/view-app --screenshot-watcher
 TryExec=/usr/bin/view-app
 Icon=io.github.zdong104.View

@@ -41,7 +41,19 @@ All code lives in `preview/`:
 | `text_view.py`, `syntax.py` | Text and code viewer, Pygments helpers |
 | `video_view.py`, `media_player.py` | Video / audio viewer and player widget |
 | `inspector.py` | Get Info window |
+| `i18n.py` | UI translation (gettext); catalogs live in `po/` |
 | `quicklook.py`, `quicklook_renderers.py` | Quick Look service for GNOME Files |
+
+## Translations
+
+UI strings are wrapped with `_()` (`from .i18n import _, N_, ngettext`); the language is picked in Preferences (or follows the system locale) and applies after a restart.
+
+- Write `_("Could not save “{name}”: {err}").format(name=n, err=e)` with named placeholders, never `f"…"` or string concatenation inside `_()`.
+- Use `ngettext("{n} page", "{n} pages", n).format(n=n)` for plurals.
+- Module-level constants (menu tables, labels) use `N_("…")` and are translated with `_()` where they are shown.
+- Don't use `_` as a throwaway variable (`lambda *_`, `for _ in …`) in a function that also calls `_()`; use `_a`, `_x`, …
+- `make i18n` refreshes `po/view.pot`, merges it into every `po/*.po` and compiles `preview/locale/<lang>/LC_MESSAGES/view.mo`. Commit the `.mo` files: the packages ship them as they are. It needs GNU gettext (`xgettext`, `msgmerge`, `msgfmt`).
+- To add a language: `msginit -i po/view.pot -l <lang> -o po/<lang>.po --no-translator`, translate it, add it to `LANGUAGES` in `preview/i18n.py`, and run `make i18n`.
 
 ## Chrome extension
 
@@ -87,6 +99,7 @@ Attach screenshots to your pull request when the UI changes. Use sample files yo
 
 - [ ] Based on current `main`, one topic per PR
 - [ ] `make selftest` passes
+- [ ] New UI strings go through `_()` and `make i18n` has been run
 - [ ] Tried it manually (and with a large file if you touched rendering or loading)
 - [ ] The UI stays responsive (no blocking calls on the main thread)
 - [ ] Docs / README updated if behaviour changed

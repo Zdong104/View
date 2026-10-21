@@ -25,6 +25,7 @@ import cairo
 from PIL import Image
 
 from . import convert, runtime
+from .i18n import _, N_, ngettext
 from .image_ops import (ALPHA_FORMATS, ANIM_EXTS, COLOR_DEFAULTS, PIXBUF_SAVE, WRITABLE,
                         adjust_color, anim_dest_ok, anim_probe, iter_frames, save_animated,
                         apply_ops, color_is_neutral, fit_size, image_info_sections, load_base,
@@ -117,7 +118,7 @@ class ImageItem(GObject.Object):
         super().__init__()
         self.gfile = gfile
         self.path = gfile.get_path() if gfile is not None else None
-        self.name = name or (gfile.get_basename() if gfile is not None else "Untitled")
+        self.name = name or (gfile.get_basename() if gfile is not None else _("Untitled"))
         self.ops = []
         self.history = []
         self.future = []
@@ -857,17 +858,17 @@ class ImageViewer(Viewer):
         self.osd = Gtk.Box(spacing=2, halign=Gtk.Align.CENTER, valign=Gtk.Align.END,
                            margin_bottom=14, css_classes=["preview-osd"])
         self.osd.append(Gtk.Button(icon_name="zoom-out-symbolic", action_name="img.zoom-out",
-                                   tooltip_text="Zoom Out (−)", css_classes=["flat", "circular"],
+                                   tooltip_text=_("Zoom Out (−)"), css_classes=["flat", "circular"],
                                    focus_on_click=False))
         self.zoom_btn = Gtk.Button(label="100%", action_name="img.zoom-toggle",
                                    css_classes=["flat"], width_request=64,
-                                   tooltip_text="Toggle Fit / Actual Size", focus_on_click=False)
+                                   tooltip_text=_("Toggle Fit / Actual Size"), focus_on_click=False)
         self.osd.append(self.zoom_btn)
         self.osd.append(Gtk.Button(icon_name="zoom-in-symbolic", action_name="img.zoom-in",
-                                   tooltip_text="Zoom In (+)", css_classes=["flat", "circular"],
+                                   tooltip_text=_("Zoom In (+)"), css_classes=["flat", "circular"],
                                    focus_on_click=False))
         self.osd.append(Gtk.Button(icon_name="zoom-fit-best-symbolic", action_name="img.zoom-fit",
-                                   tooltip_text="Fit to Window (0)",
+                                   tooltip_text=_("Fit to Window (0)"),
                                    css_classes=["flat", "circular"], focus_on_click=False))
         overlay.add_overlay(self.osd)
 
@@ -881,12 +882,12 @@ class ImageViewer(Viewer):
         self.tol_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)
         self.tol_scale.set_value(25)
         self.tol_scale.set_size_request(140, -1)
-        self.tol_scale.set_tooltip_text("Tolerance")
+        self.tol_scale.set_tooltip_text(_("Tolerance"))
         tb.append(self.tol_scale)
-        self.crop_btn = Gtk.Button(label="Crop", action_name="img.crop", css_classes=["flat"],
+        self.crop_btn = Gtk.Button(label=_("Crop"), action_name="img.crop", css_classes=["flat"],
                                    focus_on_click=False)
         tb.append(self.crop_btn)
-        done = Gtk.Button(label="Done", css_classes=["flat"], focus_on_click=False)
+        done = Gtk.Button(label=_("Done"), css_classes=["flat"], focus_on_click=False)
         done.connect("clicked", lambda *_: self._set_tool("pan"))
         tb.append(done)
         self.tool_bar.set_child(tb)
@@ -900,19 +901,20 @@ class ImageViewer(Viewer):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, width_request=280,
                       margin_top=12, margin_bottom=12, margin_start=14, margin_end=14)
         head = Gtk.Box(spacing=6)
-        head.append(Gtk.Label(label="Adjust Color", css_classes=["heading"], hexpand=True,
+        head.append(Gtk.Label(label=_("Adjust Color"), css_classes=["heading"], hexpand=True,
                               xalign=0))
-        self.auto_btn = Gtk.ToggleButton(label="Auto Levels", css_classes=["flat"])
+        self.auto_btn = Gtk.ToggleButton(label=_("Auto Levels"), css_classes=["flat"])
         self.auto_btn.connect("toggled", lambda *_: self._color_changed())
         head.append(self.auto_btn)
         box.append(head)
         self.color_scales = {}
-        spec = [("exposure", "Exposure", -2, 2), ("contrast", "Contrast", -1, 1),
-                ("highlights", "Highlights", -1, 1), ("shadows", "Shadows", -1, 1),
-                ("saturation", "Saturation", -1, 1), ("temperature", "Temperature", -1, 1),
-                ("tint", "Tint", -1, 1), ("sepia", "Sepia", 0, 1), ("sharpness", "Sharpness", 0, 1)]
+        spec = [("exposure", N_("Exposure"), -2, 2), ("contrast", N_("Contrast"), -1, 1),
+                ("highlights", N_("Highlights"), -1, 1), ("shadows", N_("Shadows"), -1, 1),
+                ("saturation", N_("Saturation"), -1, 1), ("temperature", N_("Temperature"), -1, 1),
+                ("tint", N_("Tint"), -1, 1), ("sepia", N_("Sepia"), 0, 1),
+                ("sharpness", N_("Sharpness"), 0, 1)]
         for key, label, lo, hi in spec:
-            box.append(Gtk.Label(label=label, xalign=0, css_classes=["caption"]))
+            box.append(Gtk.Label(label=_(label), xalign=0, css_classes=["caption"]))
             sc = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, lo, hi, 0.01)
             sc.set_value(0)
             sc.set_draw_value(False)
@@ -920,11 +922,11 @@ class ImageViewer(Viewer):
             box.append(sc)
             self.color_scales[key] = sc
         btns = Gtk.Box(spacing=6, margin_top=8, homogeneous=True)
-        reset = Gtk.Button(label="Reset")
+        reset = Gtk.Button(label=_("Reset"))
         reset.connect("clicked", lambda *_: self._color_reset())
-        cancel = Gtk.Button(label="Cancel")
+        cancel = Gtk.Button(label=_("Cancel"))
         cancel.connect("clicked", lambda *_: self._color_close(apply=False))
-        apply_ = Gtk.Button(label="Apply", css_classes=["suggested-action"])
+        apply_ = Gtk.Button(label=_("Apply"), css_classes=["suggested-action"])
         apply_.connect("clicked", lambda *_: self._color_close(apply=True))
         for b in (reset, cancel, apply_):
             btns.append(b)
@@ -956,13 +958,13 @@ class ImageViewer(Viewer):
                                 hscrollbar_policy=Gtk.PolicyType.NEVER)
         tv.set_content(sw)
         bar = Gtk.ActionBar()
-        bar.pack_start(Gtk.Button(icon_name="list-add-symbolic", tooltip_text="Add Images…",
+        bar.pack_start(Gtk.Button(icon_name="list-add-symbolic", tooltip_text=_("Add Images…"),
                                   action_name="img.add"))
         bar.pack_start(Gtk.Button(icon_name="list-remove-symbolic",
-                                  tooltip_text="Remove from List (Delete)",
+                                  tooltip_text=_("Remove from List (Delete)"),
                                   action_name="img.remove"))
         bar.pack_end(Gtk.Button(icon_name="document-send-symbolic",
-                                tooltip_text="Export Selected Images…",
+                                tooltip_text=_("Export Selected Images…"),
                                 action_name="img.export-selected"))
         self.sel_label = Gtk.Label(css_classes=["dim-label", "caption"])
         bar.set_center_widget(self.sel_label)
@@ -1258,72 +1260,72 @@ class ImageViewer(Viewer):
     def build_header(self, header):
         self._headers_built = True
         self.sidebar_btn = Gtk.ToggleButton(icon_name="sidebar-show-symbolic",
-                                            tooltip_text="Show Thumbnails (F9)",
+                                            tooltip_text=_("Show Thumbnails (F9)"),
                                             focus_on_click=False, visible=False)
         self.split.bind_property("show-sidebar", self.sidebar_btn, "active",
                                  GObject.BindingFlags.BIDIRECTIONAL |
                                  GObject.BindingFlags.SYNC_CREATE)
         header.pack_start(self.sidebar_btn)
-        for icon, act, tip in (("object-rotate-left-symbolic", "rotate-left", "Rotate Left (Ctrl+L)"),
+        for icon, act, tip in (("object-rotate-left-symbolic", "rotate-left", N_("Rotate Left (Ctrl+L)")),
                                ("object-rotate-right-symbolic", "rotate-right",
-                                "Rotate Right (Ctrl+R)")):
+                                N_("Rotate Right (Ctrl+R)"))):
             header.pack_start(Gtk.Button(icon_name=icon, action_name=f"img.{act}",
-                                         tooltip_text=tip, focus_on_click=False))
+                                         tooltip_text=_(tip), focus_on_click=False))
 
         tools = Gio.Menu()
         sel = Gio.Menu()
-        sel.append("Move and Zoom", "img.tool::pan")
-        sel.append("Rectangular Selection", "img.tool::rect")
-        sel.append("Elliptical Selection", "img.tool::ellipse")
-        sel.append("Instant Alpha", "img.tool::alpha")
+        sel.append(_("Move and Zoom"), "img.tool::pan")
+        sel.append(_("Rectangular Selection"), "img.tool::rect")
+        sel.append(_("Elliptical Selection"), "img.tool::ellipse")
+        sel.append(_("Instant Alpha"), "img.tool::alpha")
         tools.append_section(None, sel)
         t2 = Gio.Menu()
-        t2.append("Crop to Selection", "img.crop")
-        t2.append("Adjust Color…", "img.adjust-color")
-        t2.append("Adjust Size…", "img.adjust-size")
-        t2.append("Flip Horizontal", "img.flip")
+        t2.append(_("Crop to Selection"), "img.crop")
+        t2.append(_("Adjust Color…"), "img.adjust-color")
+        t2.append(_("Adjust Size…"), "img.adjust-size")
+        t2.append(_("Flip Horizontal"), "img.flip")
         tools.append_section(None, t2)
         t3 = Gio.Menu()
-        t3.append("Undo", "img.undo")
-        t3.append("Redo", "img.redo")
-        t3.append("Revert to Saved", "img.revert")
+        t3.append(_("Undo"), "img.undo")
+        t3.append(_("Redo"), "img.redo")
+        t3.append(_("Revert to Saved"), "img.revert")
         tools.append_section(None, t3)
         t5 = Gio.Menu()
-        t5.append("Show Markup Toolbar", "img.markup")
-        t5.append("Recognize Text", "img.recognize")
-        t5.append("Show Recognized Text", "img.show-text")
-        t5.append("Copy All Text", "img.copy-text")
+        t5.append(_("Show Markup Toolbar"), "img.markup")
+        t5.append(_("Recognize Text"), "img.recognize")
+        t5.append(_("Show Recognized Text"), "img.show-text")
+        t5.append(_("Copy All Text"), "img.copy-text")
         tools.append_section(None, t5)
         t4 = Gio.Menu()
-        t4.append("Slideshow", "img.slideshow")
+        t4.append(_("Slideshow"), "img.slideshow")
         if runtime.IS_LINUX or runtime.IS_WINDOWS:     # GNOME background settings / Win32
-            t4.append("Set as Wallpaper…", "img.wallpaper")
+            t4.append(_("Set as Wallpaper…"), "img.wallpaper")
         tools.append_section(None, t4)
         header.pack_start(Gtk.MenuButton(icon_name="applications-graphics-symbolic",
-                                         menu_model=tools, tooltip_text="Tools",
+                                         menu_model=tools, tooltip_text=_("Tools"),
                                          focus_on_click=False))
 
         # end side, packed right-to-left (the window's menu is already rightmost)
         menu = Gio.Menu()
         sec = Gio.Menu()
-        sec.append("Save", "img.save")
-        sec.append("Save As…", "img.save-as")
-        sec.append("Export As…", "img.export-as")
-        sec.append("Export as PDF…", "img.export-pdf")
-        sec.append("Export Selected Images…", "img.export-selected")
+        sec.append(_("Save"), "img.save")
+        sec.append(_("Save As…"), "img.save-as")
+        sec.append(_("Export As…"), "img.export-as")
+        sec.append(_("Export as PDF…"), "img.export-pdf")
+        sec.append(_("Export Selected Images…"), "img.export-selected")
         menu.append_section(None, sec)
         sec2 = Gio.Menu()
-        sec2.append("Copy Image", "img.copy")
-        sec2.append("Print…", "img.print")
+        sec2.append(_("Copy Image"), "img.copy")
+        sec2.append(_("Print…"), "img.print")
         menu.append_section(None, sec2)
         header.pack_end(Gtk.MenuButton(icon_name="document-save-symbolic", menu_model=menu,
-                                       tooltip_text="Save, Export and Print",
+                                       tooltip_text=_("Save, Export and Print"),
                                        focus_on_click=False))
         header.pack_end(Gtk.Button(icon_name="x-office-document-symbolic",
                                    action_name="img.export-pdf", focus_on_click=False,
-                                   tooltip_text="Export as PDF…"))
+                                   tooltip_text=_("Export as PDF…")))
         self.markup_btn = Gtk.ToggleButton(icon_name="document-edit-symbolic",
-                                           tooltip_text="Markup (Ctrl+Shift+A)",
+                                           tooltip_text=_("Markup (Ctrl+Shift+A)"),
                                            focus_on_click=False)
         self.markup_rev.bind_property("reveal-child", self.markup_btn, "active",
                                       GObject.BindingFlags.SYNC_CREATE)
@@ -1347,7 +1349,7 @@ class ImageViewer(Viewer):
         self._attach_host()
         new = [ImageItem(f) for f in files if f.get_path()]
         if not new:
-            self.toast("Could not open the selected images (only local files are supported)")
+            self.toast(_("Could not open the selected images (only local files are supported)"))
             return
         self._load_items(new)
         if len(new) == 1 and not self.compact:
@@ -1367,7 +1369,7 @@ class ImageViewer(Viewer):
         if name is None:
             _untitled_counter[0] += 1
             n = _untitled_counter[0]
-            name = "Untitled" if n == 1 else f"Untitled {n}"
+            name = _("Untitled") if n == 1 else _("Untitled {n}").format(n=n)
         item = ImageItem(None, name, im)
         if self.store.get_n_items() == 0:
             self._load_items([item])
@@ -1530,7 +1532,7 @@ class ImageViewer(Viewer):
             self._busy(False)
             if base is None:
                 item.error = str(err)
-                self.toast(f"Could not open {item.name}")
+                self.toast(_("Could not open {name}").format(name=item.name))
                 self.refresh_title()
                 return False
             item.base, item.exif, item.icc = base, exif, icc
@@ -1572,7 +1574,7 @@ class ImageViewer(Viewer):
             if err is not None:
                 import traceback
                 traceback.print_exception(err)
-                self.toast(f"Edit failed: {err}")
+                self.toast(_("Edit failed: {err}").format(err=err))
                 return False
             if item is self.current:
                 self._shown(item, im, display, tex, keep_view)
@@ -1764,14 +1766,15 @@ class ImageViewer(Viewer):
         if it.gfile is not None:
             out.append(file_info_section(it.gfile))
         else:
-            out.append(("File", [("File name", it.name), ("Kind", "Untitled image (not saved)")]))
+            out.append((_("File"), [(_("File name"), it.name),
+                                   (_("Kind"), _("Untitled image (not saved)"))]))
         size = it.orig_size
         secs = image_info_sections(it.path, size) if it.path else (
-            [("Image", [("Dimensions", f"{size[0]} × {size[1]} px")])] if size else [])
+            [(_("Image"), [(_("Dimensions"), f"{size[0]} × {size[1]} px")])] if size else [])
         if it.rendered is not None and it.final_ops() and secs:
             w, h = it.rendered.size
-            secs[0][1].insert(1, ("Edited size", f"{w} × {h} px"))
-            secs[0][1].insert(2, ("Edits", ", ".join(o[0] for o in it.final_ops())))
+            secs[0][1].insert(1, (_("Edited size"), f"{w} × {h} px"))
+            secs[0][1].insert(2, (_("Edits"), ", ".join(o[0] for o in it.final_ops())))
         return out + secs
 
     def has_unsaved_changes(self):
@@ -1791,10 +1794,10 @@ class ImageViewer(Viewer):
         self._update_sidebar_ui()
         if had == 0:
             self.selection.select_item(0, True)
-        self.toast(f"Added {len(new)} image{'s' if len(new) != 1 else ''}")
+        self.toast(ngettext("Added {n} image", "Added {n} images", len(new)).format(n=len(new)))
 
     def _add_dialog(self):
-        fd = Gtk.FileDialog(title="Add Images")
+        fd = Gtk.FileDialog(title=_("Add Images"))
         f = Gtk.FileFilter(name="Images")
         for e in sorted(x[1:] for x in IMAGE_EXTS):
             f.add_suffix(e)
@@ -1823,7 +1826,7 @@ class ImageViewer(Viewer):
             return
         if len(self._siblings) > 1 and self._sib_idx >= 0:
             if self.current and self.current.final_ops():
-                self.toast("Save or revert your changes before browsing")
+                self.toast(_("Save or revert your changes before browsing"))
                 return
             idx = self._sib_idx + delta
             if wrap:
@@ -1860,7 +1863,7 @@ class ImageViewer(Viewer):
         if not pos or n <= 1:
             return
         if len(pos) >= n:
-            self.toast("At least one image has to stay open")
+            self.toast(_("At least one image has to stay open"))
             return
         self._reordering = True
         for p in sorted(pos, reverse=True):
@@ -1975,7 +1978,7 @@ class ImageViewer(Viewer):
         changed = bool(it.ops)
         it.ops = []
         self._after_edit(it, render=changed)
-        self.toast("Reverted to the saved version", "Undo", self._undo)
+        self.toast(_("Reverted to the saved version"), _("Undo"), self._undo)
 
     # ---- tools ------------------------------------------------------------------------------
     def _set_tool(self, tool):
@@ -1983,9 +1986,9 @@ class ImageViewer(Viewer):
             tool = "pan"
         self._acts["tool"].set_state(GLib.Variant("s", tool))
         self.canvas.set_tool(tool)
-        hints = {"rect": "Drag to select an area · Ctrl+K crops",
-                 "ellipse": "Drag to select an ellipse · Ctrl+K crops",
-                 "alpha": "Click a colour to make it transparent"}
+        hints = {"rect": _("Drag to select an area · Ctrl+K crops"),
+                 "ellipse": _("Drag to select an ellipse · Ctrl+K crops"),
+                 "alpha": _("Click a colour to make it transparent")}
         self.tool_label.set_text(hints.get(tool, ""))
         self.tol_scale.set_visible(tool == "alpha")
         self.crop_btn.set_visible(tool in ("rect", "ellipse"))
@@ -1999,7 +2002,7 @@ class ImageViewer(Viewer):
         if it is None or it.rendered is None:
             return
         if not sel:
-            self.toast("Select an area first (Tools ▸ Rectangular Selection)")
+            self.toast(_("Select an area first (Tools ▸ Rectangular Selection)"))
             return
         self._commit_overlay(it)
         w, h = it.rendered.size
@@ -2063,7 +2066,7 @@ class ImageViewer(Viewer):
         self.canvas.queue_draw()
         self.refresh_title()
         self._update_actions()
-        self.toast("Drag to move, drag the corner to resize. Backspace removes it.")
+        self.toast(_("Drag to move, drag the corner to resize. Backspace removes it."))
 
     def _discard_overlay(self):
         it = self.current
@@ -2082,7 +2085,7 @@ class ImageViewer(Viewer):
         try:
             from .markup import MarkupController, MarkupToolbar
         except Exception as e:  # noqa: BLE001
-            self.toast(f"Markup is unavailable: {e}")
+            self.toast(_("Markup is unavailable: {e}").format(e=e))
             return False
         self.mk = MarkupController(self)
         extra = ()
@@ -2119,9 +2122,9 @@ class ImageViewer(Viewer):
                 err = self.mk.start_touchpad("img")
                 if err:
                     btn.set_active(False)
-                    self.toast(f"Touchpad drawing unavailable: {err}")
+                    self.toast(_("Touchpad drawing unavailable: {err}").format(err=err))
                 else:
-                    self.toast("Draw with one finger on the touchpad · any key to finish")
+                    self.toast(_("Draw with one finger on the touchpad · any key to finish"))
         elif self.mk.pad is not None:
             self.mk.pad.stop()
 
@@ -2233,7 +2236,7 @@ class ImageViewer(Viewer):
             from . import ocr
         except Exception as e:  # noqa: BLE001
             if force:
-                self.toast(f"Text recognition is unavailable: {e}")
+                self.toast(_("Text recognition is unavailable: {e}").format(e=e))
             return
         if not ocr.is_available():
             if force:
@@ -2255,15 +2258,15 @@ class ImageViewer(Viewer):
                 return
             if err is not None:
                 if force:
-                    self.toast(f"Text recognition failed: {err}")
+                    self.toast(_("Text recognition failed: {err}").format(err=err))
                 return
             ov = ocr.TextOverlay(lines, display.size)
             ov.on_change = self.canvas.queue_draw
             self.canvas.text = ov
             self.canvas.text_k = k
             if force:
-                self.toast(f"Recognized {len(lines)} line{'s' if len(lines) != 1 else ''} of text"
-                           if lines else "No text found")
+                self.toast(ngettext("Recognized {n} line of text", "Recognized {n} lines of text", len(lines)).format(n=len(lines))
+                           if lines else _("No text found"))
                 if lines:
                     ov.set_show_boxes(True)
             self._update_actions()
@@ -2277,11 +2280,11 @@ class ImageViewer(Viewer):
     def _copy_all_text(self):
         t = self.canvas.text
         if t is None or not t.has_text():
-            self.toast("No recognized text")
+            self.toast(_("No recognized text"))
             return
         from . import ocr
         self.get_clipboard().set(ocr.lines_to_text(t.lines))
-        self.toast("All text copied")
+        self.toast(_("All text copied"))
 
     # ---- adjust colour ------------------------------------------------------------------------
     def _color_open(self):
@@ -2396,7 +2399,7 @@ class ImageViewer(Viewer):
         t = self.canvas.text
         if t is not None and t.has_selection():
             self.get_clipboard().set(t.selected_text())
-            self.toast("Text copied")
+            self.toast(_("Text copied"))
             return
         if self.mk is not None and self.mk.copy_selected():
             return
@@ -2419,16 +2422,16 @@ class ImageViewer(Viewer):
 
             def done(tex, err):
                 if err:
-                    self.toast(f"Copy failed: {err}")
+                    self.toast(_("Copy failed: {err}").format(err=err))
                 else:
                     self._set_clip(tex)
-                    self.toast("Selection copied" if sel else "Image copied")
+                    self.toast(_("Selection copied") if sel else _("Image copied"))
             self._run_bg(work, done)
         else:
             full = it.rendered
             self._run_bg(lambda: pil_to_texture(full),
-                         lambda tex, err: (self._set_clip(tex), self.toast("Image copied"))
-                         if err is None else self.toast(f"Copy failed: {err}"))
+                         lambda tex, err: (self._set_clip(tex), self.toast(_("Image copied")))
+                         if err is None else self.toast(_("Copy failed: {err}").format(err=err)))
 
     # ---- save / export ----------------------------------------------------------------------------
     def _run_bg(self, fn, done):
@@ -2445,7 +2448,7 @@ class ImageViewer(Viewer):
     def _anim_progress(self, k, n):
         """Frame progress from a save worker -> spinner tooltip (throttled)."""
         if k == n or k % max(1, n // 20) == 0:
-            GLib.idle_add(lambda: (self.spinner.set_tooltip_text(f"Saving frame {k} of {n}"),
+            GLib.idle_add(lambda: (self.spinner.set_tooltip_text(_("Saving frame {k} of {n}").format(k=k, n=n)),
                                    False)[1])
 
     def _write_item(self, it, dest, quality=None, max_px=0, export=False):
@@ -2457,7 +2460,7 @@ class ImageViewer(Viewer):
         info = anim_probe(it.path) if it.path else None
         if info and anim_dest_ok("" if export else Path(it.path).suffix, ext):
             if info["n"] >= 12:
-                GLib.idle_add(lambda: (self.toast(f"Saving {info['n']}-frame animation…"),
+                GLib.idle_add(lambda: (self.toast(_("Saving {v}-frame animation…").format(v=info['n'])),
                                        False)[1])
             save_animated(it.path, it.final_ops(), dest, quality if export else None,
                           max_px, progress=self._anim_progress)
@@ -2473,7 +2476,7 @@ class ImageViewer(Viewer):
     def _run_saving(self, fn, done):
         """_run_bg with the busy spinner shown for the duration."""
         self._busy(True)
-        self.spinner.set_tooltip_text("Saving…")
+        self.spinner.set_tooltip_text(_("Saving…"))
 
         def finished(res, err):
             self._busy(False)
@@ -2516,20 +2519,22 @@ class ImageViewer(Viewer):
 
         def done(res, err):
             if err:
-                self.toast(f"Could not save: {err}")
+                self.toast(_("Could not save: {err}").format(err=err))
                 after_files(False)
                 return
             moved = [d for it, d, _k in res if d != it.path]
             for it, dest, _k in res:
                 self._reset_item(it, dest)
             if moved:
-                self.toast(f"Saved as {os.path.basename(moved[0])} (the original format "
-                           "can't keep these edits)")
+                self.toast(_("Saved as {v} (the original format can't keep these edits)").format(v=os.path.basename(moved[0])))
             else:
-                self.toast("Saved " + (os.path.basename(res[0][1]) if len(res) == 1
-                                       else f"{len(res)} images") +
-                           (" (first frame only; the format can't animate)"
-                            if any(k == "flat" for _i, _d, k in res) else ""))
+                if len(res) == 1:
+                    msg = _("Saved {name}").format(name=os.path.basename(res[0][1]))
+                else:
+                    msg = _("Saved {n} images").format(n=len(res))
+                if any(k == "flat" for _i, _d, k in res):
+                    msg += _(" (first frame only; the format can't animate)")
+                self.toast(msg)
             after_files(True)
         self._run_saving(job, done)
 
@@ -2611,7 +2616,7 @@ class ImageViewer(Viewer):
 
             def done(res, err):
                 if err:
-                    self.toast(f"Could not save: {err}")
+                    self.toast(_("Could not save: {err}").format(err=err))
                     if on_done:
                         on_done(False)
                     return
@@ -2619,19 +2624,20 @@ class ImageViewer(Viewer):
                 it.gfile = Gio.File.new_for_path(res)
                 it.path, it.name = res, os.path.basename(res)
                 self._reset_item(it)
-                self.toast(f"Saved {it.name}" + (" (first frame only; this format can't "
-                                                 "animate)" if kind == "flat" else ""))
+                self.toast(_("Saved {name}").format(name=it.name) +
+                           (_(" (first frame only; this format can't animate)")
+                            if kind == "flat" else ""))
                 if on_done:
                     on_done(True)
             self._run_saving(job, done)
-        self._file_dialog_save("Save As", name, go)
+        self._file_dialog_save(_("Save As"), name, go)
 
     def _format_dialog(self, title, formats, ok_label, on_ok, extra=None):
         """Small Adw.Dialog with Format + Quality (+ optional extra rows)."""
         dlg = Adw.Dialog(title=title, content_width=420)
         tv = Adw.ToolbarView()
         hb = Adw.HeaderBar(show_end_title_buttons=False, show_start_title_buttons=False)
-        cancel = Gtk.Button(label="Cancel")
+        cancel = Gtk.Button(label=_("Cancel"))
         cancel.connect("clicked", lambda *_: dlg.close())
         ok = Gtk.Button(label=ok_label, css_classes=["suggested-action"])
         hb.pack_start(cancel)
@@ -2640,8 +2646,8 @@ class ImageViewer(Viewer):
         page = Adw.PreferencesPage()
         g = Adw.PreferencesGroup()
         page.add(g)
-        fmt_row = Adw.ComboRow(title="Format", model=Gtk.StringList.new([f[0] for f in formats]))
-        q_row = Adw.SpinRow(title="Quality", sensitive=False,
+        fmt_row = Adw.ComboRow(title=_("Format"), model=Gtk.StringList.new([f[0] for f in formats]))
+        q_row = Adw.SpinRow(title=_("Quality"), sensitive=False,
                             adjustment=Gtk.Adjustment(value=90, lower=1, upper=100,
                                                       step_increment=1, page_increment=10))
         g.add(fmt_row)
@@ -2685,14 +2691,14 @@ class ImageViewer(Viewer):
 
                 def done(res, err):
                     if err:
-                        self.toast(f"Could not export: {err}")
+                        self.toast(_("Could not export: {err}").format(err=err))
                     else:
-                        self.toast(f"Exported {os.path.basename(res[0])}" +
-                                   (f" — first frame only, {ext[1:].upper()} can't hold an "
-                                    "animation" if res[1] == "flat" else ""))
+                        self.toast(_("Exported {name}").format(name=os.path.basename(res[0])) +
+                                   (_(" — first frame only, {format} can't hold an animation")
+                                    .format(format=ext[1:].upper()) if res[1] == "flat" else ""))
                 self._run_saving(job, done)
-            self._file_dialog_save("Export Image", Path(it.name).stem + ext, chosen)
-        self._format_dialog("Export Image", EXPORT_FORMATS, "Export…", on_ok)
+            self._file_dialog_save(_("Export Image"), Path(it.name).stem + ext, chosen)
+        self._format_dialog(_("Export Image"), EXPORT_FORMATS, _("Export…"), on_ok)
 
     def _export_selected(self):
         """Batch convert: selected (or all) images → format / max size → folder."""
@@ -2706,18 +2712,18 @@ class ImageViewer(Viewer):
                  os.path.expanduser("~")}
 
         def extra(page, g):
-            g.set_description(f"{len(items)} image{'s' if len(items) != 1 else ''}")
-            size_row = Adw.SpinRow(title="Maximum Size", subtitle="Longest side in pixels, 0 = original",
+            g.set_description(ngettext("{n} image", "{n} images", len(items)).format(n=len(items)))
+            size_row = Adw.SpinRow(title=_("Maximum Size"), subtitle=_("Longest side in pixels, 0 = original"),
                                    adjustment=Gtk.Adjustment(value=0, lower=0, upper=20000,
                                                              step_increment=100,
                                                              page_increment=1000))
             g.add(size_row)
-            folder_row = Adw.ActionRow(title="Save To", subtitle=state["folder"], subtitle_lines=2)
+            folder_row = Adw.ActionRow(title=_("Save To"), subtitle=state["folder"], subtitle_lines=2)
             btn = Gtk.Button(icon_name="folder-open-symbolic", valign=Gtk.Align.CENTER,
-                             css_classes=["flat"], tooltip_text="Choose Folder…")
+                             css_classes=["flat"], tooltip_text=_("Choose Folder…"))
 
-            def pick(*_):
-                fd = Gtk.FileDialog(title="Choose Output Folder",
+            def pick(*_a):
+                fd = Gtk.FileDialog(title=_("Choose Output Folder"),
                                     initial_folder=Gio.File.new_for_path(state["folder"]))
 
                 def done(fd_, res):
@@ -2786,19 +2792,22 @@ class ImageViewer(Viewer):
                 if ctx["dlg"].get_root() is not None:
                     ctx["dlg"].force_close()
                 if errors:
-                    self.toast(f"Exported {len(written)} of {n}; {len(errors)} failed "
-                               f"({errors[0]})")
+                    self.toast(_("Exported {v} of {n}; {v2} failed ({v3})").format(v=len(written), n=n, v2=len(errors), v3=errors[0]))
                 else:
                     fol = Gio.File.new_for_path(folder)
-                    self.toast(f"Exported {len(written)} image{'s' if len(written) != 1 else ''}" +
-                               (f" ({len(flat)} animation{'s' if len(flat) != 1 else ''} "
-                                f"saved as first frame only)" if flat else ""),
-                               "Open Folder",
+                    msg = ngettext("Exported {n} image", "Exported {n} images",
+                                   len(written)).format(n=len(written))
+                    if flat:
+                        msg += ngettext(" ({n} animation saved as first frame only)",
+                                        " ({n} animations saved as first frame only)",
+                                        len(flat)).format(n=len(flat))
+                    self.toast(msg,
+                               _("Open Folder"),
                                lambda: Gtk.FileLauncher.new(fol).launch(self._root(), None,
                                                                          None, None))
                 return False
             threading.Thread(target=work, daemon=True).start()
-        self._format_dialog("Export Selected Images", BATCH_FORMATS, "Export", on_ok, extra)
+        self._format_dialog(_("Export Selected Images"), BATCH_FORMATS, _("Export"), on_ok, extra)
 
     def _export_pdf(self):
         pos = self._selected_positions()
@@ -2818,7 +2827,7 @@ class ImageViewer(Viewer):
                 else:
                     paths.append(it.path)
         except Exception as e:  # noqa: BLE001
-            self.toast(f"Could not prepare images: {e}")
+            self.toast(_("Could not prepare images: {e}").format(e=e))
             return
         first = next((i.path for i in items if i.path), None) or os.path.join(
             GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_DOCUMENTS) or
@@ -2876,7 +2885,7 @@ class ImageViewer(Viewer):
         try:
             op.run(Gtk.PrintOperationAction.PRINT_DIALOG, self._root())
         except GLib.Error as e:
-            self.toast(f"Printing failed: {e.message}")
+            self.toast(_("Printing failed: {message}").format(message=e.message))
 
     # ---- wallpaper ------------------------------------------------------------------------------
     def _wallpaper(self):
@@ -2889,14 +2898,15 @@ class ImageViewer(Viewer):
             src = Gio.SettingsSchemaSource.get_default()
             sch = src.lookup(schema, True) if src else None
             if sch is None:
-                self.toast("Desktop background settings are not available")
+                self.toast(_("Desktop background settings are not available"))
                 return
-        dlg = Adw.AlertDialog(heading="Set as Wallpaper?",
-                              body=f"“{it.name}” will be used as the desktop background" +
-                                   ("." if runtime.IS_WINDOWS else
-                                    " for both light and dark styles."))
-        dlg.add_response("cancel", "Cancel")
-        dlg.add_response("set", "Set Wallpaper")
+        dlg = Adw.AlertDialog(heading=_("Set as Wallpaper?"),
+                              body=(_("“{name}” will be used as the desktop background.")
+                                    if runtime.IS_WINDOWS else
+                                    _("“{name}” will be used as the desktop background "
+                                      "for both light and dark styles.")).format(name=it.name))
+        dlg.add_response("cancel", _("Cancel"))
+        dlg.add_response("set", _("Set Wallpaper"))
         dlg.set_response_appearance("set", Adw.ResponseAppearance.SUGGESTED)
         dlg.set_default_response("set")
         dlg.set_close_response("cancel")
@@ -2917,15 +2927,15 @@ class ImageViewer(Viewer):
 
             def done(path, err):
                 if err:
-                    self.toast(f"Could not set wallpaper: {err}")
+                    self.toast(_("Could not set wallpaper: {err}").format(err=err))
                     return
                 if runtime.IS_WINDOWS:
                     import ctypes
                     # SPI_SETDESKWALLPAPER, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE
                     if ctypes.windll.user32.SystemParametersInfoW(0x14, 0, str(path), 3):
-                        self.toast("Wallpaper set")
+                        self.toast(_("Wallpaper set"))
                     else:
-                        self.toast("Could not set wallpaper")
+                        self.toast(_("Could not set wallpaper"))
                     return
                 s = Gio.Settings.new(schema)
                 uri = Gio.File.new_for_path(path).get_uri()
@@ -2934,7 +2944,7 @@ class ImageViewer(Viewer):
                     s.set_string("picture-uri-dark", uri)
                 if s.get_string("picture-options") == "none":
                     s.set_string("picture-options", "zoom")
-                self.toast("Wallpaper set")
+                self.toast(_("Wallpaper set"))
             self._run_bg(job, done)
         dlg.connect("response", response)
         dlg.present(self._parent_widget())
@@ -2948,7 +2958,7 @@ class ImageViewer(Viewer):
 
     def _start_slideshow(self):
         if self.store.get_n_items() < 2 and len(self._siblings) < 2:
-            self.toast("Open several images for a slideshow")
+            self.toast(_("Open several images for a slideshow"))
             return
         win = self.window if isinstance(self.window, Gtk.Window) else None
         self._slideshow_state = {
@@ -2964,7 +2974,7 @@ class ImageViewer(Viewer):
             win.fullscreen()
         self.canvas.zoom_fit()
         self._slideshow = GLib.timeout_add_seconds(4, self._slideshow_tick)
-        self.toast("Slideshow — Esc or F5 to stop")
+        self.toast(_("Slideshow — Esc or F5 to stop"))
 
     def _slideshow_tick(self):
         if self.current and self.current.final_ops() and self.store.get_n_items() < 2:
@@ -2993,28 +3003,28 @@ class ImageViewer(Viewer):
         if it is None or it.rendered is None:
             return
         bw, bh = it.rendered.size
-        dlg = Adw.Dialog(title="Adjust Size", content_width=380)
+        dlg = Adw.Dialog(title=_("Adjust Size"), content_width=380)
         tv = Adw.ToolbarView()
         hb = Adw.HeaderBar(show_end_title_buttons=False, show_start_title_buttons=False)
-        cancel = Gtk.Button(label="Cancel")
+        cancel = Gtk.Button(label=_("Cancel"))
         cancel.connect("clicked", lambda *_: dlg.close())
-        ok = Gtk.Button(label="Apply", css_classes=["suggested-action"])
+        ok = Gtk.Button(label=_("Apply"), css_classes=["suggested-action"])
         hb.pack_start(cancel)
         hb.pack_end(ok)
         tv.add_top_bar(hb)
         page = Adw.PreferencesPage()
-        g = Adw.PreferencesGroup(description=f"Current size: {bw} × {bh} px")
+        g = Adw.PreferencesGroup(description=_("Current size: {bw} × {bh} px").format(bw=bw, bh=bh))
         page.add(g)
-        wr = Adw.SpinRow(title="Width", subtitle="Pixels",
+        wr = Adw.SpinRow(title=_("Width"), subtitle=_("Pixels"),
                          adjustment=Gtk.Adjustment(value=bw, lower=1, upper=30000,
                                                    step_increment=1, page_increment=100))
-        hr = Adw.SpinRow(title="Height", subtitle="Pixels",
+        hr = Adw.SpinRow(title=_("Height"), subtitle=_("Pixels"),
                          adjustment=Gtk.Adjustment(value=bh, lower=1, upper=30000,
                                                    step_increment=1, page_increment=100))
-        pct = Adw.SpinRow(title="Scale", subtitle="Percent",
+        pct = Adw.SpinRow(title=_("Scale"), subtitle=_("Percent"),
                           adjustment=Gtk.Adjustment(value=100, lower=1, upper=1000,
                                                     step_increment=1, page_increment=10))
-        lock = Adw.SwitchRow(title="Keep Aspect Ratio", active=True)
+        lock = Adw.SwitchRow(title=_("Keep Aspect Ratio"), active=True)
         for w in (pct, wr, hr, lock):
             g.add(w)
         busy = [False]

@@ -19,6 +19,7 @@ gi.require_version("Gdk", "4.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
 from .media_player import MediaPlayer, init_gst  # noqa: E402
+from .i18n import _
 from .viewer_base import AUDIO_EXTS, Viewer, file_info_section  # noqa: E402
 
 SEEK_STEP_US = 5_000_000
@@ -161,7 +162,7 @@ class VideoViewer(Viewer):
 
         # error page
         self.error_page = Adw.StatusPage(icon_name="dialog-warning-symbolic",
-                                         title="Can’t play this file")
+                                         title=_("Can’t play this file"))
         self.stack.add_named(self.error_page, "error")
 
         key = Gtk.EventControllerKey()
@@ -204,7 +205,7 @@ class VideoViewer(Viewer):
         if self.compact:
             return
         self.frame_btn = Gtk.Button(icon_name="camera-photo-symbolic",
-                                    tooltip_text="Save Frame as PNG… (Ctrl+S)",
+                                    tooltip_text=_("Save Frame as PNG… (Ctrl+S)"),
                                     action_name="video.save-frame")
         header.pack_start(self.frame_btn)
 
@@ -360,9 +361,8 @@ class VideoViewer(Viewer):
         msg = (message or "").strip()
         msg = GLib.markup_escape_text(msg.splitlines()[0] if msg else "Playback failed")
         self.error_page.set_description(
-            f"{msg}\n\nIf the file is fine, GStreamer is probably missing a codec for it. "
-            f"On Ubuntu try:\n<tt>{CODEC_HINT}</tt>")
-        btn = Gtk.Button(label="Open with Default App", halign=Gtk.Align.CENTER,
+            _("{msg}\n\nIf the file is fine, GStreamer is probably missing a codec for it. On Ubuntu try:\n<tt>{CODEC_HINT}</tt>").format(msg=msg, CODEC_HINT=CODEC_HINT))
+        btn = Gtk.Button(label=_("Open with Default App"), halign=Gtk.Align.CENTER,
                          css_classes=["pill"])
         btn.connect("clicked", self._open_external)
         self.error_page.set_child(btn)
@@ -461,15 +461,15 @@ class VideoViewer(Viewer):
         if not self._usable():
             return
         if self.audio_only:
-            self.toast("Audio files have no video frame to save")
+            self.toast(_("Audio files have no video frame to save"))
             return
         tex = self._grab_frame()
         if tex is None:
-            self.toast("No video frame is available yet")
+            self.toast(_("No video frame is available yet"))
             return
         stem = os.path.splitext(self.gfile.get_basename() or "frame")[0]
         pos = fmt_time(self.player.get_position_us()).replace(":", "-")
-        dlg = Gtk.FileDialog(title="Save Frame as PNG")
+        dlg = Gtk.FileDialog(title=_("Save Frame as PNG"))
         dlg.set_initial_name(f"{stem} {pos}.png")
         if self.gfile is not None and self.gfile.get_parent() is not None:
             dlg.set_initial_folder(self.gfile.get_parent())
@@ -486,12 +486,12 @@ class VideoViewer(Viewer):
                 return
             path = gf.get_path()
             if path is None:
-                self.toast("Only local files are supported")
+                self.toast(_("Only local files are supported"))
                 return
             if not path.lower().endswith(".png"):
                 path += ".png"
             if tex.save_to_png(path):
-                self.toast(f"Saved “{os.path.basename(path)}”")
+                self.toast(_("Saved “{v}”").format(v=os.path.basename(path)))
             else:
-                self.toast("Could not save the frame")
+                self.toast(_("Could not save the frame"))
         dlg.save(self.get_root(), None, done)

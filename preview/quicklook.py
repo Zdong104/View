@@ -12,6 +12,7 @@ import sys
 import time
 
 from .runtime import APP_ID as _MAIN_APP_ID, configure_gl_env  # noqa: E402
+from .i18n import _
 
 configure_gl_env()
 
@@ -135,7 +136,7 @@ def _decoration_layout():
 class QuickLookWindow(Adw.Window):
     def __init__(self, app):
         cfg = app.config
-        super().__init__(application=app, title="Quick Look",
+        super().__init__(application=app, title=_("Quick Look"),
                          default_width=int(cfg.get("width", 900)),
                          default_height=int(cfg.get("height", 650)))
         self.app = app
@@ -148,20 +149,20 @@ class QuickLookWindow(Adw.Window):
         self.add_css_class("quicklook")
 
         self.header = Adw.HeaderBar(decoration_layout=_decoration_layout())
-        self.wtitle = Adw.WindowTitle(title="Quick Look", subtitle="")
+        self.wtitle = Adw.WindowTitle(title=_("Quick Look"), subtitle="")
         self.header.set_title_widget(self.wtitle)
 
         self.fs_btn = Gtk.Button(icon_name="view-fullscreen-symbolic",
-                                 tooltip_text="Full Screen (F)")
+                                 tooltip_text=_("Full Screen (F)"))
         self.fs_btn.connect("clicked", lambda *_: self.toggle_fullscreen())
         self.header.pack_start(self.fs_btn)
 
-        self.open_default_btn = Gtk.Button(label="Open")
+        self.open_default_btn = Gtk.Button(label=_("Open"))
         self.open_default_btn.connect("clicked", lambda *_: self.open_default())
         self.header.pack_end(self.open_default_btn)
-        self.open_preview_btn = Gtk.Button(label="Open with View",
+        self.open_preview_btn = Gtk.Button(label=_("Open with View"),
                                            css_classes=["suggested-action"],
-                                           tooltip_text="Open with View (Enter)")
+                                           tooltip_text=_("Open with View (Enter)"))
         self.open_preview_btn.connect("clicked", lambda *_: self.open_in_preview())
         self.header.pack_end(self.open_preview_btn)
 
@@ -388,7 +389,7 @@ class QuickLookWindow(Adw.Window):
         if launched:
             self.close_preview()
         else:
-            self.show_toast("Could not start View")
+            self.show_toast(_("Could not start View"))
 
     def open_default(self):
         if self.gfile is None:
@@ -400,12 +401,12 @@ class QuickLookWindow(Adw.Window):
                 Gio.AppInfo.launch_default_for_uri_finish(res)
             except GLib.Error as e:
                 self.present()
-                self.show_toast(f"Could not open: {e.message}")
+                self.show_toast(_("Could not open: {message}").format(message=e.message))
         try:
             Gio.AppInfo.launch_default_for_uri_async(uri, self._launch_context(), None, done)
             self.close_preview()
         except Exception as e:  # noqa: BLE001
-            self.show_toast(f"Could not open: {e}")
+            self.show_toast(_("Could not open: {e}").format(e=e))
 
     def show_toast(self, message, button_label=None, on_button=None):
         t = Adw.Toast(title=GLib.markup_escape_text(message), timeout=4)

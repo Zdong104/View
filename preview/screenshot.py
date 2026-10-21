@@ -40,6 +40,7 @@ import sys
 import time
 
 from . import runtime
+from .i18n import _
 
 APP_ID = runtime.APP_ID + ".ScreenshotEditor"
 AUTOSTART_NAME = APP_ID + ".desktop"
@@ -644,8 +645,8 @@ def _editor_class():
             self.header = Adw.HeaderBar()
             self.wtitle = Adw.WindowTitle(title=name)
             self.header.set_title_widget(self.wtitle)
-            self.done_btn = Gtk.Button(label="Done", css_classes=["suggested-action"],
-                                       tooltip_text="Save and copy to the clipboard (Ctrl+S)")
+            self.done_btn = Gtk.Button(label=_("Done"), css_classes=["suggested-action"],
+                                       tooltip_text=_("Save and copy to the clipboard (Ctrl+S)"))
             self.done_btn.connect("clicked", lambda *_: self.done())
             self.header.pack_end(self.done_btn)
             toolbar = Adw.ToolbarView()
@@ -744,7 +745,7 @@ def _editor_class():
                 self._saving = False
                 if err is not None:
                     self.done_btn.set_sensitive(True)
-                    self.show_toast(f"Could not save: {err}")
+                    self.show_toast(_("Could not save: {err}").format(err=err))
                     return
                 self.viewer._set_clip(tex)
                 _log(f"done {name} ({'edited' if edited else 'unchanged'}), copied")
@@ -764,15 +765,15 @@ def _editor_class():
             GLib.idle_add(free)
             return False
 
-        def _on_close_request(self, *_):
+        def _on_close_request(self, *_a):
             if self._saving:
                 return True
             if self._finished or not self.viewer.has_unsaved_changes():
                 return self._closing()
-            dlg = Adw.AlertDialog(heading="Discard changes?",
-                                  body="The screenshot and the clipboard keep the original.")
-            dlg.add_response("cancel", "Cancel")
-            dlg.add_response("discard", "Discard")
+            dlg = Adw.AlertDialog(heading=_("Discard changes?"),
+                                  body=_("The screenshot and the clipboard keep the original."))
+            dlg.add_response("cancel", _("Cancel"))
+            dlg.add_response("discard", _("Discard"))
             dlg.set_response_appearance("discard", Adw.ResponseAppearance.DESTRUCTIVE)
             dlg.set_default_response("cancel")
             dlg.set_close_response("cancel")

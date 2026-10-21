@@ -26,6 +26,7 @@ gi.require_version("Gsk", "4.0")
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Graphene, Gsk, Gtk, Poppler
 
 from . import markup, pdf_ops
+from .i18n import _, N_, ngettext
 from .markup import Item, MarkupController, MarkupToolbar, TEXTMARK_KINDS
 from .pdf_canvas import MARGIN, PageCanvas
 from .pdf_ops import PageRef, Source, poppler_open, rotate_point
@@ -266,7 +267,7 @@ class PdfViewer(Viewer):
         box.append(self.mk_revealer)
 
         # search bar
-        self.search_entry = Gtk.SearchEntry(placeholder_text="Search document", hexpand=True)
+        self.search_entry = Gtk.SearchEntry(placeholder_text=_("Search document"), hexpand=True)
         self.search_entry.connect("search-changed", self._on_search_changed)
         self.search_entry.connect("activate", lambda *_: self._search_step(1))
         self.search_entry.connect("next-match", lambda *_: self._search_step(1))
@@ -275,8 +276,8 @@ class PdfViewer(Viewer):
         sbox = Gtk.Box(spacing=6)
         sbox.append(self.search_entry)
         nav = Gtk.Box(css_classes=["linked"])
-        for icon, tip, d in (("go-up-symbolic", "Previous Match", -1),
-                             ("go-down-symbolic", "Next Match", 1)):
+        for icon, tip, d in (("go-up-symbolic", _("Previous Match"), -1),
+                             ("go-down-symbolic", _("Next Match"), 1)):
             b = Gtk.Button(icon_name=icon, tooltip_text=tip)
             b.connect("clicked", lambda _b, d=d: self._search_step(d))
             nav.append(b)
@@ -325,9 +326,9 @@ class PdfViewer(Viewer):
                                   "annots")
         self.side_toggle = Adw.ToggleGroup(css_classes=["flat"], halign=Gtk.Align.CENTER,
                                            margin_top=6, margin_bottom=6)
-        for name, icon, tip in (("thumbs", "view-grid-symbolic", "Thumbnails"),
-                                ("toc", "view-list-symbolic", "Table of Contents"),
-                                ("annots", "chat-symbolic", "Highlights and Notes")):
+        for name, icon, tip in (("thumbs", "view-grid-symbolic", _("Thumbnails")),
+                                ("toc", "view-list-symbolic", _("Table of Contents")),
+                                ("annots", "chat-symbolic", _("Highlights and Notes"))):
             self.side_toggle.add(Adw.Toggle(name=name, icon_name=icon, tooltip=tip))
         self.side_toggle.set_active_name("thumbs")
         self.side_toggle.connect("notify::active-name", self._on_side_view)
@@ -344,7 +345,7 @@ class PdfViewer(Viewer):
     def build_header(self, header: Adw.HeaderBar) -> None:
         self._header = header
         self.sidebar_btn = Gtk.ToggleButton(icon_name="sidebar-show-symbolic",
-                                            tooltip_text="Sidebar (F9)")
+                                            tooltip_text=_("Sidebar (F9)"))
         self.split.bind_property("show-sidebar", self.sidebar_btn, "active",
                                  GObject.BindingFlags.BIDIRECTIONAL |
                                  GObject.BindingFlags.SYNC_CREATE)
@@ -352,7 +353,7 @@ class PdfViewer(Viewer):
         pbox = Gtk.Box(spacing=4, valign=Gtk.Align.CENTER)
         self.page_entry = Gtk.Entry(width_chars=3, max_width_chars=4, xalign=1,
                                     input_purpose=Gtk.InputPurpose.DIGITS,
-                                    tooltip_text="Go to Page (Ctrl+G)")
+                                    tooltip_text=_("Go to Page (Ctrl+G)"))
         self.page_entry.connect("activate", self._on_page_entry)
         focus = Gtk.EventControllerFocus()
         focus.connect("leave", lambda *_: self._sync_page_entry())
@@ -363,38 +364,38 @@ class PdfViewer(Viewer):
         header.pack_start(pbox)
 
         header.pack_end(Gtk.MenuButton(icon_name="view-more-symbolic", menu_model=self._menu(),
-                                       tooltip_text="Document Menu"))
-        self.save_btn = Gtk.Button(label="Save", action_name="pdf.save",
-                                   tooltip_text="Save (Ctrl+S)")
+                                       tooltip_text=_("Document Menu")))
+        self.save_btn = Gtk.Button(label=_("Save"), action_name="pdf.save",
+                                   tooltip_text=_("Save (Ctrl+S)"))
         header.pack_end(self.save_btn)
         if _sig is not None and hasattr(_sig, "SignatureButton"):
             try:
                 sb = _sig.SignatureButton(self.window, self.place_signature)
-                sb.set_tooltip_text("Sign")
+                sb.set_tooltip_text(_("Sign"))
                 header.pack_end(sb)
             except Exception as e:
                 print("signature button:", e)
         self.markup_btn = Gtk.ToggleButton(icon_name="marker-symbolic",
-                                           tooltip_text="Markup Toolbar (Ctrl+Shift+A)")
+                                           tooltip_text=_("Markup Toolbar (Ctrl+Shift+A)"))
         self.mk_revealer.bind_property("reveal-child", self.markup_btn, "active",
                                        GObject.BindingFlags.BIDIRECTIONAL |
                                        GObject.BindingFlags.SYNC_CREATE)
         header.pack_end(self.markup_btn)
         zbox = Gtk.Box(css_classes=["linked"])
-        zbox.append(Gtk.Button(icon_name="zoom-out-symbolic", tooltip_text="Zoom Out",
+        zbox.append(Gtk.Button(icon_name="zoom-out-symbolic", tooltip_text=_("Zoom Out"),
                                action_name="pdf.zoom-out"))
         zmenu = Gio.Menu()
-        zmenu.append("Fit Width", "pdf.zoom-fit-width")
-        zmenu.append("Fit Page", "pdf.zoom-fit-page")
-        zmenu.append("Actual Size", "pdf.zoom-actual")
-        self.zoom_btn = Gtk.MenuButton(label="100%", menu_model=zmenu, tooltip_text="Zoom",
+        zmenu.append(_("Fit Width"), "pdf.zoom-fit-width")
+        zmenu.append(_("Fit Page"), "pdf.zoom-fit-page")
+        zmenu.append(_("Actual Size"), "pdf.zoom-actual")
+        self.zoom_btn = Gtk.MenuButton(label="100%", menu_model=zmenu, tooltip_text=_("Zoom"),
                                        css_classes=["numeric"])
         zbox.append(self.zoom_btn)
-        zbox.append(Gtk.Button(icon_name="zoom-in-symbolic", tooltip_text="Zoom In",
+        zbox.append(Gtk.Button(icon_name="zoom-in-symbolic", tooltip_text=_("Zoom In"),
                                action_name="pdf.zoom-in"))
         header.pack_end(zbox)
         self.search_btn = Gtk.ToggleButton(icon_name="system-search-symbolic",
-                                           tooltip_text="Find (Ctrl+F)")
+                                           tooltip_text=_("Find (Ctrl+F)"))
         self.search_bar.bind_property("search-mode-enabled", self.search_btn, "active",
                                       GObject.BindingFlags.BIDIRECTIONAL |
                                       GObject.BindingFlags.SYNC_CREATE)
@@ -418,30 +419,30 @@ class PdfViewer(Viewer):
                     s.append(*e)
             menu.append_section(label, s)
 
-        sec(None, ("Save", "pdf.save"), ("Save As…", "pdf.save-as"),
-            ("Save Selected Pages as New PDF…", "pdf.save-selected"),
-            ("Merge All Documents into One PDF…", "pdf.merge"), ("Print…", "pdf.print"))
+        sec(None, (_("Save"), "pdf.save"), (_("Save As…"), "pdf.save-as"),
+            (_("Save Selected Pages as New PDF…"), "pdf.save-selected"),
+            (_("Merge All Documents into One PDF…"), "pdf.merge"), (_("Print…"), "pdf.print"))
         exp = Gio.Menu()
-        exp.append("Export as Images…", "pdf.export-images")
-        exp.append("Export with Password…", "pdf.export-encrypted")
-        exp.append("Export as Searchable PDF (OCR)…", "pdf.export-searchable")
-        exp.append("Reduce File Size…", "pdf.reduce-size")
-        menu.append_submenu("Export", exp)
+        exp.append(_("Export as Images…"), "pdf.export-images")
+        exp.append(_("Export with Password…"), "pdf.export-encrypted")
+        exp.append(_("Export as Searchable PDF (OCR)…"), "pdf.export-searchable")
+        exp.append(_("Reduce File Size…"), "pdf.reduce-size")
+        menu.append_submenu(_("Export"), exp)
         edit = Gio.Menu()
-        edit.append("Insert Blank Page", "pdf.insert-blank")
-        edit.append("Insert Pages from File…", "pdf.insert-file")
-        edit.append("Rotate Left", "pdf.rotate-left")
-        edit.append("Rotate Right", "pdf.rotate-right")
-        edit.append("Delete Selected Pages", "pdf.delete-pages")
-        edit.append("Recognize Text (OCR)", "pdf.ocr-page")
-        menu.append_submenu("Pages", edit)
+        edit.append(_("Insert Blank Page"), "pdf.insert-blank")
+        edit.append(_("Insert Pages from File…"), "pdf.insert-file")
+        edit.append(_("Rotate Left"), "pdf.rotate-left")
+        edit.append(_("Rotate Right"), "pdf.rotate-right")
+        edit.append(_("Delete Selected Pages"), "pdf.delete-pages")
+        edit.append(_("Recognize Text (OCR)"), "pdf.ocr-page")
+        menu.append_submenu(_("Pages"), edit)
         view = Gio.Menu()
-        view.append("Continuous Scroll", "pdf.view-mode::continuous")
-        view.append("Single Page", "pdf.view-mode::single")
-        view.append("Two Pages", "pdf.view-mode::two")
-        menu.append_submenu("View", view)
-        sec(None, ("Find…", "pdf.find"), ("Go to Page…", "pdf.goto"),
-            ("Undo", "pdf.undo"), ("Redo", "pdf.redo"))
+        view.append(_("Continuous Scroll"), "pdf.view-mode::continuous")
+        view.append(_("Single Page"), "pdf.view-mode::single")
+        view.append(_("Two Pages"), "pdf.view-mode::two")
+        menu.append_submenu(_("View"), view)
+        sec(None, (_("Find…"), "pdf.find"), (_("Go to Page…"), "pdf.goto"),
+            (_("Undo"), "pdf.undo"), (_("Redo"), "pdf.redo"))
         return menu
 
     def _build_actions(self):
@@ -563,7 +564,7 @@ class PdfViewer(Viewer):
         """Open queued files one at a time, off the main thread."""
         if not self._open_queue:
             if not self.docs and self.stack.get_visible_child_name() == "loading":
-                self._show_error("Could not open the document", "")
+                self._show_error(_("Could not open the document"), "")
             return
         f = self._open_queue.pop(0)
         path = f.get_path()
@@ -605,9 +606,9 @@ class PdfViewer(Viewer):
 
     def _error(self, name, msg):
         if self.docs:
-            self.toast(f"Could not open “{name}”: {msg}")
+            self.toast(_("Could not open “{name}”: {msg}").format(name=name, msg=msg))
         else:
-            self._show_error(f"Could not open “{name}”", msg)
+            self._show_error(_("Could not open “{name}”").format(name=name), msg)
 
     def _parent(self):
         root = self.get_root()
@@ -618,10 +619,10 @@ class PdfViewer(Viewer):
 
     def _ask_password(self, src, gfile, wrong):
         if not self.docs:
-            self.status.set_title("Password Required")
-            self.status.set_description(f"“{src.name}” is password-protected.")
+            self.status.set_title(_("Password Required"))
+            self.status.set_description(_("“{name}” is password-protected.").format(name=src.name))
             self.status.set_icon_name("system-lock-screen-symbolic")
-            btn = Gtk.Button(label="Unlock…", halign=Gtk.Align.CENTER,
+            btn = Gtk.Button(label=_("Unlock…"), halign=Gtk.Align.CENTER,
                              css_classes=["pill", "suggested-action"])
             btn.connect("clicked", lambda *_: self._ask_password(src, gfile, False))
             self.status.set_child(btn)
@@ -630,12 +631,12 @@ class PdfViewer(Viewer):
         def present():
             entry = Gtk.PasswordEntry(show_peek_icon=True, activates_default=True)
             d = Adw.AlertDialog(
-                heading="Password Required",
-                body=("Incorrect password. Try again." if wrong else
-                      f"Enter the password to open “{src.name}”."),
+                heading=_("Password Required"),
+                body=(_("Incorrect password. Try again.") if wrong else
+                      _("Enter the password to open “{name}”.").format(name=src.name)),
                 extra_child=entry, default_response="unlock", close_response="cancel")
-            d.add_response("cancel", "Cancel")
-            d.add_response("unlock", "Unlock")
+            d.add_response("cancel", _("Cancel"))
+            d.add_response("unlock", _("Unlock"))
             d.set_response_appearance("unlock", Adw.ResponseAppearance.SUGGESTED)
 
             def done(_d, response):
@@ -760,15 +761,15 @@ class PdfViewer(Viewer):
     def get_title(self) -> str:
         d = self.doc
         if d is None:
-            return "View"
-        return d.name + (" — Edited" if d.dirty() and not self.compact else "")
+            return _("View")
+        return d.name + (_(" — Edited") if d.dirty() and not self.compact else "")
 
     def get_subtitle(self) -> str:
         if not self._loaded or not self.pages:
             return ""
-        s = f"Page {self.current + 1} of {len(self.pages)}"
+        s = _("Page {page} of {total}").format(page=self.current + 1, total=len(self.pages))
         if len(self.docs) > 1:
-            s += f" · {self.active + 1} of {len(self.docs)} documents"
+            s += _(" · {n} of {total} documents").format(n=self.active + 1, total=len(self.docs))
         return s
 
     def has_unsaved_changes(self) -> bool:
@@ -788,7 +789,7 @@ class PdfViewer(Viewer):
         """Close-prompt hook: save every edited document in place."""
         dirty = [d for d in self.docs if d.dirty() and d.path]
         if any(d.dirty() and not d.path for d in self.docs):
-            self.toast("Some documents can only be saved with Save As")
+            self.toast(_("Some documents can only be saved with Save As"))
             on_done(False)
             return
         if not dirty:
@@ -1056,7 +1057,7 @@ class PdfViewer(Viewer):
         if not hasattr(self, "page_entry"):
             return
         self.page_entry.set_text(str(self.current + 1) if self.pages else "")
-        self.page_total.set_label(f"of {len(self.pages)}" if self.pages else "")
+        self.page_total.set_label(_("of {total}").format(total=len(self.pages)) if self.pages else "")
 
     def _on_page_entry(self, entry):
         try:
@@ -1145,9 +1146,9 @@ class PdfViewer(Viewer):
                 err = self.mk.start_touchpad(self.current)
                 if err:
                     btn.set_active(False)
-                    self.toast(f"Touchpad drawing unavailable: {err}")
+                    self.toast(_("Touchpad drawing unavailable: {err}").format(err=err))
                 else:
-                    self.toast("Draw with one finger on the touchpad · any key to finish")
+                    self.toast(_("Draw with one finger on the touchpad · any key to finish"))
         elif self.mk.pad is not None:
             self.mk.pad.stop()
 
@@ -1238,17 +1239,17 @@ class PdfViewer(Viewer):
         self._ctx_point = hit
         menu = Gio.Menu()
         if self.text_sel and self.text_sel["rects"]:
-            menu.append("Copy", "pdf.copy")
+            menu.append(_("Copy"), "pdf.copy")
             if not self.compact:
-                menu.append("Highlight", "pdf.highlight-selection")
+                menu.append(_("Highlight"), "pdf.highlight-selection")
         if not self.compact and hit is not None:
-            menu.append("Add Note Here", "pdf.note-here")
+            menu.append(_("Add Note Here"), "pdf.note-here")
             if _ocr_module() is not None and not self._page_has_text(self.pages[hit[0]]):
-                menu.append("Recognize Text", "pdf.ocr-page")
+                menu.append(_("Recognize Text"), "pdf.ocr-page")
         if not self.compact:
             s = Gio.Menu()
-            s.append("Rotate Left", "pdf.rotate-left")
-            s.append("Rotate Right", "pdf.rotate-right")
+            s.append(_("Rotate Left"), "pdf.rotate-left")
+            s.append(_("Rotate Right"), "pdf.rotate-right")
             menu.append_section(None, s)
         if menu.get_n_items() == 0:
             return
@@ -1358,7 +1359,7 @@ class PdfViewer(Viewer):
             return
         if self.text_sel and self.text_sel["text"]:
             self.get_clipboard().set(self.text_sel["text"])
-            self.toast("Copied text")
+            self.toast(_("Copied text"))
 
     def _markup_selection(self, kind):
         ts = self.text_sel
@@ -1395,7 +1396,7 @@ class PdfViewer(Viewer):
                 from . import ocr_install
                 ocr_install.offer(self, lambda: self.recognize_text(positions, announce, done))
             else:
-                self.toast("Text recognition is not available")
+                self.toast(_("Text recognition is not available"))
             return
         refs = [self.pages[p] for p in positions
                 if (self.pages[p].src, self.pages[p].index) not in self.ocr_lines]
@@ -1406,7 +1407,7 @@ class PdfViewer(Viewer):
         for r in refs:
             self._ocr_running.add((r.src, r.index))
         if announce:
-            self.toast(f"Recognizing text on {len(refs)} page{'s' if len(refs) > 1 else ''}…")
+            self.toast(ngettext("Recognizing text on {n} page…", "Recognizing text on {n} pages…", len(refs)).format(n=len(refs)))
         sources = list(self.sources)
 
         def work():
@@ -1427,8 +1428,8 @@ class PdfViewer(Viewer):
                 self._ocr_running.discard((r.src, r.index))
             n = sum(len(v) for v in out.values())
             if announce:
-                self.toast(f"Recognized {n} line{'s' if n != 1 else ''} of text" if n
-                           else "No text found")
+                self.toast(ngettext("Recognized {n} line of text", "Recognized {n} lines of text", n).format(n=n) if n
+                           else _("No text found"))
             if done:
                 done()
             return False
@@ -1586,11 +1587,11 @@ class PdfViewer(Viewer):
         mode = self._save_mode()
         if mode == "selected":
             n = len(self._selected_rows())
-            self.save_btn.set_label(f"Save {n} Page{'s' if n > 1 else ''}…")
-            self.save_btn.set_tooltip_text("Save the selected pages as a new PDF (Ctrl+S)")
+            self.save_btn.set_label(ngettext("Save {n} Page…", "Save {n} Pages…", n).format(n=n))
+            self.save_btn.set_tooltip_text(_("Save the selected pages as a new PDF (Ctrl+S)"))
         else:
-            self.save_btn.set_label("Save")
-            self.save_btn.set_tooltip_text("Save (Ctrl+S)")
+            self.save_btn.set_label(_("Save"))
+            self.save_btn.set_tooltip_text(_("Save (Ctrl+S)"))
         self.save_btn.set_visible(not self.compact)
 
     def _save_mode(self):
@@ -1707,15 +1708,15 @@ class PdfViewer(Viewer):
                 if idx is not None:
                     self.sel.select_item(idx, True)
             menu = Gio.Menu()
-            menu.append("Rotate Left", "pdf.rotate-left")
-            menu.append("Rotate Right", "pdf.rotate-right")
+            menu.append(_("Rotate Left"), "pdf.rotate-left")
+            menu.append(_("Rotate Right"), "pdf.rotate-right")
             s = Gio.Menu()
-            s.append("Save Selected Pages as New PDF…", "pdf.save-selected")
-            s.append("Delete", "pdf.delete-pages")
+            s.append(_("Save Selected Pages as New PDF…"), "pdf.save-selected")
+            s.append(_("Delete"), "pdf.delete-pages")
             menu.append_section(None, s)
             s = Gio.Menu()
-            s.append("Insert Blank Page", "pdf.insert-blank")
-            s.append("Insert Pages from File…", "pdf.insert-file")
+            s.append(_("Insert Blank Page"), "pdf.insert-blank")
+            s.append(_("Insert Pages from File…"), "pdf.insert-file")
             menu.append_section(None, s)
             pm = Gtk.PopoverMenu.new_from_model(menu)
             pm.set_has_arrow(False)
@@ -1932,7 +1933,7 @@ class PdfViewer(Viewer):
         if di != self.active:
             self.active = di
         self._changed(select=[(di, dest + i) for i in range(len(refs))])
-        self.toast(f"Copied {len(refs)} page{'s' if len(refs) > 1 else ''}", "Undo", self.undo)
+        self.toast(ngettext("Copied {n} page", "Copied {n} pages", len(refs)).format(n=len(refs)), _("Undo"), self.undo)
 
     def rotate_pages(self, direction):
         rows = self._target_rows()
@@ -1955,7 +1956,7 @@ class PdfViewer(Viewer):
         for di in {d for d, _p in rows}:
             if len([1 for d, _p in rows if d == di]) >= len(self.docs[di].pages) \
                     and len(self.docs) == 1:
-                self.toast("A document needs at least one page")
+                self.toast(_("A document needs at least one page"))
                 return
         self.push_undo()
         for di, d in enumerate(self.docs):
@@ -1964,14 +1965,14 @@ class PdfViewer(Viewer):
         self.mk.select(None)
         self._changed()
         n = len(rows)
-        self.toast(f"Deleted {n} page{'s' if n > 1 else ''}", "Undo", self.undo)
+        self.toast(ngettext("Deleted {n} page", "Deleted {n} pages", n).format(n=n), _("Undo"), self.undo)
 
     def insert_blank(self):
         if not self.pages:
             return
         ref = self.pages[self.current]
         w, h = self._base_size(ref.src, ref.index)
-        sid = self._add_source(Source("Blank page", data=pdf_ops.blank_pdf_bytes(w, h)))
+        sid = self._add_source(Source(_("Blank page"), data=pdf_ops.blank_pdf_bytes(w, h)))
         self.push_undo()
         pos = self.current + 1
         self.pages.insert(pos, PageRef(sid, 0, ref.rotation))
@@ -1979,8 +1980,8 @@ class PdfViewer(Viewer):
         self.goto_page(pos)
 
     def insert_from_file(self):
-        dlg = Gtk.FileDialog(title="Insert Pages from File", modal=True)
-        f = Gtk.FileFilter(name="PDFs and images")
+        dlg = Gtk.FileDialog(title=_("Insert Pages from File"), modal=True)
+        f = Gtk.FileFilter(name=_("PDFs and images"))
         f.add_mime_type("application/pdf")
         f.add_pixbuf_formats()
         store = Gio.ListStore(item_type=Gtk.FileFilter)
@@ -2025,7 +2026,8 @@ class PdfViewer(Viewer):
                 try:
                     pdoc = poppler_open(res)
                 except GLib.Error as e:
-                    errors.append(f"“{name}” is password-protected" if _is_encrypted_error(e)
+                    errors.append(_("“{name}” is password-protected").format(name=name)
+                                  if _is_encrypted_error(e)
                                   else f"“{name}”: {e.message}")
                     continue
                 sid = self._add_source(res, pdoc)
@@ -2038,9 +2040,9 @@ class PdfViewer(Viewer):
                 self._changed(select=[(di, pos + i) for i in range(len(new_refs))])
                 self.goto_page(pos)
                 n = len(new_refs)
-                self.toast(f"Inserted {n} page{'s' if n > 1 else ''}", "Undo", self.undo)
+                self.toast(ngettext("Inserted {n} page", "Inserted {n} pages", n).format(n=n), _("Undo"), self.undo)
             if errors:
-                self.toast("Could not insert " + "; ".join(errors))
+                self.toast(_("Could not insert {errors}").format(errors="; ".join(errors)))
             return False
 
         threading.Thread(target=work, daemon=True).start()
@@ -2122,16 +2124,16 @@ class PdfViewer(Viewer):
             self.save_as()
             return
         if not d.dirty():
-            self.toast("No changes to save")
+            self.toast(_("No changes to save"))
             return
         dlg = Adw.AlertDialog(
-            heading=f"Overwrite “{d.name}”?",
-            body="Your changes, including any signatures, will be written into the "
-                 "original file. This cannot be undone. Use Save As to keep the original.",
+            heading=_("Overwrite “{name}”?").format(name=d.name),
+            body=_("Your changes, including any signatures, will be written into the "
+                 "original file. This cannot be undone. Use Save As to keep the original."),
             default_response="save", close_response="cancel")
-        dlg.add_response("cancel", "Cancel")
-        dlg.add_response("save-as", "Save As…")
-        dlg.add_response("save", "Overwrite")
+        dlg.add_response("cancel", _("Cancel"))
+        dlg.add_response("save-as", _("Save As…"))
+        dlg.add_response("save", _("Overwrite"))
         dlg.set_response_appearance("save", Adw.ResponseAppearance.DESTRUCTIVE)
 
         def done(_d, response):
@@ -2156,7 +2158,7 @@ class PdfViewer(Viewer):
                 return
             path = g.get_path()
             if not path:
-                self.toast("Can only save to local files")
+                self.toast(_("Can only save to local files"))
                 return
             if not folder and not path.lower().endswith(".pdf"):
                 path += ".pdf"
@@ -2170,7 +2172,7 @@ class PdfViewer(Viewer):
         if not self._loaded or self._busy:
             return
         d = self.doc
-        self._file_dialog("Save As", self._default_name(d), d,
+        self._file_dialog(_("Save As"), self._default_name(d), d,
                           lambda path: self._write_doc(self.active, path))
 
     def save_selected(self):
@@ -2180,12 +2182,12 @@ class PdfViewer(Viewer):
         doc = self.docs[rows[0][0]]
         nums = [p + 1 for _d, p in rows]
         name = self._default_name(doc, f"-page{'s' if len(nums) > 1 else ''}-{_ranges(nums)}")
-        self._file_dialog("Save Selected Pages as New PDF", name, doc,
+        self._file_dialog(_("Save Selected Pages as New PDF"), name, doc,
                           lambda path: self._write_new(path, refs, base=refs[0].src))
 
     def merge_documents(self):
         refs = [r.copy() for d in self.docs for r in d.pages]
-        self._file_dialog("Merge into One PDF", self._default_name(self.docs[0], "-merged"),
+        self._file_dialog(_("Merge into One PDF"), self._default_name(self.docs[0], "-merged"),
                           self.docs[0], lambda path: self._write_new(path, refs, base=refs[0].src))
 
     def _write_new(self, path, refs, base=0, encrypt=None, text_layers=None, then=None):
@@ -2212,10 +2214,10 @@ class PdfViewer(Viewer):
             self._update_actions()
             name = os.path.basename(path)
             if err is not None:
-                self.toast(f"Could not save “{name}”: {err}")
+                self.toast(_("Could not save “{name}”: {err}").format(name=name, err=err))
             else:
                 g = Gio.File.new_for_path(path)
-                self.toast(f"Saved “{name}”", "Open", lambda *_: self.window.open_files([g]))
+                self.toast(_("Saved “{name}”").format(name=name), _("Open"), lambda *_: self.window.open_files([g]))
             return False
         threading.Thread(target=work, name="pdf-save", daemon=True).start()
 
@@ -2253,7 +2255,7 @@ class PdfViewer(Viewer):
             name = os.path.basename(path)
             if err is not None:
                 self._update_actions()
-                self.toast(f"Could not save “{name}”: {err}")
+                self.toast(_("Could not save “{name}”: {err}").format(name=name, err=err))
                 if done:
                     done(False)
                 return False
@@ -2261,7 +2263,7 @@ class PdfViewer(Viewer):
             try:
                 pdoc = poppler_open(src)
             except GLib.Error as e:
-                self.toast(f"Saved, but could not reopen “{name}”: {e.message}")
+                self.toast(_("Saved, but could not reopen “{name}”: {message}").format(name=name, message=e.message))
                 if done:
                     done(True)
                 return False
@@ -2276,7 +2278,7 @@ class PdfViewer(Viewer):
                 self.current = min(keep, len(d.pages) - 1)
             self._changed()
             gfile = d.gfile
-            self.toast(f"Saved “{name}”", "Show in Files", lambda *_: self._show_in_files(gfile))
+            self.toast(_("Saved “{name}”").format(name=name), _("Show in Files"), lambda *_: self._show_in_files(gfile))
             if done:
                 done(True)
             return False
@@ -2287,7 +2289,7 @@ class PdfViewer(Viewer):
         try:
             Gtk.FileLauncher(file=gfile).open_containing_folder(self._parent(), None, None)
         except Exception as e:
-            self.toast(f"Could not open the file manager: {e}")
+            self.toast(_("Could not open the file manager: {e}").format(e=e))
 
     # ================================================================ export ====
     def export_images(self):
@@ -2296,20 +2298,22 @@ class PdfViewer(Viewer):
         dpi = Gtk.SpinButton(adjustment=Gtk.Adjustment(value=150, lower=36, upper=1200,
                                                        step_increment=25), numeric=True)
         grid = Gtk.Grid(column_spacing=12, row_spacing=8, halign=Gtk.Align.CENTER)
-        grid.attach(Gtk.Label(label="Format", xalign=1), 0, 0, 1, 1)
+        grid.attach(Gtk.Label(label=_("Format"), xalign=1), 0, 0, 1, 1)
         grid.attach(fmt, 1, 0, 1, 1)
-        grid.attach(Gtk.Label(label="Resolution (dpi)", xalign=1), 0, 1, 1, 1)
+        grid.attach(Gtk.Label(label=_("Resolution (dpi)"), xalign=1), 0, 1, 1, 1)
         grid.attach(dpi, 1, 1, 1, 1)
         rows = self._selected_rows() if self._explicit_sel else []
         refs = ([self.docs[a].pages[b].copy() for a, b in sorted(rows)] if rows
                 else [r.copy() for r in self.pages])
-        dlg = Adw.AlertDialog(heading="Export as Images",
-                              body=f"Each of the {len(refs)} page{'s' if len(refs) > 1 else ''} "
-                                   "becomes one image file in the folder you choose.",
+        dlg = Adw.AlertDialog(heading=_("Export as Images"),
+                              body=ngettext(
+                                  "Each of the {n} page becomes one image file in the folder you choose.",
+                                  "Each of the {n} pages becomes one image file in the folder you choose.",
+                                  len(refs)).format(n=len(refs)),
                               extra_child=grid, default_response="export",
                               close_response="cancel")
-        dlg.add_response("cancel", "Cancel")
-        dlg.add_response("export", "Choose Folder…")
+        dlg.add_response("cancel", _("Cancel"))
+        dlg.add_response("export", _("Choose Folder…"))
         dlg.set_response_appearance("export", Adw.ResponseAppearance.SUGGESTED)
 
         def resp(_d, r):
@@ -2317,7 +2321,7 @@ class PdfViewer(Viewer):
                 return
             f = ["png", "jpeg", "tiff"][fmt.get_selected()]
             res = int(dpi.get_value())
-            self._file_dialog("Export to Folder", None, d,
+            self._file_dialog(_("Export to Folder"), None, d,
                               lambda folder: self._run_export(folder, refs, f, res), folder=True)
         dlg.connect("response", resp)
         self._present(dlg)
@@ -2330,46 +2334,47 @@ class PdfViewer(Viewer):
             try:
                 paths = pdf_ops.export_images(sources, refs, folder, stem, fmt, dpi)
                 GLib.idle_add(lambda: self.toast(
-                    f"Exported {len(paths)} image{'s' if len(paths) > 1 else ''}",
-                    "Show in Files", lambda *_: self._show_in_files(
+                    ngettext("Exported {n} image", "Exported {n} images", len(paths)).format(n=len(paths)),
+                    _("Show in Files"), lambda *_: self._show_in_files(
                         Gio.File.new_for_path(paths[0]))) and False)
             except Exception as e:
-                GLib.idle_add(lambda: self.toast(f"Export failed: {e}") and False)
-        self.toast("Exporting…")
+                GLib.idle_add(lambda: self.toast(_("Export failed: {e}").format(e=e)) and False)
+        self.toast(_("Exporting…"))
         threading.Thread(target=work, daemon=True).start()
 
     def export_encrypted(self):
         d = self.doc
-        user = Gtk.PasswordEntry(show_peek_icon=True, placeholder_text="Password to open")
+        user = Gtk.PasswordEntry(show_peek_icon=True, placeholder_text=_("Password to open"))
         owner = Gtk.PasswordEntry(show_peek_icon=True,
-                                  placeholder_text="Owner password (optional)")
+                                  placeholder_text=_("Owner password (optional)"))
         checks = {k: Gtk.CheckButton(label=lbl, active=True) for k, lbl in (
-            ("allow_print", "Allow printing"), ("allow_copy", "Allow copying text and images"),
-            ("allow_modify", "Allow changes and page assembly"),
-            ("allow_annotate", "Allow comments and form filling"))}
+            ("allow_print", _("Allow printing")),
+            ("allow_copy", _("Allow copying text and images")),
+            ("allow_modify", _("Allow changes and page assembly")),
+            ("allow_annotate", _("Allow comments and form filling")))}
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         box.append(user)
         box.append(owner)
         for c in checks.values():
             box.append(c)
-        dlg = Adw.AlertDialog(heading="Export with Password",
-                              body="The new PDF is encrypted with AES-256. Permissions are "
-                                   "enforced by the owner password.",
+        dlg = Adw.AlertDialog(heading=_("Export with Password"),
+                              body=_("The new PDF is encrypted with AES-256. Permissions are "
+                                   "enforced by the owner password."),
                               extra_child=box, default_response="export", close_response="cancel")
-        dlg.add_response("cancel", "Cancel")
-        dlg.add_response("export", "Save As…")
+        dlg.add_response("cancel", _("Cancel"))
+        dlg.add_response("export", _("Save As…"))
         dlg.set_response_appearance("export", Adw.ResponseAppearance.SUGGESTED)
 
         def resp(_d, r):
             if r != "export":
                 return
             if not user.get_text() and not owner.get_text():
-                self.toast("Enter a password")
+                self.toast(_("Enter a password"))
                 return
             enc = {"user": user.get_text(), "owner": owner.get_text() or None}
             enc.update({k: c.get_active() for k, c in checks.items()})
             refs = [r_.copy() for r_ in d.pages]
-            self._file_dialog("Export with Password", self._default_name(d, "-protected"), d,
+            self._file_dialog(_("Export with Password"), self._default_name(d, "-protected"), d,
                               lambda path: self._write_new(path, refs, d.src, encrypt=enc))
         dlg.connect("response", resp)
         self._present(dlg)
@@ -2377,7 +2382,7 @@ class PdfViewer(Viewer):
     def reduce_size(self):
         d = self.doc
         if not pdf_ops.ghostscript():
-            self.toast("Reduce File Size needs Ghostscript (gs)")
+            self.toast(_("Reduce File Size needs Ghostscript (gs)"))
             return
         refs = [r.copy() for r in d.pages]
         sources = list(self.sources)
@@ -2395,23 +2400,23 @@ class PdfViewer(Viewer):
                 except Exception as e:
                     err, before, after = e, 0, 0
                 GLib.idle_add(lambda: self._reduced(path, err, before, after) and False)
-            self.toast("Reducing file size…")
+            self.toast(_("Reducing file size…"))
             threading.Thread(target=work, daemon=True).start()
-        self._file_dialog("Reduce File Size", self._default_name(d, "-reduced"), d, chosen)
+        self._file_dialog(_("Reduce File Size"), self._default_name(d, "-reduced"), d, chosen)
 
     def _reduced(self, path, err, before, after):
         if err:
-            self.toast(f"Could not reduce the file: {err}")
+            self.toast(_("Could not reduce the file: {err}").format(err=err))
             return
         if before and after >= before:
             try:
                 os.unlink(path)
             except OSError:
                 pass
-            self.toast("This PDF is already compact — nothing to reduce")
+            self.toast(_("This PDF is already compact — nothing to reduce"))
             return
         g = Gio.File.new_for_path(path)
-        self.toast(f"Saved {_human(after)} (was {_human(before)})", "Open",
+        self.toast(_("Saved {v} (was {v2})").format(v=_human(after), v2=_human(before)), _("Open"),
                    lambda *_: self.window.open_files([g]))
 
     def export_searchable(self):
@@ -2421,7 +2426,7 @@ class PdfViewer(Viewer):
                 from . import ocr_install
                 ocr_install.offer(self, self.export_searchable)
             else:
-                self.toast("Text recognition is not available")
+                self.toast(_("Text recognition is not available"))
             return
         d = self.doc
         refs = [r.copy() for r in d.pages]
@@ -2452,10 +2457,10 @@ class PdfViewer(Viewer):
                             sources, docs, r))
                 GLib.idle_add(lambda: (self.ocr_lines.update(lines), self._write_new(
                     path, refs, d.src, text_layers=layers)) and False)
-            self.toast(f"Recognizing text on {len(need)} page{'s' if len(need) != 1 else ''}…"
-                       if need else "Writing searchable PDF…")
+            self.toast(ngettext("Recognizing text on {n} page…", "Recognizing text on {n} pages…", len(need)).format(n=len(need))
+                       if need else _("Writing searchable PDF…"))
             threading.Thread(target=work, daemon=True).start()
-        self._file_dialog("Export as Searchable PDF", self._default_name(d, "-searchable"), d,
+        self._file_dialog(_("Export as Searchable PDF"), self._default_name(d, "-searchable"), d,
                           chosen)
 
     def _base_size_threadsafe(self, sources, docs, ref):
@@ -2532,7 +2537,7 @@ class PdfViewer(Viewer):
             self.canvas.queue_draw()
             return False
 
-        self.search_label.set_label("Searching…")
+        self.search_label.set_label(_("Searching…"))
         threading.Thread(target=work, name="pdf-search", daemon=True).start()
 
     def _update_search_label(self):
@@ -2541,7 +2546,7 @@ class PdfViewer(Viewer):
             self.search_label.set_label("")
             return
         if st["count"] == 0:
-            self.search_label.set_label("No matches" if st["done"] else "Searching…")
+            self.search_label.set_label(_("No matches") if st["done"] else _("Searching…"))
             return
         idx = 0
         for pos in sorted(st["results"]):
@@ -2612,7 +2617,7 @@ class PdfViewer(Viewer):
         try:
             op.run(Gtk.PrintOperationAction.PRINT_DIALOG, self._parent())
         except GLib.Error as e:
-            self.toast(f"Printing failed: {e.message}")
+            self.toast(_("Printing failed: {message}").format(message=e.message))
 
     # ========================================================= side panels ====
     def _on_side_view(self, *_):
@@ -2663,7 +2668,7 @@ class PdfViewer(Viewer):
         if it is not None:
             walk(it, 0)
         if not entries:
-            lb.append(Gtk.Label(label="No table of contents", css_classes=["dim-label"],
+            lb.append(Gtk.Label(label=_("No table of contents"), css_classes=["dim-label"],
                                 margin_top=12))
             return
         for depth, title, page in entries:
@@ -2693,15 +2698,16 @@ class PdfViewer(Viewer):
         lb = self.annot_list
         while (row := lb.get_row_at_index(0)) is not None:
             lb.remove(row)
-        names = {"highlight": "Highlight", "underline": "Underline", "strike": "Strikethrough",
-                 "note": "Note", "text": "Text", "sig": "Signature"}
+        names = {"highlight": _("Highlight"), "underline": _("Underline"),
+                 "strike": _("Strikethrough"), "note": _("Note"), "text": _("Text"),
+                 "sig": _("Signature")}
         n = 0
         for pos, ref in enumerate(self.pages):
             for it in ref.items:
                 if it.kind not in names:
                     continue
                 n += 1
-                self._annot_row(f"{names[it.kind]} · page {pos + 1}",
+                self._annot_row(_("{kind} · page {page}").format(kind=names[it.kind], page=pos + 1),
                                 it.text.strip().replace("\n", " ")[:80], (pos, it.id))
             try:
                 for m in self._ppage(ref).get_annot_mapping():
@@ -2711,13 +2717,13 @@ class PdfViewer(Viewer):
                              Poppler.AnnotType.POPUP):
                         continue
                     n += 1
-                    label = t.value_nick.replace("-", " ").title()
-                    self._annot_row(f"{label} · page {pos + 1}",
+                    label = _(t.value_nick.replace("-", " ").title())
+                    self._annot_row(_("{label} · page {page}").format(label=label, page=pos + 1),
                                     (a.get_contents() or "").strip()[:80], (pos, None))
             except Exception:
                 pass
         if n == 0:
-            lb.append(Gtk.Label(label="No highlights or notes", css_classes=["dim-label"],
+            lb.append(Gtk.Label(label=_("No highlights or notes"), css_classes=["dim-label"],
                                 margin_top=12))
 
     def _annot_row(self, title, text, target):
@@ -2759,25 +2765,25 @@ class PdfViewer(Viewer):
             if value not in (None, ""):
                 rows.append((label, str(value)))
 
-        add("Title", pdoc.get_title())
-        add("Author", pdoc.get_author())
-        add("Subject", pdoc.get_subject())
-        add("Keywords", pdoc.get_keywords())
-        add("Creator", pdoc.get_creator())
-        add("Encoding software", pdoc.get_producer())
-        add("PDF version", pdoc.get_pdf_version_string())
+        add(_("Title"), pdoc.get_title())
+        add(_("Author"), pdoc.get_author())
+        add(_("Subject"), pdoc.get_subject())
+        add(_("Keywords"), pdoc.get_keywords())
+        add(_("Creator"), pdoc.get_creator())
+        add(_("Encoding software"), pdoc.get_producer())
+        add(_("PDF version"), pdoc.get_pdf_version_string())
 
         def dt(t):
             if not t or t < 0:
                 return None
             return GLib.DateTime.new_from_unix_local(t).format("%x, %X")
-        add("Created", dt(pdoc.get_creation_date()))
-        add("Modified", dt(pdoc.get_modification_date()))
-        add("Pages", len(d.pages))
+        add(_("Created"), dt(pdoc.get_creation_date()))
+        add(_("Modified"), dt(pdoc.get_modification_date()))
+        add(_("Pages"), len(d.pages))
         if self.pages:
             w, h = self.sizes[self.current]
             paper = pdf_ops.paper_name(w, h)
-            add("Page size", f"{w:.0f} × {h:.0f} pt ({w * 25.4 / 72:.0f} × {h * 25.4 / 72:.0f} mm, "
+            add(_("Page size"), f"{w:.0f} × {h:.0f} pt ({w * 25.4 / 72:.0f} × {h * 25.4 / 72:.0f} mm, "
                              f"{w / 72:.2f} × {h / 72:.2f} in)" + (f" — {paper}" if paper else ""))
         src = self.sources[d.src]
         try:
@@ -2788,25 +2794,26 @@ class PdfViewer(Viewer):
         if enc or src.password:
             perms = pdoc.get_permissions()
             P = Poppler.Permissions
-            allowed = [n for n, f in (("printing", P.OK_TO_PRINT), ("copying", P.OK_TO_COPY),
-                                      ("modifying", P.OK_TO_MODIFY),
-                                      ("annotating", P.OK_TO_ADD_NOTES),
-                                      ("form filling", P.OK_TO_FILL_FORM)) if perms & f]
-            add("Security", "Encrypted" + (" (password to open)" if src.password else "")
-                + (" — allows " + ", ".join(allowed) if allowed else " — no permissions"))
+            allowed = [n for n, f in ((_("printing"), P.OK_TO_PRINT), (_("copying"), P.OK_TO_COPY),
+                                      (_("modifying"), P.OK_TO_MODIFY),
+                                      (_("annotating"), P.OK_TO_ADD_NOTES),
+                                      (_("form filling"), P.OK_TO_FILL_FORM)) if perms & f]
+            add(_("Security"), _("Encrypted") + (_(" (password to open)") if src.password else "")
+                + (_(" — allows {list}").format(list=", ".join(allowed)) if allowed
+                   else _(" — no permissions")))
         else:
-            add("Security", "None")
-        add("Linearized (fast web view)", "Yes" if pdoc.is_linearized() else "No")
+            add(_("Security"), _("None"))
+        add(_("Linearized (fast web view)"), _("Yes") if pdoc.is_linearized() else _("No"))
         if reader is not None:
             try:
                 mi = reader.trailer["/Root"].get("/MarkInfo")
-                add("Tagged", "Yes" if mi and mi.get_object().get("/Marked") else "No")
+                add(_("Tagged"), _("Yes") if mi and mi.get_object().get("/Marked") else _("No"))
             except Exception:
                 pass
             try:
                 af = reader.trailer["/Root"].get("/AcroForm")
                 if af is not None:
-                    add("Form fields", len(af.get_object().get("/Fields", [])))
+                    add(_("Form fields"), len(af.get_object().get("/Fields", [])))
             except Exception:
                 pass
         try:
@@ -2816,16 +2823,16 @@ class PdfViewer(Viewer):
             while ok and it is not None:
                 n = it.get_name()
                 if n:
-                    names.add(n.split("+")[-1] + ("" if it.is_embedded() else " (not embedded)"))
+                    names.add(n.split("+")[-1] + ("" if it.is_embedded() else _(" (not embedded)")))
                 if not it.next():
                     break
             if names:
-                add("Fonts", ", ".join(sorted(names)[:25]) + (" …" if len(names) > 25 else ""))
+                add(_("Fonts"), ", ".join(sorted(names)[:25]) + (" …" if len(names) > 25 else ""))
         except Exception:
             pass
-        out.append(("Document", rows))
+        out.append((_("Document"), rows))
         if len(self.docs) > 1:
-            out.append(("Window", [("Documents", ", ".join(x.name for x in self.docs))]))
+            out.append((_("Window"), [(_("Documents"), ", ".join(x.name for x in self.docs))]))
         return out
 
 

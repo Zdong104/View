@@ -8,12 +8,13 @@ DEB      := dist/view_$(VERSION)_all.deb
 IMAGE    ?= ubuntu:26.04
 ARGS     ?=
 
-.PHONY: help run selftest selftest-headless venv ocr deb docker-test install uninstall purge check clean
+.PHONY: help run selftest selftest-headless venv ocr deb docker-test install uninstall purge check clean i18n
 
 help:
 	@echo "make run [ARGS='file.pdf']   run View from the working tree"
 	@echo "make selftest                check every viewer (opens windows briefly)"
 	@echo "make selftest-headless       same, without a display"
+	@echo "make i18n                    refresh and compile the UI translations (po/)"
 	@echo "make ocr                     add the optional OCR engine to $(VENV)"
 	@echo "make deb                     build $(DEB)"
 	@echo "make docker-test [IMAGE=…]   apt-install the .deb in a clean container + selftest"
@@ -60,6 +61,18 @@ purge:
 
 check:
 	$(PYTHON) -m compileall -q preview
+
+# UI translations: refresh po/view.pot from the sources, merge it into every
+# po/*.po, and compile them into preview/locale/<lang>/LC_MESSAGES/view.mo.
+i18n:
+	xgettext --language=Python --from-code=UTF-8 --keyword=_ --keyword=N_ --keyword=ngettext:1,2 \
+		--package-name=View --add-comments=TRANSLATORS --no-location -o po/view.pot preview/*.py
+	@for po in po/*.po; do \
+		lang=$$(basename $$po .po); \
+		msgmerge --quiet --update --backup=none --no-location $$po po/view.pot; \
+		mkdir -p preview/locale/$$lang/LC_MESSAGES; \
+		msgfmt --check -o preview/locale/$$lang/LC_MESSAGES/view.mo $$po; \
+	done
 
 clean:
 	rm -rf dist build $(VENV)

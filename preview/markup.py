@@ -50,6 +50,8 @@ gi.require_version("Pango", "1.0")
 gi.require_version("PangoCairo", "1.0")
 from gi.repository import Gdk, GLib, GObject, Gtk, Pango, PangoCairo
 
+from .i18n import _, N_
+
 _ids = itertools.count(1)
 
 BOX_KINDS = {"rect", "rrect", "oval", "bubble", "star", "text", "sig", "note"}
@@ -63,11 +65,11 @@ NOTE_COLOR = (1.0, 0.85, 0.25, 1.0)
 HIGHLIGHT_COLOR = (1.0, 0.86, 0.1, 1.0)
 
 TOOL_NAMES = {
-    "select": "Select", "sketch": "Sketch", "draw": "Draw", "line": "Line",
-    "arrow": "Arrow", "rect": "Rectangle", "rrect": "Rounded Rectangle",
-    "oval": "Oval", "bubble": "Speech Bubble", "star": "Star", "text": "Text",
-    "note": "Note", "highlight": "Highlight", "underline": "Underline",
-    "strike": "Strikethrough",
+    "select": N_("Select"), "sketch": N_("Sketch"), "draw": N_("Draw"), "line": N_("Line"),
+    "arrow": N_("Arrow"), "rect": N_("Rectangle"), "rrect": N_("Rounded Rectangle"),
+    "oval": N_("Oval"), "bubble": N_("Speech Bubble"), "star": N_("Star"), "text": N_("Text"),
+    "note": N_("Note"), "highlight": N_("Highlight"), "underline": N_("Underline"),
+    "strike": N_("Strikethrough"),
 }
 
 
@@ -952,11 +954,11 @@ class MarkupController(GObject.Object):
         tv.get_buffer().set_text(it.text)
         sw = Gtk.ScrolledWindow(child=tv, min_content_width=240, min_content_height=90,
                                 max_content_height=240, propagate_natural_height=True)
-        hint = Gtk.Label(label="Ctrl+Enter to finish", css_classes=["dim-label", "caption"],
+        hint = Gtk.Label(label=_("Ctrl+Enter to finish"), css_classes=["dim-label", "caption"],
                          xalign=0)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         if it.kind == "note":
-            box.append(Gtk.Label(label="Note", xalign=0, css_classes=["heading"]))
+            box.append(Gtk.Label(label=_("Note"), xalign=0, css_classes=["heading"]))
         box.append(sw)
         box.append(hint)
         pop = Gtk.Popover(child=box, position=Gtk.PositionType.BOTTOM)
@@ -1290,7 +1292,7 @@ class ToolIcon(Gtk.Widget):
 
 
 def _tool_button(kind, tooltip, group=None, icon=None):
-    b = Gtk.ToggleButton(tooltip_text=tooltip, css_classes=["flat"])
+    b = Gtk.ToggleButton(tooltip_text=_(tooltip), css_classes=["flat"])
     b.set_child(Gtk.Image(icon_name=icon) if icon else ToolIcon(kind))
     if group is not None:
         b.set_group(group)
@@ -1315,33 +1317,35 @@ class MarkupToolbar(Gtk.Box):
         super().__init__(spacing=2, css_classes=["toolbar"], margin_start=6, margin_end=6)
         self.ctrl = ctrl
         self.buttons = {}
-        sel = _tool_button("select", "Select (Esc)")
+        sel = _tool_button("select", N_("Select (Esc)"))
         self.buttons["select"] = sel
         self.append(sel)
         if text_tools:
-            for k, tip, icon in (("highlight", "Highlight Text", None),
-                                 ("underline", "Underline Text", "format-text-underline-symbolic"),
-                                 ("strike", "Strike Through Text",
+            for k, tip, icon in (("highlight", N_("Highlight Text"), None),
+                                 ("underline", N_("Underline Text"),
+                                  "format-text-underline-symbolic"),
+                                 ("strike", N_("Strike Through Text"),
                                   "format-text-strikethrough-symbolic")):
                 b = _tool_button(k, tip, sel, icon)
                 self.buttons[k] = b
                 self.append(b)
             self.append(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL, margin_start=4,
                                       margin_end=4))
-        for k, tip in (("sketch", "Sketch (shapes are recognised)"), ("draw", "Draw (ink)")):
+        for k, tip in (("sketch", N_("Sketch (shapes are recognised)")),
+                      ("draw", N_("Draw (ink)"))):
             b = _tool_button(k, tip, sel)
             self.buttons[k] = b
             self.append(b)
         # shapes: one toggle showing the last shape + a chooser
         self.shape = "rect"
-        self.shape_btn = _tool_button("rect", "Shapes", sel)
+        self.shape_btn = _tool_button("rect", N_("Shapes"), sel)
         self.buttons["shape"] = self.shape_btn
-        chooser = Gtk.MenuButton(tooltip_text="Choose Shape", css_classes=["flat"],
+        chooser = Gtk.MenuButton(tooltip_text=_("Choose Shape"), css_classes=["flat"],
                                  icon_name="pan-down-symbolic")
         grid = Gtk.FlowBox(max_children_per_line=4, selection_mode=Gtk.SelectionMode.NONE)
         pop = Gtk.Popover(child=grid)
         for k in SHAPES:
-            sb = Gtk.Button(tooltip_text=TOOL_NAMES[k], css_classes=["flat"])
+            sb = Gtk.Button(tooltip_text=_(TOOL_NAMES[k]), css_classes=["flat"])
             sb.set_child(ToolIcon(k))
             sb.connect("clicked", self._pick_shape, k, pop)
             grid.append(sb)
@@ -1350,7 +1354,8 @@ class MarkupToolbar(Gtk.Box):
         sbox.append(self.shape_btn)
         sbox.append(chooser)
         self.append(sbox)
-        for k, tip, icon in (("text", "Text Box", "insert-text-symbolic"), ("note", "Note", None)):
+        for k, tip, icon in (("text", N_("Text Box"), "insert-text-symbolic"),
+                            ("note", N_("Note"), None)):
             b = _tool_button(k, tip, sel, icon)
             self.buttons[k] = b
             self.append(b)
@@ -1360,30 +1365,30 @@ class MarkupToolbar(Gtk.Box):
                                   margin_end=4))
         # style controls
         self.stroke_btn = Gtk.ColorDialogButton(dialog=Gtk.ColorDialog(with_alpha=True),
-                                                tooltip_text="Border / Ink Colour",
+                                                tooltip_text=_("Border / Ink Colour"),
                                                 rgba=_gdk_rgba(ctrl.stroke))
         self.stroke_btn.connect("notify::rgba", lambda b, _p: ctrl.set_style(
             stroke=_rgba_tuple(b.get_rgba())))
         self.append(self.stroke_btn)
         self.fill_btn = Gtk.ColorDialogButton(dialog=Gtk.ColorDialog(with_alpha=True),
-                                              tooltip_text="Fill Colour",
+                                              tooltip_text=_("Fill Colour"),
                                               rgba=_gdk_rgba((1, 1, 1, 0)))
         self.fill_btn.connect("notify::rgba", self._fill_changed)
         self.append(self.fill_btn)
         widths = Gtk.StringList.new(["0.5 pt", "1 pt", "2 pt", "3 pt", "5 pt", "8 pt"])
         self._widths = [0.5, 1, 2, 3, 5, 8]
-        self.width_dd = Gtk.DropDown(model=widths, selected=2, tooltip_text="Line Width")
+        self.width_dd = Gtk.DropDown(model=widths, selected=2, tooltip_text=_("Line Width"))
         self.width_dd.connect("notify::selected", lambda d, _p: ctrl.set_style(
             width=self._widths[d.get_selected()]))
         self.append(self.width_dd)
-        self.font_btn = Gtk.FontDialogButton(dialog=Gtk.FontDialog(), tooltip_text="Font",
+        self.font_btn = Gtk.FontDialogButton(dialog=Gtk.FontDialog(), tooltip_text=_("Font"),
                                              level=Gtk.FontLevel.FONT,
                                              font_desc=Pango.FontDescription.from_string(
                                                  f"{ctrl.font} {ctrl.size:g}"))
         self.font_btn.connect("notify::font-desc", self._font_changed)
         self.append(self.font_btn)
-        self.pad_btn = Gtk.ToggleButton(tooltip_text="Draw with Touchpad — the whole pad maps "
-                                        "onto the visible page; any key ends",
+        self.pad_btn = Gtk.ToggleButton(tooltip_text=_("Draw with Touchpad — the whole pad maps "
+                                        "onto the visible page; any key ends"),
                                         css_classes=["flat"], visible=False)
         self.pad_btn.set_child(Gtk.Image(icon_name="input-touchpad-symbolic"))
         self.append(self.pad_btn)
@@ -1399,7 +1404,7 @@ class MarkupToolbar(Gtk.Box):
         pop.popdown()
         self.shape = kind
         self.shape_btn.set_child(ToolIcon(kind))
-        self.shape_btn.set_tooltip_text(TOOL_NAMES[kind])
+        self.shape_btn.set_tooltip_text(_(TOOL_NAMES[kind]))
         self.ctrl.set_tool(kind)
 
     def _toggled(self, btn, k):

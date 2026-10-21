@@ -13,6 +13,8 @@ import threading
 
 from gi.repository import Adw, Gdk, GdkPixbuf, Gio, GLib, GObject, Gtk, Pango
 
+from .i18n import _
+
 ATTRS = ("standard::*,time::modified,time::created,time::access,"
          "thumbnail::path,thumbnail::is-valid,unix::mode")
 
@@ -555,7 +557,7 @@ class PdfRenderer(EmbeddingRenderer):
         self.col.remove(self.spinner)
         if err is not None:
             self.col.append(Adw.StatusPage(icon_name="x-office-document-symbolic",
-                                           title="Cannot render this PDF",
+                                           title=_("Cannot render this PDF"),
                                            description=GLib.markup_escape_text(str(err))))
             return False
         self._pages = sizes
@@ -969,7 +971,7 @@ class MediaRenderer(Renderer):
         if self.alive:
             self.win.bin.set_child(GenericRenderer(self.win, self.gfile, self.info,
                                                    self.local).build())
-            self.win.show_toast(f"Cannot play: {message}")
+            self.win.show_toast(_("Cannot play: {message}").format(message=message))
             self._release()
 
     def _release(self):
@@ -1165,7 +1167,7 @@ class TextRenderer(Renderer):
                 GS = None
         self.sw = Gtk.ScrolledWindow(child=self.view, hexpand=True, vexpand=True)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.banner = Adw.Banner(title="Showing the first 2 MB")
+        self.banner = Adw.Banner(title=_("Showing the first 2 MB"))
         box.append(self.banner)
         box.append(self.sw)
         name = self.local.get_basename() or ""

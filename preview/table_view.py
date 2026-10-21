@@ -24,6 +24,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk, Pango  # noqa: E402
 import numpy as np  # noqa: E402
 
 from .table_data import Command, TableData, TableError, col_letter, to_num  # noqa: E402
+from .i18n import _, N_, ngettext
 from .viewer_base import Viewer, file_info_section  # noqa: E402
 
 CSS = """
@@ -168,11 +169,11 @@ class TableViewer(Viewer):
     # ======================================================================
     def _build_ui(self):
         # search bar
-        self.search_entry = Gtk.SearchEntry(placeholder_text="Find in table", hexpand=True)
+        self.search_entry = Gtk.SearchEntry(placeholder_text=_("Find in table"), hexpand=True)
         self.match_label = Gtk.Label(label="", css_classes=["dim-label"], width_chars=10, xalign=1.0)
-        self.filter_btn = Gtk.ToggleButton(label="Filter rows", tooltip_text="Show only rows that match")
-        prev = Gtk.Button(icon_name="go-up-symbolic", tooltip_text="Previous match (Shift+F3)")
-        nxt = Gtk.Button(icon_name="go-down-symbolic", tooltip_text="Next match (F3)")
+        self.filter_btn = Gtk.ToggleButton(label=_("Filter rows"), tooltip_text=_("Show only rows that match"))
+        prev = Gtk.Button(icon_name="go-up-symbolic", tooltip_text=_("Previous match (Shift+F3)"))
+        nxt = Gtk.Button(icon_name="go-down-symbolic", tooltip_text=_("Next match (F3)"))
         box = Gtk.Box(spacing=6)
         for w in (self.search_entry, self.match_label, prev, nxt, self.filter_btn):
             box.append(w)
@@ -286,17 +287,17 @@ class TableViewer(Viewer):
             return m
         self.menu_rows_cols = Gio.Menu()
         self.menu_rows_cols.append_section(None, sec([
-            ("Insert Row Above", "table.insert-row-above"), ("Insert Row Below", "table.insert-row-below"),
-            ("Delete Row(s)", "table.delete-rows")]))
+            (_("Insert Row Above"), "table.insert-row-above"), (_("Insert Row Below"), "table.insert-row-below"),
+            (_("Delete Row(s)"), "table.delete-rows")]))
         self.menu_rows_cols.append_section(None, sec([
-            ("Insert Column Left", "table.insert-col-left"), ("Insert Column Right", "table.insert-col-right"),
-            ("Delete Column(s)", "table.delete-cols")]))
+            (_("Insert Column Left"), "table.insert-col-left"), (_("Insert Column Right"), "table.insert-col-right"),
+            (_("Delete Column(s)"), "table.delete-cols")]))
         self.menu_cell = Gio.Menu()
         self.menu_cell.append_section(None, sec([
-            ("Cut", "table.cut"), ("Copy", "table.copy"), ("Paste", "table.paste"),
-            ("Clear Contents", "table.clear")]))
+            (_("Cut"), "table.cut"), (_("Copy"), "table.copy"), (_("Paste"), "table.paste"),
+            (_("Clear Contents"), "table.clear")]))
         self.menu_cell.append_section(None, self.menu_rows_cols)
-        self.menu_cell.append_section(None, sec([("Select All", "table.select-all")]))
+        self.menu_cell.append_section(None, sec([(_("Select All"), "table.select-all")]))
         self.cell_popover = Gtk.PopoverMenu.new_from_model(self.menu_cell)
         self.cell_popover.set_has_arrow(False)
         self.cell_popover.set_halign(Gtk.Align.START)
@@ -304,26 +305,26 @@ class TableViewer(Viewer):
 
         self.menu_format = Gio.Menu()
         s = Gio.Menu()
-        s.append("First Row Is Header", "table.header")
-        s.append("Quote All Fields When Saving", "table.quote-all")
+        s.append(_("First Row Is Header"), "table.header")
+        s.append(_("Quote All Fields When Saving"), "table.quote-all")
         self.menu_format.append_section(None, s)
         d = Gio.Menu()
-        for lab, v in (("Comma", ","), ("Tab", "\t"), ("Semicolon", ";"), ("Pipe", "|")):
+        for lab, v in ((_("Comma"), ","), (_("Tab"), "\t"), (_("Semicolon"), ";"), (_("Pipe"), "|")):
             d.append_item(self._radio_item(lab, "table.delimiter", v))
-        self.menu_format.append_submenu("Delimiter", d)
+        self.menu_format.append_submenu(_("Delimiter"), d)
         e = Gio.Menu()
-        for lab, v in (("Unicode (UTF-8)", "utf-8"), ("Unicode (UTF-16)", "utf-16"),
-                       ("Western (Windows-1252)", "cp1252"), ("Western (Latin-1)", "latin-1"),
-                       ("Chinese (GB18030)", "gb18030"), ("Chinese (Big5)", "big5"),
-                       ("Japanese (Shift-JIS)", "shift_jis"), ("Korean (EUC-KR)", "euc-kr")):
+        for lab, v in ((_("Unicode (UTF-8)"), "utf-8"), (_("Unicode (UTF-16)"), "utf-16"),
+                       (_("Western (Windows-1252)"), "cp1252"), (_("Western (Latin-1)"), "latin-1"),
+                       (_("Chinese (GB18030)"), "gb18030"), (_("Chinese (Big5)"), "big5"),
+                       (_("Japanese (Shift-JIS)"), "shift_jis"), (_("Korean (EUC-KR)"), "euc-kr")):
             e.append_item(self._radio_item(lab, "table.encoding", v))
-        self.menu_format.append_submenu("Reopen With Encoding", e)
+        self.menu_format.append_submenu(_("Reopen With Encoding"), e)
         le = Gio.Menu()
-        le.append_item(self._radio_item("Unix (LF)", "table.eol", "lf"))
-        le.append_item(self._radio_item("Windows (CRLF)", "table.eol", "crlf"))
-        self.menu_format.append_submenu("Line Endings When Saving", le)
+        le.append_item(self._radio_item(_("Unix (LF)"), "table.eol", "lf"))
+        le.append_item(self._radio_item(_("Windows (CRLF)"), "table.eol", "crlf"))
+        self.menu_format.append_submenu(_("Line Endings When Saving"), le)
         s2 = Gio.Menu()
-        s2.append("Clear Sorting", "table.clear-sort")
+        s2.append(_("Clear Sorting"), "table.clear-sort")
         self.menu_format.append_section(None, s2)
 
     @staticmethod
@@ -413,24 +414,24 @@ class TableViewer(Viewer):
     def build_header(self, header: Adw.HeaderBar) -> None:
         if self.compact:
             return
-        self.btn_undo = Gtk.Button(icon_name="edit-undo-symbolic", tooltip_text="Undo (Ctrl+Z)",
+        self.btn_undo = Gtk.Button(icon_name="edit-undo-symbolic", tooltip_text=_("Undo (Ctrl+Z)"),
                                    action_name="table.undo")
-        self.btn_redo = Gtk.Button(icon_name="edit-redo-symbolic", tooltip_text="Redo (Ctrl+Shift+Z)",
+        self.btn_redo = Gtk.Button(icon_name="edit-redo-symbolic", tooltip_text=_("Redo (Ctrl+Shift+Z)"),
                                    action_name="table.redo")
-        self.btn_save = Gtk.Button(icon_name="document-save-symbolic", tooltip_text="Save (Ctrl+S)",
+        self.btn_save = Gtk.Button(icon_name="document-save-symbolic", tooltip_text=_("Save (Ctrl+S)"),
                                    action_name="table.save")
         box = Gtk.Box(css_classes=["linked"])
         box.append(self.btn_undo)
         box.append(self.btn_redo)
         header.pack_start(box)
         header.pack_start(self.btn_save)
-        search_btn = Gtk.ToggleButton(icon_name="system-search-symbolic", tooltip_text="Find (Ctrl+F)")
+        search_btn = Gtk.ToggleButton(icon_name="system-search-symbolic", tooltip_text=_("Find (Ctrl+F)"))
         search_btn.bind_property("active", self.search_bar, "search-mode-enabled",
                                  GObject.BindingFlags.BIDIRECTIONAL | GObject.BindingFlags.SYNC_CREATE)
         header.pack_end(search_btn)
-        header.pack_end(Gtk.MenuButton(icon_name="view-more-symbolic", tooltip_text="Table Format",
+        header.pack_end(Gtk.MenuButton(icon_name="view-more-symbolic", tooltip_text=_("Table Format"),
                                        menu_model=self.menu_format))
-        header.pack_end(Gtk.MenuButton(icon_name="list-add-symbolic", tooltip_text="Rows and Columns",
+        header.pack_end(Gtk.MenuButton(icon_name="list-add-symbolic", tooltip_text=_("Rows and Columns"),
                                        menu_model=self.menu_rows_cols))
         self._update_sensitivity()
 
@@ -447,23 +448,25 @@ class TableViewer(Viewer):
         return self.gfile
 
     def get_title(self) -> str:
-        name = (self.gfile.get_basename() if self.gfile is not None else None) or "Table"
+        name = (self.gfile.get_basename() if self.gfile is not None else None) or _("Table")
         if self.data.has_unsaved_changes():
-            name += " — Edited"
+            name += _(" — Edited")
         return name
 
     def get_subtitle(self) -> str:
         d = self.data
         if d.nbase == 0 and self._loading:
-            return "Loading…"
+            return _("Loading…")
         n = d.n_rows
-        s = f"{n:,} row{'s' if n != 1 else ''} × {d.ncols:,} column{'s' if d.ncols != 1 else ''}"
+        s = _("{rows} × {columns}").format(
+            rows=ngettext("{n:,} row", "{n:,} rows", n).format(n=n),
+            columns=ngettext("{n:,} column", "{n:,} columns", d.ncols).format(n=d.ncols))
         if self._loading:
-            s = f"Loading… {n:,} rows"
+            s = _("Loading… {n:,} rows").format(n=n)
         elif d.filter_on and d.search_text:
-            s += f" · {d.n_view:,} shown"
+            s += _(" · {n:,} shown").format(n=d.n_view)
         if d.sort_col is not None and not self._loading:
-            s += f" · sorted by {d.title(d.sort_col)}"
+            s += _(" · sorted by {column}").format(column=d.title(d.sort_col))
         return s
 
     def has_unsaved_changes(self) -> bool:
@@ -486,28 +489,30 @@ class TableViewer(Viewer):
         d = self.data
         if not d.nbase and not d.loaded:
             return sections
-        eol = {b"\n": "LF (Unix)", b"\r\n": "CRLF (Windows)", b"\r": "CR (classic Mac)"}.get(d.eol, "LF")
-        rows = [("Rows", f"{d.n_rows:,}" + ("…" if self._loading else "")),
-                ("Columns", f"{d.ncols:,}"),
-                ("Delimiter", {",": "Comma", "\t": "Tab", ";": "Semicolon", "|": "Pipe"}.get(d.delim, repr(d.delim))),
-                ("Encoding", d.enc_label),
-                ("First row is header", "Yes" if d.has_header else "No"),
-                ("Line endings", eol),
-                ("Quoting", "All fields" if d.quoting == "all" else "When needed")]
+        eol = {b"\n": _("LF (Unix)"), b"\r\n": _("CRLF (Windows)"),
+               b"\r": _("CR (classic Mac)")}.get(d.eol, "LF")
+        rows = [(_("Rows"), f"{d.n_rows:,}" + ("…" if self._loading else "")),
+                (_("Columns"), f"{d.ncols:,}"),
+                (_("Delimiter"), {",": _("Comma"), "\t": _("Tab"), ";": _("Semicolon"),
+                                  "|": _("Pipe")}.get(d.delim, repr(d.delim))),
+                (_("Encoding"), d.enc_label),
+                (_("First row is header"), _("Yes") if d.has_header else _("No")),
+                (_("Line endings"), eol),
+                (_("Quoting"), _("All fields") if d.quoting == "all" else _("When needed"))]
         if d.has_unsaved_changes():
-            rows.append(("Status", "Edited (unsaved)"))
-        sections.append(("Table", rows))
+            rows.append((_("Status"), _("Edited (unsaved)")))
+        sections.append((_("Table"), rows))
         if d.loaded:
             stats = self._get_stats()
             crow = []
             for c in range(min(d.ncols, 60)):
                 t = d.col_type(c)
                 e = stats[c] if stats is not None and c < len(stats) else None
-                est = "…" if e is None else f"{e:,} empty"
+                est = "…" if e is None else _("{n:,} empty").format(n=e)
                 crow.append((d.title(c), f"{t} · {est}"))
             if d.ncols > 60:
-                crow.append(("…", f"{d.ncols - 60:,} more columns"))
-            sections.append(("Columns", crow))
+                crow.append(("…", _("{n:,} more columns").format(n=d.ncols - 60)))
+            sections.append((_("Columns"), crow))
         return sections
 
     def _get_stats(self):
@@ -622,7 +627,7 @@ class TableViewer(Viewer):
             return
         self._loading = False
         self.progress.set_visible(False)
-        self.toast(f"Could not read this file: {e}")
+        self.toast(_("Could not read this file: {e}").format(e=e))
 
     def _sync_format_actions(self):
         d = self.data
@@ -824,18 +829,18 @@ class TableViewer(Viewer):
             it.set_action_and_target_value("table." + action, GLib.Variant("i", slot))
             return it
         s1 = Gio.Menu()
-        s1.append_item(item("Sort Ascending", "col-sort-asc"))
-        s1.append_item(item("Sort Descending", "col-sort-desc"))
-        s1.append_item(item("Sort Permanently, A → Z", "col-sort-perm-asc"))
-        s1.append_item(item("Sort Permanently, Z → A", "col-sort-perm-desc"))
+        s1.append_item(item(_("Sort Ascending"), "col-sort-asc"))
+        s1.append_item(item(_("Sort Descending"), "col-sort-desc"))
+        s1.append_item(item(_("Sort Permanently, A → Z"), "col-sort-perm-asc"))
+        s1.append_item(item(_("Sort Permanently, Z → A"), "col-sort-perm-desc"))
         s2 = Gio.Menu()
-        s2.append_item(item("Rename Column…", "col-rename"))
-        s2.append_item(item("Select Column", "col-select"))
-        s2.append_item(item("Fit Column Width", "col-fit"))
+        s2.append_item(item(_("Rename Column…"), "col-rename"))
+        s2.append_item(item(_("Select Column"), "col-select"))
+        s2.append_item(item(_("Fit Column Width"), "col-fit"))
         s3 = Gio.Menu()
-        s3.append_item(item("Insert Column Left", "col-insert-left"))
-        s3.append_item(item("Insert Column Right", "col-insert-right"))
-        s3.append_item(item("Delete Column", "col-delete"))
+        s3.append_item(item(_("Insert Column Left"), "col-insert-left"))
+        s3.append_item(item(_("Insert Column Right"), "col-insert-right"))
+        s3.append_item(item(_("Delete Column"), "col-delete"))
         for s in (s1, s2, s3):
             m.append_section(None, s)
         return m
@@ -1120,15 +1125,16 @@ class TableViewer(Viewer):
         r0, c0, r1, c1 = self._sel_rect()
         cnt = (r1 - r0 + 1) * (c1 - c0 + 1)
         if d.n_view == 0:
-            self.status.set_text("No rows")
+            self.status.set_text(_("No rows"))
             return False
         if cnt == 1:
             t = d.cell_at(self.cur[0], self.cur[1])
             self.status.set_text(f"{col_letter(self.cur[1])}{self.cur[0] + 1}"
                                  + (f"  ·  {d.title(self.cur[1])}" if d.has_header else "")
-                                 + (f"  ·  {len(t):,} characters" if len(t) > 80 else ""))
+                                 + (_("  ·  {n:,} characters").format(n=len(t))
+                                    if len(t) > 80 else ""))
             return False
-        s = f"{r1 - r0 + 1:,} × {c1 - c0 + 1:,} cells selected"
+        s = _("{rows:,} × {cols:,} cells selected").format(rows=r1 - r0 + 1, cols=c1 - c0 + 1)
         if cnt <= 40000:
             vals = []
             for r in range(r0, r1 + 1):
@@ -1138,8 +1144,9 @@ class TableViewer(Viewer):
                     if v is not None:
                         vals.append(v)
             if vals:
-                s += f"  ·  {len(vals):,} numeric  ·  Sum {_fmt_num(sum(vals))}  ·  Avg {_fmt_num(sum(vals) / len(vals))}" \
-                     f"  ·  Min {_fmt_num(min(vals))}  ·  Max {_fmt_num(max(vals))}"
+                s += _("  ·  {n:,} numeric  ·  Sum {sum}  ·  Avg {avg}  ·  Min {min}  ·  Max {max}").format(
+                    n=len(vals), sum=_fmt_num(sum(vals)), avg=_fmt_num(sum(vals) / len(vals)),
+                    min=_fmt_num(min(vals)), max=_fmt_num(max(vals)))
         self.status.set_text(s)
         return False
 
@@ -1400,10 +1407,10 @@ class TableViewer(Viewer):
         if self.compact:
             return False
         if self._loading or not self.data.loaded:
-            self.toast("The file is still loading")
+            self.toast(_("The file is still loading"))
             return False
         if self._busy:
-            self.toast("Please wait for the current operation to finish")
+            self.toast(_("Please wait for the current operation to finish"))
             return False
         return True
 
@@ -1506,7 +1513,7 @@ class TableViewer(Viewer):
         self._close_editor()
         d = self.data
         if r < d.n_view and text != old:
-            d.set_cells([(d.key_at(r), c, text)], "Edit Cell")
+            d.set_cells([(d.key_at(r), c, text)], _("Edit Cell"))
         if refocus:
             self._focus_table()
         if move:
@@ -1516,15 +1523,15 @@ class TableViewer(Viewer):
 
     def _edit_dialog(self, r, c):
         d = self.data
-        dlg = Adw.AlertDialog(heading=f"Edit Cell {col_letter(c)}{r + 1}")
+        dlg = Adw.AlertDialog(heading=_("Edit Cell {cell}").format(cell=f"{col_letter(c)}{r + 1}"))
         tv = Gtk.TextView(wrap_mode=Gtk.WrapMode.WORD_CHAR, top_margin=6, bottom_margin=6,
                           left_margin=8, right_margin=8, accepts_tab=False)
         tv.get_buffer().set_text(d.cell_at(r, c))
         sw = Gtk.ScrolledWindow(child=tv, min_content_height=160, min_content_width=420,
                                 css_classes=["card"])
         dlg.set_extra_child(sw)
-        dlg.add_response("cancel", "Cancel")
-        dlg.add_response("ok", "Apply")
+        dlg.add_response("cancel", _("Cancel"))
+        dlg.add_response("ok", _("Apply"))
         dlg.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
         dlg.set_default_response("ok")
 
@@ -1533,7 +1540,7 @@ class TableViewer(Viewer):
                 buf = tv.get_buffer()
                 text = buf.get_text(buf.get_start_iter(), buf.get_end_iter(), False)
                 if r < d.n_view:
-                    d.set_cells([(d.key_at(r), c, text)], "Edit Cell")
+                    d.set_cells([(d.key_at(r), c, text)], _("Edit Cell"))
             self._focus_table()
         dlg.connect("response", resp)
         dlg.present(self)
@@ -1624,15 +1631,15 @@ class TableViewer(Viewer):
         h = len(block)
         w = max(len(r) for r in block)
         if h * w > 5_000_000:
-            self.toast("The clipboard data is too large to paste.")
+            self.toast(_("The clipboard data is too large to paste."))
             return
         r0, c0, r1, c1 = self._sel_rect()
         single = h == 1 and w == 1
-        with d.group("Paste"):
+        with d.group(_("Paste")):
             if single and (r1 > r0 or c1 > c0):
                 # fill the whole selection with the one value
                 ch = [(d.key_at(r), c, block[0][0]) for r in range(r0, r1 + 1) for c in range(c0, c1 + 1)]
-                d.set_cells(ch, "Paste")
+                d.set_cells(ch, _("Paste"))
             else:
                 d.ensure_size(r0 + h, c0 + w)
                 ch = []
@@ -1640,7 +1647,7 @@ class TableViewer(Viewer):
                     key = d.key_at(r0 + i)
                     for j, v in enumerate(row):
                         ch.append((key, c0 + j, v))
-                d.set_cells(ch, "Paste")
+                d.set_cells(ch, _("Paste"))
         self.anchor = (r0, c0)
         self.cur = (min(d.n_view - 1, r0 + (r1 - r0 if single else h - 1)),
                     min(d.ncols - 1, c0 + (c1 - c0 if single else w - 1)))
@@ -1652,7 +1659,7 @@ class TableViewer(Viewer):
         d = self.data
         r0, c0, r1, c1 = self._sel_rect()
         ch = [(d.key_at(r), c, "") for r in range(r0, min(r1, d.n_view - 1) + 1) for c in range(c0, c1 + 1)]
-        d.set_cells(ch, "Clear Cells")
+        d.set_cells(ch, _("Clear Cells"))
 
     # ======================================================================
     # Rows and columns
@@ -1702,7 +1709,7 @@ class TableViewer(Viewer):
         d = self.data
         r0, c0, r1, c1 = self._sel_rect()
         if (c1 - c0 + 1) >= d.ncols:
-            self.toast("A table needs at least one column")
+            self.toast(_("A table needs at least one column"))
             return
         d.delete_cols(range(c0, c1 + 1))
         c = min(c0, d.ncols - 1)
@@ -1737,15 +1744,15 @@ class TableViewer(Viewer):
         d = self.data
         c = self.win_start + slot
         if not d.has_header:
-            self.toast("Turn on “First Row Is Header” to name columns")
+            self.toast(_("Turn on “First Row Is Header” to name columns"))
             return
         if not self._guard_edit():
             return
-        dlg = Adw.AlertDialog(heading="Rename Column")
+        dlg = Adw.AlertDialog(heading=_("Rename Column"))
         entry = Gtk.Entry(text=d.headers[c], activates_default=True)
         dlg.set_extra_child(entry)
-        dlg.add_response("cancel", "Cancel")
-        dlg.add_response("ok", "Rename")
+        dlg.add_response("cancel", _("Cancel"))
+        dlg.add_response("ok", _("Rename"))
         dlg.set_response_appearance("ok", Adw.ResponseAppearance.SUGGESTED)
         dlg.set_default_response("ok")
 
@@ -1808,15 +1815,15 @@ class TableViewer(Viewer):
             return
         if col is None and d.sort_col is None:
             return
-        self._recompute_view(col, asc, d.filter_on, label="Sorting…")
+        self._recompute_view(col, asc, d.filter_on, label=_("Sorting…"))
 
-    def _recompute_view(self, sort_col, asc, filter_on, label="Working…", then=None):
+    def _recompute_view(self, sort_col, asc, filter_on, label=N_("Working…"), then=None):
         d = self.data
         self._view_gen += 1
         gen = self._view_gen
         mut = d.mut
         match_keys = d.match_keys
-        self._begin_busy(label)
+        self._begin_busy(_(label))
 
         def work():
             try:
@@ -1833,7 +1840,7 @@ class TableViewer(Viewer):
                 return False
             self._end_busy()
             if err is not None:
-                self.toast(f"Could not sort: {err}")
+                self.toast(_("Could not sort: {err}").format(err=err))
             elif d.mut != mut:
                 self._recompute_view(sort_col, asc, filter_on, label, then)
             else:
@@ -1851,7 +1858,7 @@ class TableViewer(Viewer):
             return
         d = self.data
         col = self.win_start + slot
-        self._begin_busy("Sorting…")
+        self._begin_busy(_("Sorting…"))
 
         def work():
             try:
@@ -1864,9 +1871,9 @@ class TableViewer(Viewer):
         def done(new, err):
             self._end_busy()
             if err is not None:
-                self.toast(f"Could not sort: {err}")
+                self.toast(_("Could not sort: {err}").format(err=err))
             else:
-                d.set_order(new, "Sort")
+                d.set_order(new, _("Sort"))
                 self.vadj.set_value(0)
             return False
         threading.Thread(target=work, daemon=True).start()
@@ -1934,7 +1941,7 @@ class TableViewer(Viewer):
             self._update_match_label()
             self._repaint_all()
             return False
-        self._begin_busy("Searching…")
+        self._begin_busy(_("Searching…"))
         mut = d.mut
 
         def work():
@@ -1978,14 +1985,14 @@ class TableViewer(Viewer):
             return
         on = btn.get_active() and bool(d.search_text)
         if on != d.filter_on or (not btn.get_active() and self._view_is_filtered()):
-            self._recompute_view(d.sort_col, d.sort_asc, on, label="Filtering…")
+            self._recompute_view(d.sort_col, d.sort_asc, on, label=_("Filtering…"))
 
     def _update_match_label(self):
         d = self.data
         if not d.search_text:
             self.match_label.set_text("")
         elif len(d.match_keys) == 0:
-            self.match_label.set_text("No matches")
+            self.match_label.set_text(_("No matches"))
         else:
             n = len(d.match_keys)
             self.match_label.set_text(f"{n:,} row{'s' if n != 1 else ''}")
@@ -2032,12 +2039,12 @@ class TableViewer(Viewer):
             d.quoting = v
             self.act_quote.set_state(GLib.Variant("b", v == "all"))
         setv(new)
-        d._push(Command("Quoting", lambda: setv(old), lambda: setv(new)))
+        d._push(Command(_("Quoting"), lambda: setv(old), lambda: setv(new)))
         self.refresh_title()
 
     def _reload_with(self, **kw):
         if self.data.has_unsaved_changes():
-            self.toast("Save or undo your changes first")
+            self.toast(_("Save or undo your changes first"))
             self._sync_format_actions()
             return
         if self.gfile is None:
@@ -2071,7 +2078,7 @@ class TableViewer(Viewer):
             d.out_eol = x
             self.act_eol.set_state(GLib.Variant("s", "crlf" if x == b"\r\n" else "lf"))
         setv(new)
-        d._push(Command("Line Endings", lambda: setv(old), lambda: setv(new)))
+        d._push(Command(_("Line Endings"), lambda: setv(old), lambda: setv(new)))
         self.refresh_title()
 
     # ======================================================================
@@ -2085,7 +2092,7 @@ class TableViewer(Viewer):
             self.save_as(on_done)
             return
         if self._loading or not d.loaded:
-            self.toast("The file is still loading")
+            self.toast(_("The file is still loading"))
             if on_done:
                 on_done(False)
             return
@@ -2098,10 +2105,10 @@ class TableViewer(Viewer):
         d = self.data
         if self._loading or not d.loaded:
             return
-        dlg = Gtk.FileDialog(title="Save As")
+        dlg = Gtk.FileDialog(title=_("Save As"))
         filters = Gio.ListStore.new(Gtk.FileFilter)
-        for name, pats in (("CSV (comma-separated)", ["*.csv"]), ("TSV (tab-separated)", ["*.tsv", "*.tab"]),
-                           ("JSON", ["*.json"]), ("Excel workbook", ["*.xlsx"])):
+        for name, pats in ((_("CSV (comma-separated)"), ["*.csv"]), (_("TSV (tab-separated)"), ["*.tsv", "*.tab"]),
+                           ("JSON", ["*.json"]), (_("Excel workbook"), ["*.xlsx"])):
             f = Gtk.FileFilter(name=name)
             for p in pats:
                 f.add_pattern(p)
@@ -2139,12 +2146,12 @@ class TableViewer(Viewer):
     def _save_async(self, path, fmt, delim, on_done, same_doc, gfile=None):
         d = self.data
         if self._busy:
-            self.toast("Please wait for the current operation to finish")
+            self.toast(_("Please wait for the current operation to finish"))
             if on_done:
                 on_done(False)
             return
         self._cancel_edit()
-        self._begin_busy("Saving…")
+        self._begin_busy(_("Saving…"))
         self.progress.set_fraction(0.0)
         frac = [0.0]
 
@@ -2170,7 +2177,7 @@ class TableViewer(Viewer):
         def done(note, err):
             self._end_busy()
             if err is not None:
-                self.toast(f"Could not save: {err}")
+                self.toast(_("Could not save: {err}").format(err=err))
                 if on_done:
                     on_done(False)
                 return False
@@ -2181,9 +2188,9 @@ class TableViewer(Viewer):
                     d.path = path
                 if delim:
                     self._out_delim = delim
-                self.toast(note or f"Saved “{os.path.basename(path)}”")
+                self.toast(note or _("Saved “{name}”").format(name=os.path.basename(path)))
             else:
-                self.toast(f"Exported “{os.path.basename(path)}”")
+                self.toast(_("Exported “{v}”").format(v=os.path.basename(path)))
             self._update_sensitivity()
             self.refresh_title()
             if on_done:

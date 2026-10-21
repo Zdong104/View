@@ -16,6 +16,7 @@ import img2pdf
 from PIL import Image, ImageOps
 from pypdf import PdfWriter, PdfReader
 from .runtime import replace_file
+from .i18n import _, N_, ngettext
 
 MM_TO_PT = 72.0 / 25.4
 PAGE_SIZES = {  # points
@@ -205,7 +206,7 @@ def images_to_pdf(paths, out_path, page_size="fit", margin_mm=0, landscape_auto=
 
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="view-app --combine-pdf",
-                                 description="Combine images into a PDF.")
+                                 description=_("Combine images into a PDF."))
     ap.add_argument("images", nargs="+")
     ap.add_argument("-o", "--output", help="output PDF (default: next to the first image)")
     ap.add_argument("--page-size", choices=["fit", "a4", "letter"], default="fit")
@@ -243,41 +244,42 @@ def show_export_dialog(window, paths, cleanup=None, default_dir_from=None, paren
     host = parent or window
     paths = [str(p) for p in paths]
     if not paths:
-        window.show_toast("No images to export")
+        window.show_toast(_("No images to export"))
         if cleanup:
             cleanup()
         return
 
     state = {"out": default_output_path([default_dir_from or paths[0]]), "explicit": False, "busy": False}
 
-    dlg = Adw.Dialog(title="Export as PDF", content_width=440)
+    dlg = Adw.Dialog(title=_("Export as PDF"), content_width=440)
     tv = Adw.ToolbarView()
     hb = Adw.HeaderBar(show_end_title_buttons=False, show_start_title_buttons=False)
-    cancel = Gtk.Button(label="Cancel")
+    cancel = Gtk.Button(label=_("Cancel"))
     cancel.connect("clicked", lambda *_: dlg.close())
-    export = Gtk.Button(label="Export", css_classes=["suggested-action"])
+    export = Gtk.Button(label=_("Export"), css_classes=["suggested-action"])
     hb.pack_start(cancel)
     hb.pack_end(export)
     tv.add_top_bar(hb)
 
     page = Adw.PreferencesPage()
     group = Adw.PreferencesGroup(
-        description=f"{len(paths)} image{'s' if len(paths) != 1 else ''}, one per page")
+        description=ngettext("{n} image, one per page", "{n} images, one per page",
+                             len(paths)).format(n=len(paths)))
     page.add(group)
 
-    sizes = [("Fit to Image", "fit"), ("A4", "a4"), ("US Letter", "letter")]
-    size_row = Adw.ComboRow(title="Page Size", model=Gtk.StringList.new([s[0] for s in sizes]))
+    sizes = [(N_("Fit to Image"), "fit"), ("A4", "a4"), (N_("US Letter"), "letter")]
+    size_row = Adw.ComboRow(title=_("Page Size"), model=Gtk.StringList.new([_(s[0]) for s in sizes]))
     group.add(size_row)
 
-    margin_row = Adw.SpinRow(title="Margin", subtitle="Millimetres",
+    margin_row = Adw.SpinRow(title=_("Margin"), subtitle=_("Millimetres"),
                              adjustment=Gtk.Adjustment(value=0, lower=0, upper=50,
                                                        step_increment=1, page_increment=5))
     group.add(margin_row)
 
-    out_row = Adw.ActionRow(title="Save To", subtitle=str(state["out"]), subtitle_lines=2,
+    out_row = Adw.ActionRow(title=_("Save To"), subtitle=str(state["out"]), subtitle_lines=2,
                             title_lines=1)
     choose = Gtk.Button(icon_name="document-open-symbolic", valign=Gtk.Align.CENTER,
-                        tooltip_text="Choose…", css_classes=["flat"])
+                        tooltip_text=_("Choose…"), css_classes=["flat"])
     out_row.add_suffix(choose)
     group.add(out_row)
 
@@ -294,10 +296,10 @@ def show_export_dialog(window, paths, cleanup=None, default_dir_from=None, paren
         state["out"] = Path(p)
         out_row.set_subtitle(str(p))
 
-    def on_choose(*_):
-        fd = Gtk.FileDialog(title="Save PDF", initial_name=state["out"].name,
+    def on_choose(*_a):
+        fd = Gtk.FileDialog(title=_("Save PDF"), initial_name=state["out"].name,
                             initial_folder=Gio.File.new_for_path(str(state["out"].parent)))
-        f = Gtk.FileFilter(name="PDF documents")
+        f = Gtk.FileFilter(name=_("PDF documents"))
         f.add_suffix("pdf")
         fd.set_default_filter(f)
 
@@ -324,7 +326,7 @@ def show_export_dialog(window, paths, cleanup=None, default_dir_from=None, paren
             w.set_sensitive(not busy)
         progress.set_visible(busy)
 
-    def on_export(*_):
+    def on_export(*_a):
         if state["busy"]:
             return
         out = state["out"]
@@ -350,10 +352,10 @@ def show_export_dialog(window, paths, cleanup=None, default_dir_from=None, paren
         def finished(err):
             dlg.force_close()
             if err is not None:
-                window.show_toast(f"PDF export failed: {err}")
+                window.show_toast(_("PDF export failed: {error}").format(error=err))
             else:
                 gf = Gio.File.new_for_path(str(out))
-                window.show_toast(f"Saved {out.name}", "Open",
+                window.show_toast(_("Saved {name}").format(name=out.name), _("Open"),
                                   lambda: window.open_files([gf]))
             return False
 

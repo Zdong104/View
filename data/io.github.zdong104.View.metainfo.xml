@@ -77,6 +77,14 @@
     <keyword>STL</keyword>
   </keywords>
   <releases>
+    <release version="0.1.8" date="2026-10-21">
+      <description>
+        <p>Combine Images into PDF in the GNOME Files right-click menu.</p>
+        <ul>
+          <li>Select images in Files, right-click and choose Combine Images into PDF (Convert to PDF for a single image), right in the menu instead of under Scripts. The .deb installs it automatically (it needs python3-nautilus, which it recommends); snap users enable it with a one-time command shown in the README.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.7" date="2026-10-20">
       <description>
         <p>Check for Updates works in the snap.</p>

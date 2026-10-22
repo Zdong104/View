@@ -22,7 +22,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
             page.add(self._files_group())
         elif runtime.IS_LINUX and runtime.SANDBOXED:
             grp = Adw.PreferencesGroup(title="GNOME Files")
-            grp.add(Adw.ActionRow(title="Space-bar previews and Files scripts",
+            grp.add(Adw.ActionRow(title="Space-bar previews and Combine Images into PDF",
                                   subtitle=reason, subtitle_selectable=True))
             page.add(grp)
 
@@ -47,8 +47,12 @@ class PreferencesDialog(Adw.PreferencesDialog):
                            subtitle="Replaces GNOME Sushi’s quick previewer",
                            active=integration.quicklook_enabled())
         sc = Adw.SwitchRow(title="Add “Combine Images into PDF” to Files",
-                           subtitle="Right-click selected images → Scripts",
+                           subtitle="Right-click selected images; if it is missing, restart Files (nautilus -q)",
                            active=integration.script_enabled())
+        if integration.system_extension_installed():
+            # the .deb's copy serves every user; nothing per user to turn off
+            sc.set_subtitle("Installed for all users by the View package")
+            sc.set_sensitive(False)
 
         def toggled(row, _pspec, which):
             try:

@@ -23,8 +23,9 @@ description: |
   Done saves it and copies it to the clipboard (on by default, off in
   Preferences).
 
-  The GNOME Files integration (Space-bar Quick Look, "Combine Images into
-  PDF" script) is not available in the snap; use the .deb for that.
+  The GNOME Files integration is limited in the snap: Space-bar Quick Look
+  needs the .deb, and the "Combine Images into PDF" right-click item needs
+  a one-time setup (see the README).
 license: PolyForm-Noncommercial-1.0.0
 website: https://github.com/Zdong104/View
 source-code: https://github.com/Zdong104/View
@@ -108,6 +109,9 @@ parts:
       install -d "$CRAFT_PART_INSTALL/usr/lib/view-app" "$CRAFT_PART_INSTALL/usr/bin"
       cp -r "$CRAFT_PART_SRC/preview" "$CRAFT_PART_INSTALL/usr/lib/view-app/"
       find "$CRAFT_PART_INSTALL/usr/lib/view-app" -name __pycache__ -prune -exec rm -rf {} +
+      # Files extension template for `view-app --print-files-extension`
+      install -Dm644 "$CRAFT_PART_SRC/data/view-nautilus-extension.py" \
+        "$CRAFT_PART_INSTALL/usr/lib/view-app/data/view-nautilus-extension.py"
       cat > "$CRAFT_PART_INSTALL/usr/bin/view-app" <<EOF
       #!/bin/sh
       # View snap launcher: our staged typelibs, GStreamer plugins and

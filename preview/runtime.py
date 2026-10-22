@@ -314,8 +314,11 @@ def files_integration_supported() -> tuple[bool, str]:
         return False, "Only available on Linux with GNOME Files."
     if IN_SNAP:
         return False, ("Not available in the snap: strict confinement cannot register a "
-                       "D-Bus service or Files scripts for your session. Install the .deb "
-                       "to use it.")
+                       "D-Bus service or Files extensions for your session. For a "
+                       "“Combine Images into PDF” item in Files, install python3-nautilus and "
+                       "save the output of “snap run view --print-files-extension” as "
+                       "~/.local/share/nautilus-python/extensions/view-app.py (full command "
+                       "in the README). Space-bar previews need the .deb.")
     if IN_FLATPAK:
         return False, "Not available in the Flatpak sandbox."
     if not has_nautilus():

@@ -25,12 +25,14 @@ echo "Building $PKG $VERSION$DEB_REVISION"
 # ---- payload ---------------------------------------------------------------
 install -d "$P/usr/lib/$PKG" "$P/usr/bin" "$P/usr/share/applications" "$P/usr/share/man" \
     "$P/usr/share/icons/hicolor/scalable/apps" "$P/usr/share/metainfo" \
-    "$P/usr/share/doc/$PKG" "$P/DEBIAN"
+    "$P/usr/share/doc/$PKG" "$P/usr/share/nautilus-python/extensions" "$P/DEBIAN"
 chmod 755 "$P"
 
 # the Python package, without caches (byte-compiled on install by py3compile)
 tar -C "$ROOT" --exclude='__pycache__' --exclude='*.pyc' --exclude='*.pyo' -cf - preview \
     | tar -C "$P/usr/lib/$PKG" -xf -
+# the Files extension template, where integration.extension_text() looks for it
+install -Dm644 "data/view-nautilus-extension.py" "$P/usr/lib/$PKG/data/view-nautilus-extension.py"
 find "$P/usr/lib/$PKG" -type d -exec chmod 755 {} +
 find "$P/usr/lib/$PKG" -type f -exec chmod 644 {} +
 
@@ -48,6 +50,15 @@ from preview.__main__ import main  # noqa: E402
 sys.exit(main())
 EOF
 chmod 755 "$P/usr/bin/$CMD"
+
+# "Combine Images into PDF" in the Files right-click menu (nautilus-python, from
+# the recommended python3-nautilus), with the launcher filled in
+sed -e 's|^LAUNCHER = \[\].*$|LAUNCHER = ["/usr/bin/view-app"]|' \
+    -e 's|^ENV_PYTHONPATH = ""  # @ENV_PYTHONPATH@$|ENV_PYTHONPATH = ""|' \
+    data/view-nautilus-extension.py \
+    > "$P/usr/share/nautilus-python/extensions/view-app.py"
+chmod 644 "$P/usr/share/nautilus-python/extensions/view-app.py"
+grep -q '^LAUNCHER = \["/usr/bin/view-app"\]$' "$P/usr/share/nautilus-python/extensions/view-app.py"
 
 install -m644 "data/$APP_ID.desktop" "$P/usr/share/applications/$APP_ID.desktop"
 # screenshot quick edit, on by default for every user; Preferences turns it
@@ -100,7 +111,7 @@ DEPENDS="python3 (>= 3.12), python3-gi (>= 3.48), python3-gi-cairo, python3-cair
  python3-numpy, python3-pil, python3-pypdf, python3-opengl, python3-img2pdf,
  python3-pygments, python3-openpyxl, libegl1, libgl1"
 RECOMMENDS="gstreamer1.0-libav, gstreamer1.0-plugins-bad, gstreamer1.0-plugins-ugly,
- ghostscript, python3-venv, librsvg2-common, webp-pixbuf-loader, heif-gdk-pixbuf,
+ ghostscript, python3-nautilus, python3-venv, librsvg2-common, webp-pixbuf-loader, heif-gdk-pixbuf,
  7zip | p7zip-full"
 SUGGESTS="nautilus, gir1.2-gtksource-5, libreoffice-core"
 
@@ -127,8 +138,9 @@ Description: macOS Preview-style viewer for PDFs, images, video, text and 3D
  Press Print Screen and the screenshot opens in View for quick markup; Done
  saves it and copies it to the clipboard (on by default, off in Preferences).
  .
- Optional per-user extras, enabled from Preferences: Space-bar Quick Look
- for GNOME Files, a "Combine Images into PDF" Files script, and a downloadable
+ With python3-nautilus, GNOME Files gets a "Combine Images into PDF" item in
+ the right-click menu of selected images. Optional per-user extras, enabled
+ from Preferences: Space-bar Quick Look for GNOME Files and a downloadable
  text-recognition (OCR) engine.
  .
  Licensed under the PolyForm Noncommercial License 1.0.0.

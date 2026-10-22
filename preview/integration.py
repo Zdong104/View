@@ -4,13 +4,18 @@
   (~/.local/share/dbus-1/services/…) that starts ``view-app --quicklook``
   instead of GNOME Sushi when Space is pressed.  A system package cannot do
   this: the system-wide file belongs to gnome-sushi.
-* "Combine Images into PDF": a Nautilus script (~/.local/share/nautilus/scripts/).
+* "Combine Images into PDF": a top-level right-click item from a nautilus-python
+  extension (~/.local/share/nautilus-python/extensions/; the .deb ships a system
+  copy instead).  Without python3-nautilus it falls back to a Nautilus script
+  (~/.local/share/nautilus/scripts/, shown under Scripts).
 
-Both are written with absolute paths to the installed launcher, so they keep
-working from the .deb, a source checkout or any other prefix.
+Everything is written with absolute paths to the installed launcher, so it
+keeps working from the .deb, a source checkout or any other prefix.
 """
 from __future__ import annotations
 
+import glob
+import json
 import os
 import shlex
 import signal
@@ -20,6 +25,9 @@ from . import runtime
 
 BUS_NAME = "org.gnome.NautilusPreviewer"
 SCRIPT_NAME = "Combine Images into PDF"
+EXTENSION_FILE = "view-app.py"
+EXTENSION_TEMPLATE = "view-nautilus-extension.py"
+SYSTEM_EXTENSION = "/usr/share/nautilus-python/extensions/" + EXTENSION_FILE
 MARKER = f"Installed by View ({runtime.APP_ID})"
 
 
@@ -34,6 +42,24 @@ def service_path() -> str:
 
 def script_path() -> str:
     return os.path.join(_data_home(), "nautilus", "scripts", SCRIPT_NAME)
+
+
+def extension_path() -> str:
+    return os.path.join(_data_home(), "nautilus-python", "extensions", EXTENSION_FILE)
+
+
+def system_extension_installed() -> bool:
+    """The .deb's system-wide extension is present (it makes a per-user one redundant)."""
+    return os.path.exists(SYSTEM_EXTENSION)
+
+
+def has_nautilus_python() -> bool:
+    """python3-nautilus (the nautilus-python extension loader for Files 43+) is installed."""
+    for lib in ("/usr/lib/*/nautilus/extensions-4", "/usr/lib/nautilus/extensions-4",
+                "/usr/lib64/nautilus/extensions-4"):
+        if glob.glob(os.path.join(lib, "libnautilus-python.so*")):
+            return True
+    return False
 
 
 def _is_ours(path) -> bool:
@@ -52,7 +78,10 @@ def quicklook_enabled() -> bool:
 
 
 def script_enabled() -> bool:
-    return os.path.exists(script_path()) and _is_ours(script_path())
+    """"Combine Images into PDF" is available in Files (extension or script)."""
+    return (system_extension_installed()
+            or (os.path.exists(extension_path()) and _is_ours(extension_path()))
+            or (os.path.exists(script_path()) and _is_ours(script_path())))
 
 
 # ------------------------------------------------------------- writers ---
@@ -135,11 +164,52 @@ def _script_text() -> str:
             .replace("@ENV@", env_line))
 
 
-def set_script(enabled: bool):
-    if enabled:
-        _write(script_path(), _script_text(), 0o755)
-    else:
+def _extension_source() -> str:
+    """Text of the extension template: next to the package (``data/`` in a source
+    checkout; the .deb and the snap install a copy there too)."""
+    path = os.path.join(runtime.package_root(), "data", EXTENSION_TEMPLATE)
+    with open(path, encoding="utf-8") as f:
+        return f.read()
+
+
+def extension_text() -> str:
+    """The nautilus-python extension with this install's launcher baked in."""
+    env = runtime.launcher_env()
+    return (_extension_source()
+            .replace("LAUNCHER = []  # @LAUNCHER@",
+                     f"LAUNCHER = {json.dumps(runtime.launcher_argv())}")
+            .replace('ENV_PYTHONPATH = ""  # @ENV_PYTHONPATH@',
+                     f"ENV_PYTHONPATH = {json.dumps(env['PYTHONPATH'] if env else '')}"))
+
+
+def print_extension() -> int:
+    """--print-files-extension: for sandboxed installs that cannot write ~/.local."""
+    try:
+        sys.stdout.write(extension_text())
+    except OSError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 1
+    return 0
+
+
+def set_script(enabled: bool) -> str:
+    """Turn the "Combine Images into PDF" menu entry on or off.  Returns what is
+    now providing it: "system" (the .deb's extension), "extension", "script",
+    or "" when disabled."""
+    if not enabled:
+        _remove(extension_path())
         _remove(script_path())
+        return ""
+    if system_extension_installed():
+        _remove(extension_path())
+        _remove(script_path())
+        return "system"
+    if has_nautilus_python():
+        _write(extension_path(), extension_text())
+        _remove(script_path())
+        return "extension"
+    _write(script_path(), _script_text(), 0o755)
+    return "script"
 
 
 def set_quicklook(enabled: bool):
@@ -227,13 +297,22 @@ def cli(enable: bool) -> int:
         print(f"Files integration is not available: {reason}", file=sys.stderr)
         return 1
     try:
-        apply(quicklook=enable, script=enable)
+        set_quicklook(enable)
+        kind = set_script(enable)
     except OSError as e:
         print(f"error: {e}", file=sys.stderr)
         return 1
     if enable:
         print(f"Space-bar previews in Files now use View ({service_path()}).")
-        print(f"Added the Files script “{SCRIPT_NAME}” ({script_path()}).")
+        if kind == "system":
+            print(f"“{SCRIPT_NAME}” is in the Files right-click menu (system extension).")
+        elif kind == "extension":
+            print(f"Added “{SCRIPT_NAME}” to the Files right-click menu ({extension_path()}).")
+        else:
+            print(f"Added the Files script “{SCRIPT_NAME}” ({script_path()}).")
+            print("Install python3-nautilus for a top-level menu item.")
+        if kind in ("system", "extension"):
+            print("Restart Files to load it:  nautilus -q")
     else:
         print("Removed View's Files integration; GNOME Sushi handles Space again.")
     return 0

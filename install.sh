@@ -2,7 +2,7 @@
 # Install View from this source checkout for the current user (no sudo).
 # It shows up as "View (Dev)" so it can't be mistaken for the snap or .deb.
 # Re-run after moving the checkout.  Options:
-#   --no-files-integration   don't take over Space-bar previews in GNOME Files
+#   --no-files-integration   don't touch GNOME Files (Space-bar previews, PDF menu item)
 #   --uninstall              remove the per-user install (keeps the venv)
 #   --purge                  remove it and its Python venv
 set -euo pipefail
@@ -75,8 +75,9 @@ mkdir -p "$DATA/applications"
 sed -e "s|^Exec=view-app|Exec=$BIN|" -e "s|^Name=View$|Name=View (Dev)|" \
     "$SRC/data/$APP_ID.desktop" > "$DATA/applications/$APP_ID.desktop"
 
-# GNOME Files: Space-bar Quick Look + "Combine Images into PDF" script.
-# Both are per-user; undo with: view-app --disable-files-integration
+# GNOME Files: Space-bar Quick Look + "Combine Images into PDF" in the right-click
+# menu (a nautilus-python extension if python3-nautilus is installed, else a
+# Files script).  Both are per-user; undo with: view-app --disable-files-integration
 if [ "$FILES_INTEGRATION" = 1 ]; then
     "$BIN" --enable-files-integration || true
 fi

@@ -27,7 +27,7 @@
 - **Markup** on PDFs and images: sketch, shapes, arrows, text boxes, notes, highlight / underline / strikethrough.
 - **Images**: zoom, pan, pinch, rotate, flip, crop, adjust colour, instant alpha, resize, EXIF/GPS info. Animated GIF / WebP / APNG keep their animation when edited.
 - **Screenshots**: Print Screen (Linux) or Snipping Tool / Win+Print Screen (Windows) opens the capture in View for quick markup; Done saves it back to Screenshots and copies it to the clipboard.
-- **Batch tools**: convert selected images, combine images into a PDF.
+- **Batch tools**: convert selected images, combine images into a PDF (also from the GNOME Files right-click menu).
 - **Live Text (OCR)**: select and copy text in images and scanned PDFs, export searchable PDFs (RapidOCR, CPU, English + Chinese).
 - **3D models**: STL / OBJ / PLY, orbit with the touchpad, dimensions / volume / area (10M triangles tested).
 - **Tables and text**: CSV / TSV viewer and editor (1M rows), text and code viewer with syntax highlighting.
@@ -64,7 +64,13 @@ sudo snap install view --edge && sudo snap connect view:raw-input
 
 The second half lets the sandboxed snap read the touchpad for touchpad signing; without it you can still sign with the mouse, a pen or a finger. If you already installed the snap, just run `sudo snap connect view:raw-input`. Like every install, touchpad signing also needs your user in the `input` group (`sudo usermod -aG input $USER`, then log out and back in).
 
-From a terminal, start it with `snap run view` (plain `view` is usually Vim's read-only mode). The snap is sandboxed, so the GNOME Files integration (Space-bar Quick Look, "Combine Images into PDF") is only available in the .deb / source install.
+From a terminal, start it with `snap run view` (plain `view` is usually Vim's read-only mode). The snap is sandboxed, so Space-bar Quick Look for GNOME Files is only available in the .deb / source install. The "Combine Images into PDF" right-click item in Files works with a one-time setup (it needs `python3-nautilus`; the last step restarts Files):
+
+```bash
+sudo apt install python3-nautilus && mkdir -p ~/.local/share/nautilus-python/extensions && snap run view --print-files-extension > ~/.local/share/nautilus-python/extensions/view-app.py && nautilus -q
+```
+
+The .deb installs that menu item for you when `python3-nautilus` is present (`apt` recommends it).
 
 ### Windows (**experimental**)
 

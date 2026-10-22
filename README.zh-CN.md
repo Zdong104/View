@@ -27,7 +27,7 @@
 - **标注** PDF 和图片：手绘、形状、箭头、文本框、批注，以及高亮 / 下划线 / 删除线。
 - **图片**：缩放、平移、捏合手势、旋转、翻转、裁剪、调色、一键抠除背景（alpha）、调整尺寸、EXIF/GPS 信息。编辑后的 GIF / WebP / APNG 动图仍会保留动画。
 - **截图**：按 Print Screen（Linux）或使用截图工具 / Win+Print Screen（Windows）后，截图会在 View 中打开以便快速标注；点击完成即存回“截图”文件夹并复制到剪贴板。
-- **批量工具**：批量转换所选图片，将多张图片合并为 PDF。
+- **批量工具**：批量转换所选图片，将多张图片合并为 PDF（也可以在 GNOME 文件的右键菜单中直接合并）。
 - **实况文本（OCR）**：选择并复制图片和扫描版 PDF 中的文字，导出可搜索的 PDF（RapidOCR，纯 CPU 运行，支持英文和中文）。
 - **3D 模型**：支持 STL / OBJ / PLY，可用触控板旋转视角，显示尺寸 / 体积 / 表面积（已测试 1000 万三角面）。
 - **表格与文本**：CSV / TSV 查看器和编辑器（支持 100 万行），以及带语法高亮的文本和代码查看器。
@@ -64,7 +64,13 @@ sudo snap install view --edge && sudo snap connect view:raw-input
 
 后半条命令用于让沙箱中的 snap 读取触控板数据以支持触控板签名；不执行的话，仍然可以用鼠标、手写笔或手指签名。如果已经安装了 snap，只需运行 `sudo snap connect view:raw-input`。和其他安装方式一样，触控板签名还需要把你的用户加入 `input` 组（`sudo usermod -aG input $USER`，然后注销并重新登录）。
 
-在终端中请使用 `snap run view` 启动（直接输入 `view` 通常会进入 Vim 的只读模式）。由于 snap 运行在沙箱中，GNOME 文件的集成功能（空格键快速预览、“合并图片为 PDF”）仅在 .deb / 源码安装中可用。
+在终端中请使用 `snap run view` 启动（直接输入 `view` 通常会进入 Vim 的只读模式）。由于 snap 运行在沙箱中，GNOME 文件的空格键快速预览仅在 .deb / 源码安装中可用。右键菜单中的“合并图片为 PDF”只需一次性设置即可使用（需要 `python3-nautilus`，最后一步会重启文件管理器）：
+
+```bash
+sudo apt install python3-nautilus && mkdir -p ~/.local/share/nautilus-python/extensions && snap run view --print-files-extension > ~/.local/share/nautilus-python/extensions/view-app.py && nautilus -q
+```
+
+.deb 会在已安装 `python3-nautilus` 时自动提供这个菜单项（`apt` 会推荐安装它）。
 
 ### Windows（**实验性**）
 

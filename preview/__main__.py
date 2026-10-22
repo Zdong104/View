@@ -10,6 +10,7 @@ Options handled here (before GTK starts, no display needed):
   --combine-pdf -o OUT IMG…      combine images into a PDF (see --combine-pdf --help)
   --enable-files-integration     Space-bar previews + "Combine Images into PDF" in Files
   --disable-files-integration    undo the above
+  --print-files-extension        print the Files "Combine Images into PDF" extension
 Everything else (files, --new-signature, GApplication options) goes to the app.
 """
 import sys
@@ -33,7 +34,8 @@ def _usage_extra():
             "  --selftest [--no-ui]          Check that all viewers work and exit\n"
             "  --combine-pdf -o OUT IMG...   Combine images into one PDF\n"
             "  --enable-files-integration    Use View for Space-bar previews in GNOME Files\n"
-            "  --disable-files-integration   Give Space-bar previews back to GNOME Sushi\n")
+            "  --disable-files-integration   Give Space-bar previews back to GNOME Sushi\n"
+            "  --print-files-extension       Print the Files \"Combine Images into PDF\" extension\n")
 
 
 def _safe_stdio():
@@ -71,6 +73,9 @@ def main(argv=None):
     if first in ("--enable-files-integration", "--disable-files-integration"):
         from . import integration
         return integration.cli(first == "--enable-files-integration")
+    if first == "--print-files-extension":
+        from . import integration
+        return integration.print_extension()
     if first == "--check-updates":
         from .updates import cli as updates_cli
         return updates_cli()

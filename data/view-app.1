@@ -13,6 +13,7 @@ view-app \- view and annotate PDFs, images, videos, text and 3D models
 .br
 .B view-app
 \fB\-\-enable\-files\-integration\fR | \fB\-\-disable\-files\-integration\fR
+| \fB\-\-print\-files\-extension\fR
 .SH DESCRIPTION
 View is a macOS Preview\-style viewer for GNOME. It opens PDF documents,
 images, video and audio, CSV/TSV spreadsheets, text and source code, and
@@ -44,10 +45,18 @@ Combine images into one PDF without opening a window; see
 .TP
 .B \-\-enable\-files\-integration
 For the current user, make Space in GNOME Files show previews with View
-(instead of GNOME Sushi) and add a "Combine Images into PDF" Files script.
+(instead of GNOME Sushi) and add "Combine Images into PDF" to the right-click
+menu (a nautilus-python extension when python3-nautilus is installed, else a
+Files script). Restart Files afterwards with \fBnautilus \-q\fR.
 .TP
 .B \-\-disable\-files\-integration
 Undo \fB\-\-enable\-files\-integration\fR.
+.TP
+.B \-\-print\-files\-extension
+Print the nautilus-python extension that adds "Combine Images into PDF" to the
+Files right-click menu, with this installation's launcher filled in. Save it as
+\fI~/.local/share/nautilus-python/extensions/view-app.py\fR (for the snap,
+where \fB\-\-enable\-files\-integration\fR cannot write there).
 .TP
 .B \-\-quicklook
 Run the Quick Look D\-Bus service (started by the session bus).

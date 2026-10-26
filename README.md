@@ -39,22 +39,22 @@
 
 ### Ubuntu / Debian (.deb)
 
-Download [`view_0.1.8_all.deb`](https://github.com/Zdong104/View/releases/download/v0.1.8/view_0.1.8_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
+Download [`view_0.1.9_all.deb`](https://github.com/Zdong104/View/releases/download/v0.1.9/view_0.1.9_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
 
 ```bash
-sudo apt install ./view_0.1.8_all.deb
+sudo apt install ./view_0.1.9_all.deb
 ```
 
 Or in one go:
 
 ```bash
-wget https://github.com/Zdong104/View/releases/download/v0.1.8/view_0.1.8_all.deb && sudo apt install ./view_0.1.8_all.deb
+wget https://github.com/Zdong104/View/releases/download/v0.1.9/view_0.1.9_all.deb && sudo apt install ./view_0.1.9_all.deb
 ```
 
 `apt` is recommended because it also installs the dependencies. If you prefer `dpkg`:
 
 ```bash
-sudo dpkg -i view_0.1.8_all.deb && sudo apt -f install
+sudo dpkg -i view_0.1.9_all.deb && sudo apt -f install
 ```
 
 ### Snap (edge channel)
@@ -75,11 +75,11 @@ The .deb installs that menu item for you when `python3-nautilus` is present (`ap
 
 ### Windows (**experimental**)
 
-Download [`View-Setup-0.1.8.exe`](https://github.com/Zdong104/View/releases/download/v0.1.8/View-Setup-0.1.8.exe) (installer) or [`View-0.1.8-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.1.8/View-0.1.8-windows-portable.zip) (no install). It is now tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: press **Space** (or **Start**) and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
+Download [`View-Setup-0.1.9.exe`](https://github.com/Zdong104/View/releases/download/v0.1.9/View-Setup-0.1.9.exe) (installer) or [`View-0.1.9-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.1.9/View-0.1.9-windows-portable.zip) (no install). It is now tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: press **Space** (or **Start**) and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
 
-**New in 0.1.8:**
+**New in 0.1.9:**
 
-- **Combine Images into PDF in GNOME Files**: select images, right-click and choose **Combine Images into PDF** (**Convert to PDF** for a single image), right in the menu instead of under Scripts. The .deb installs it automatically (it needs `python3-nautilus`, which it recommends); for the snap, run the one-time command under [Snap](#snap-edge-channel).
+- **Interface translation: Simplified Chinese**, with a **Language** choice in Preferences (System default, English, 简体中文; it applies the next time View starts). By default View follows the system language. Thanks to [@azkuang](https://github.com/azkuang) for the translation work.
 - The **first start after installing** can take 20 seconds or more while Windows checks each new file (the build isn't code-signed yet, see below). Later starts take about a second.
 
 **Known problem:** the Windows build isn't code-signed yet, so on PCs with **Smart App Control** turned on (or a work PC with an App Control policy) it stops at startup with *"DLL load failed … An Application Control policy has blocked this file"* ([#3](https://github.com/Zdong104/View/issues/3)). Signed builds fix this; until then it only runs where Smart App Control is off (Windows Security → App & browser control → Smart App Control settings). Without Smart App Control, Windows may show a SmartScreen warning instead: click **More info → Run anyway**.
@@ -90,7 +90,7 @@ Text recognition (OCR) is included from 0.1.1 on. It runs in a small helper prog
 
 View is also supported in Chrome as an extension.
 
-1. Download [`view-chrome-0.1.8.zip`](https://github.com/Zdong104/View/releases/download/v0.1.8/view-chrome-0.1.8.zip) and unzip it.
+1. Download [`view-chrome-0.1.9.zip`](https://github.com/Zdong104/View/releases/download/v0.1.9/view-chrome-0.1.9.zip) and unzip it.
 2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and choose the unzipped folder.
 3. To open local files, click **Details** on View and turn on **Allow access to file URLs**.
 

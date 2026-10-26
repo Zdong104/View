@@ -78,6 +78,15 @@
     <keyword>STL</keyword>
   </keywords>
   <releases>
+    <release version="0.1.9" date="2026-10-26">
+      <description>
+        <p>Interface translation: Simplified Chinese, with a Language choice in Preferences.</p>
+        <ul>
+          <li>The interface is translated into Simplified Chinese. View follows the system language by default; Preferences → Language picks one explicitly (it applies the next time View starts).</li>
+          <li>Thanks to azkuang (@azkuang on GitHub) for the translation framework and the Simplified Chinese catalog.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.8" date="2026-10-21">
       <description>
         <p>Combine Images into PDF in the GNOME Files right-click menu.</p>

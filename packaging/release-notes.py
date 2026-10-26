@@ -2,7 +2,7 @@
 """Print the release notes for VERSION (from the AppStream metainfo) as
 Markdown, for the GitHub release body.  View's updater shows this text.
 
-    packaging/release-notes.py 0.1.8
+    packaging/release-notes.py 0.1.9
 """
 import os
 import sys

@@ -1,2 +1,2 @@
 """View: a macOS-View-like document viewer for GNOME."""
-__version__ = "0.1.8"
+__version__ = "0.1.9"

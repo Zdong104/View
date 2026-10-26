@@ -545,8 +545,11 @@ test("multi-image sidebar: add, select, reorder, batch convert to a folder, comb
   await page.click('dialog .btn[data-value="ok"]');
   await page.waitForFunction(async () => {
     const dir = await (await navigator.storage.getDirectory()).getDirectoryHandle("batch");
-    const names = []; for await (const k of dir.keys()) names.push(k);
-    return names.length === 4;
+    // wait for the exact final set: a write in progress shows up as an extra
+    // "<name>.crswap" entry, so counting entries can match before the last file exists
+    const sizes = {}; for await (const [k, h] of dir.entries()) sizes[k] = (await h.getFile()).size;
+    const want = ["still 2.jpg", "photo.jpg", "anim.jpg"];
+    return Object.keys(sizes).length === 4 && "still.jpg" in sizes && want.every((n) => sizes[n] > 0);
   }, { timeout: 15000 });
   const outs = await page.evaluate(async () => {
     const dir = await (await navigator.storage.getDirectory()).getDirectoryHandle("batch");

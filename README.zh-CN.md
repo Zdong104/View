@@ -150,6 +150,10 @@ View 仅在 **联想 ThinkPad P1 Gen 8 上的 Ubuntu 26.04** 中开发和测试�
 
 欢迎提交 Pull Request，无论是修正错别字还是新增查看器都可以。请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)，了解如何从源码运行、项目结构以及 PR 检查清单。所有参与者都应遵守[行为准则](CODE_OF_CONDUCT.md)。
 
+## 贡献者
+
+- [@azkuang](https://github.com/azkuang)：界面翻译框架与简体中文本地化。
+
 ## 支持本项目
 
 View 是免费的。如果它帮你节省了时间，欢迎支持项目的开发：

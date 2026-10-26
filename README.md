@@ -150,6 +150,10 @@ View is developed and tested **only on Ubuntu 26.04 on a Lenovo ThinkPad P1 Gen 
 
 Pull requests are welcome, from typo fixes to new viewers. Read [CONTRIBUTING.md](CONTRIBUTING.md) for how to run from source, the project layout and the PR checklist. Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
+## Contributors
+
+- [@azkuang](https://github.com/azkuang): UI translation framework and the Simplified Chinese localization.
+
 ## Support the project
 
 View is free. If it saves you time, you can support development:

@@ -55,6 +55,8 @@ UI strings are wrapped with `_()` (`from .i18n import _, N_, ngettext`); the lan
 - `make i18n` refreshes `po/view.pot`, merges it into every `po/*.po` and compiles `preview/locale/<lang>/LC_MESSAGES/view.mo`. Commit the `.mo` files: the packages ship them as they are. It needs GNU gettext (`xgettext`, `msgmerge`, `msgfmt`).
 - To add a language: `msginit -i po/view.pot -l <lang> -o po/<lang>.po --no-translator`, translate it, add it to `LANGUAGES` in `preview/i18n.py`, and run `make i18n`.
 
+The translation framework and the Simplified Chinese catalog were contributed by [@azkuang](https://github.com/azkuang); improvements to `po/zh_CN.po` or new languages are welcome.
+
 ## Chrome extension
 
 The Chrome version lives in `chrome/` (TypeScript, esbuild, Manifest V3). It needs Node 22+ and takes its version from `preview/__init__.py`.

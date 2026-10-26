@@ -327,12 +327,14 @@ class Updater:
 
         def done(rel, err):
             if err is not None:
-                say(f"Could not check for updates: {_short_error(err)}")
+                say(_("Could not check for updates: {error}").format(error=_short_error(err)))
             elif rel is None:
-                say(f"{runtime.APP_NAME} {runtime.VERSION} is up to date")
+                say(_("{APP_NAME} {version} is up to date").format(
+                    APP_NAME=runtime.APP_NAME, version=runtime.VERSION))
             else:
                 self._notified.add(rel.version)
-                say(f"{runtime.APP_NAME} {rel.version} is available", "Update…",
+                say(_("{APP_NAME} {version} is available").format(
+                    APP_NAME=runtime.APP_NAME, version=rel.version), _("Update…"),
                     lambda: self.offer(rel, parent))
         self.check(done)
 
@@ -341,14 +343,17 @@ class Updater:
         """The "update available" dialog for `rel`."""
         kind = install_kind()
         notes = _plain_notes(rel.notes)
-        body = f"You have version {runtime.VERSION}."
+        body = _("You have version {version}.").format(version=runtime.VERSION)
         if notes:
             body += "\n\n" + GLib.markup_escape_text(notes)
         if kind == "snap":
-            body += ("\n\nThe Snap Store installs updates automatically. To update now, run "
-                     f"<tt>sudo snap refresh {os.environ.get('SNAP_INSTANCE_NAME', 'view')}</tt>.")
-        body += (f'\n\n<a href="{GLib.markup_escape_text(rel.page)}">Release notes</a> · '
-                 f'<a href="{RELEASES}">All versions</a>')
+            body += "\n\n" + _(
+                "The Snap Store installs updates automatically. To update now, run "
+                "{command}.").format(command="<tt>sudo snap refresh {}</tt>".format(
+                    GLib.markup_escape_text(os.environ.get("SNAP_INSTANCE_NAME", "view"))))
+        body += (f'\n\n<a href="{GLib.markup_escape_text(rel.page)}">'
+                 f'{GLib.markup_escape_text(_("Release notes"))}</a> · '
+                 f'<a href="{RELEASES}">{GLib.markup_escape_text(_("All versions"))}</a>')
         dlg = Adw.AlertDialog(heading=_("{APP_NAME} {version} Is Available").format(APP_NAME=runtime.APP_NAME, version=rel.version),
                               body=body, body_use_markup=True)
         dlg.add_response("later", _("Later"))
@@ -382,14 +387,15 @@ class Updater:
             return
         self._busy = True
         name = asset_name(rel.version, kind)
-        prog = _ProgressDialog(f"Downloading {runtime.APP_NAME} {rel.version}")
+        prog = _ProgressDialog(_("Downloading {APP_NAME} {version}").format(
+            APP_NAME=runtime.APP_NAME, version=rel.version))
         prog.present(parent)
 
         def work():
             try:
                 path = download(rel, name, prog.set_fraction, prog.is_cancelled)
                 if kind == "deb":
-                    GLib.idle_add(prog.set_text, "Installing…")
+                    GLib.idle_add(prog.set_text, _("Installing…"))
                     rc, out = _apt_install(path)
                     result = ("deb", rc, out, path)
                 else:
@@ -407,13 +413,13 @@ class Updater:
                 return GLib.SOURCE_REMOVE
             what, rc, out, path = result
             if what == "error":
-                _message(parent, "Update Failed", out)
+                _message(parent, _("Update Failed"), out)
             elif what == "exe":
                 if not self._unsaved(parent):
                     try:
                         _run_windows_installer(path)
                     except OSError as e:        # e.g. the UAC prompt was declined
-                        _message(parent, "Update Not Installed", _short_error(e))
+                        _message(parent, _("Update Not Installed"), _short_error(e))
                     else:
                         self.app.quit()
             elif rc == 0:
@@ -424,8 +430,8 @@ class Updater:
                 # no polkit agent tool: hand the .deb to the software installer
                 _launch_uri(GLib.filename_to_uri(path), parent)
             else:
-                _message(parent, "Update Failed",
-                         "apt could not install the update:\n\n" + out[-600:])
+                _message(parent, _("Update Failed"),
+                         _("apt could not install the update:") + "\n\n" + out[-600:])
             return GLib.SOURCE_REMOVE
         threading.Thread(target=work, daemon=True, name="view-update").start()
 
@@ -435,9 +441,10 @@ class Updater:
             v = getattr(w, "viewer", None)
             try:
                 if v is not None and v.has_unsaved_changes():
-                    _message(parent, "Unsaved Changes",
-                             "Save or close the documents with unsaved changes, then try "
-                             "again. The update has to close View.")
+                    _message(parent, _("Unsaved Changes"),
+                             _("Save or close the documents with unsaved changes, then try "
+                               "again. The update has to close {APP_NAME}.").format(
+                                 APP_NAME=runtime.APP_NAME))
                     return True
             except Exception:  # noqa: BLE001
                 pass
@@ -512,8 +519,9 @@ def _short_error(e) -> str:
     if isinstance(e, urllib.error.URLError) and not isinstance(e, urllib.error.HTTPError):
         import ssl
         if isinstance(e.reason, ssl.SSLCertVerificationError):
-            return f"GitHub's certificate could not be verified ({e.reason.verify_message})"
-        return f"no connection to GitHub ({e.reason})"
+            return _("GitHub’s certificate could not be verified ({reason})").format(
+                reason=e.reason.verify_message)
+        return _("no connection to GitHub ({reason})").format(reason=e.reason)
     return str(e) or type(e).__name__
 
 
@@ -536,7 +544,7 @@ def _launch_uri(uri, parent):
 
 def _apt_install(path) -> tuple[int, str]:
     if not _have("pkexec"):
-        return 127, "pkexec not found"
+        return 127, _("pkexec not found")
     p = subprocess.run(["pkexec", "env", "DEBIAN_FRONTEND=noninteractive", "apt-get",
                         "install", "-y", "--allow-downgrades", path],
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)

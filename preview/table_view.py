@@ -1995,7 +1995,7 @@ class TableViewer(Viewer):
             self.match_label.set_text(_("No matches"))
         else:
             n = len(d.match_keys)
-            self.match_label.set_text(f"{n:,} row{'s' if n != 1 else ''}")
+            self.match_label.set_text(ngettext("{n:,} row", "{n:,} rows", n).format(n=n))
 
     def _goto_match(self, forward=True, include_current=False):
         d = self.data

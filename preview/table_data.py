@@ -27,6 +27,7 @@ import tempfile
 import time
 
 import numpy as np
+from .i18n import _
 from .runtime import replace_file
 
 csv.field_size_limit(1 << 30)
@@ -725,8 +726,9 @@ class TableData:
     # ======================================================================
     # Cell / header edits
     # ======================================================================
-    def set_cells(self, changes, label="Edit Cells"):
+    def set_cells(self, changes, label=None):
         """changes: iterable of (key, col, text).  Returns number of cells changed."""
+        label = label or _("Edit Cells")
         by_key: dict[int, dict[int, str]] = {}
         for k, c, t in changes:
             if 0 <= c < self.ncols:
@@ -804,7 +806,7 @@ class TableData:
             self.has_header = False
             self.header_key = -1
         self._voff = 1 if self.has_header else 0
-        self._after_struct("Toggle Header", before)
+        self._after_struct(_("Toggle Header"), before)
 
     def _after_struct(self, label, before):
         after = self._snap()
@@ -819,7 +821,7 @@ class TableData:
         """Insert `count` empty rows before view position vpos (n_view appends)."""
         before = self._snap()
         keys = []
-        for _ in range(count):
+        for _i in range(count):
             k = self._next_new
             self._next_new -= 1
             self.edits[k] = [""] * self.ncols
@@ -838,7 +840,7 @@ class TableData:
                 opos = len(self.order)
         self.order = np.insert(self.order, opos, keys)
         self.view = np.insert(self.view, vpos, keys)
-        self._after_struct("Insert Rows", before)
+        self._after_struct(_("Insert Rows"), before)
         return keys
 
     def delete_rows(self, vpositions) -> int:
@@ -850,19 +852,19 @@ class TableData:
         keys = self.view[vp]
         self.order = self.order[~np.isin(self.order, keys)]
         self.view = np.delete(self.view, vp)
-        self._after_struct("Delete Rows", before)
+        self._after_struct(_("Delete Rows"), before)
         return len(vp)
 
     def insert_cols(self, at: int, count: int = 1):
         before = self._snap()
         at = max(0, min(at, self.ncols))
-        for _ in range(count):
+        for _i in range(count):
             self.colmap.insert(at, -1)
             self.headers.insert(at, "")
             self.col_w.insert(at, None)
         self.ncols += count
         self.edits = {k: r[:at] + [""] * count + r[at:] for k, r in self.edits.items()}
-        self._after_struct("Insert Columns", before)
+        self._after_struct(_("Insert Columns"), before)
 
     def delete_cols(self, cols):
         cols = sorted({c for c in cols if 0 <= c < self.ncols})
@@ -877,7 +879,7 @@ class TableData:
         self.ncols = len(keep)
         if self.sort_col is not None:
             self.sort_col = None
-        self._after_struct("Delete Columns", before)
+        self._after_struct(_("Delete Columns"), before)
         return True
 
     def ensure_size(self, rows: int, cols: int):
@@ -887,7 +889,8 @@ class TableData:
         if rows > len(self.view):
             self.insert_rows(len(self.view), rows - len(self.view))
 
-    def set_order(self, new_order: np.ndarray, label="Sort"):
+    def set_order(self, new_order: np.ndarray, label=None):
+        label = label or _("Sort")
         before = self._snap()
         self.order = new_order
         self.sort_col = None

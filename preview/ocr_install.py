@@ -84,13 +84,15 @@ def engine_importable() -> bool:
 def can_install() -> tuple[bool, str]:
     """(possible, reason-if-not) for offering the download."""
     if runtime.IS_WINDOWS:
-        return False, ("Text recognition is not included in this build "
-                       "(ocr\\view-ocr.exe is missing). Reinstall View to get it back.")
+        return False, _("Text recognition is not included in this build "
+                        "({path} is missing). Reinstall {APP_NAME} to get it back.").format(
+                            path="ocr\\view-ocr.exe", APP_NAME=runtime.APP_NAME)
     if runtime.OCR_BUNDLED:
-        return False, "Text recognition should be bundled with this build."
+        return False, _("Text recognition should be bundled with this build.")
     if importlib.util.find_spec("venv") is None or importlib.util.find_spec("ensurepip") is None:
-        return False, ("Python’s venv module is missing. Install it first "
-                       "(e.g. sudo apt install python3-venv), then try again.")
+        return False, _("Python’s venv module is missing. Install it first "
+                        "(e.g. {command}), then try again.").format(
+                            command="sudo apt install python3-venv")
     return True, ""
 
 
@@ -142,16 +144,16 @@ class Installer:
                 import shutil
                 shutil.rmtree(vd, ignore_errors=True)
             if not os.path.exists(_venv_python(vd)):
-                self._emit(0.02, "Creating a private Python environment…")
+                self._emit(0.02, _("Creating a private Python environment…"))
                 base = getattr(sys, "_base_executable", None) or sys.executable
                 self._call([base, "-m", "venv", "--system-site-packages", vd])
-            self._emit(0.05, "Downloading the text recognition engine…")
+            self._emit(0.05, _("Downloading the text recognition engine…"))
             self._pip(vd)
             if self.cancelled:
                 raise RuntimeError("Cancelled")
             sp = site_packages(vd)
             if not os.path.isdir(sp):
-                raise RuntimeError(f"Installation finished but {sp} is missing")
+                raise RuntimeError(_("Installation finished but {path} is missing").format(path=sp))
             self._finish(None)
         except Exception as e:  # noqa: BLE001
             self._finish(e if not self.cancelled else RuntimeError("Cancelled"))
@@ -184,9 +186,9 @@ class Installer:
                 frac = min(0.85, frac + (0.8 - frac) * 0.12)
                 name = re.split(r"[<>=!~;\[,]", os.path.basename(m.group(2)))[0]
                 name = name.split("-")[0] if name.endswith((".whl", ".gz")) else name
-                self._emit(frac, f"Downloading {name}…")
+                self._emit(frac, _("Downloading {name}…").format(name=name))
             elif line.startswith("Installing collected packages"):
-                self._emit(0.9, "Installing…")
+                self._emit(0.9, _("Installing…"))
             if self.cancelled:
                 break
         rc = self.proc.wait()
@@ -225,14 +227,14 @@ def mark_offer_shown():
 def maybe_offer_once(host, on_installed=None):
     """For automatic (Live Text) paths: offer the download once per user,
     as a toast with an Install… button.  ``host`` needs toast()/show_toast()."""
-    ok, _ = can_install()
+    ok, _reason = can_install()
     if not ok or offer_shown_before():
         return
     mark_offer_shown()
     toast = getattr(host, "toast", None) or getattr(host, "show_toast")
     widget = host if hasattr(host, "get_root") else None
-    toast("Text recognition is not installed", "Install…",
-          lambda *_: offer(widget, on_installed))
+    toast(_("Text recognition is not installed"), _("Install…"),
+          lambda *_a: offer(widget, on_installed))
 
 
 def offer(parent, on_installed=None):
@@ -293,7 +295,7 @@ def _progress_dialog(parent, on_installed):
         toast = getattr(root, "show_toast", None)
         if err is None:
             if toast:
-                toast("Text recognition installed")
+                toast(_("Text recognition installed"))
             if on_installed:
                 on_installed()
         elif str(err) != "Cancelled":

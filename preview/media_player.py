@@ -394,12 +394,13 @@ class MediaPlayer(Adw.Bin):
         if uri is None or self.pipeline is not None:
             return False
         if not init_gst():
-            self._fail("GStreamer’s GTK 4 video sink (gtk4paintablesink) is not installed")
+            self._fail(_("GStreamer’s GTK 4 video sink ({element}) is not installed").format(
+                element="gtk4paintablesink"))
             return
         pb = Gst.ElementFactory.make("playbin3", None)
         sink = Gst.ElementFactory.make("gtk4paintablesink", None)
         if pb is None or sink is None:
-            self._fail("Could not create the GStreamer playback pipeline")
+            self._fail(_("Could not create the GStreamer playback pipeline"))
             return
         self.sink = sink
         self.paintable = sink.get_property("paintable")
@@ -551,7 +552,7 @@ class MediaPlayer(Adw.Bin):
                 self._teardown()
                 return
             # missing decoder for an audio track only: keep the video going
-            self._fail(err.message if err is not None else "Playback failed", dbg)
+            self._fail(err.message if err is not None else _("Playback failed"), dbg)
         elif t == Gst.MessageType.SEGMENT_DONE:
             if self.loop:
                 pb.seek(self.rate, Gst.Format.TIME,
@@ -633,7 +634,7 @@ class MediaPlayer(Adw.Bin):
             print("media_player:", message, debug)
         self.failed = True
         self._teardown()
-        self.emit("error", (message or "Playback failed").strip())
+        self.emit("error", (message or _("Playback failed")).strip())
 
     def _query_duration(self):
         pb = self.pipeline

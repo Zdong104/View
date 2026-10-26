@@ -359,7 +359,7 @@ class VideoViewer(Viewer):
     def _on_error(self, _player, message):
         self.failed = True
         msg = (message or "").strip()
-        msg = GLib.markup_escape_text(msg.splitlines()[0] if msg else "Playback failed")
+        msg = GLib.markup_escape_text(msg.splitlines()[0] if msg else _("Playback failed"))
         self.error_page.set_description(
             _("{msg}\n\nIf the file is fine, GStreamer is probably missing a codec for it. On Ubuntu try:\n<tt>{CODEC_HINT}</tt>").format(msg=msg, CODEC_HINT=CODEC_HINT))
         btn = Gtk.Button(label=_("Open with Default App"), halign=Gtk.Align.CENTER,

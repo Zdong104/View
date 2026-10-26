@@ -13,6 +13,7 @@ import sys
 import time
 
 from . import __version__
+from .i18n import _
 
 APP_ID = "io.github.zdong104.View"
 APP_NAME = "View"
@@ -311,18 +312,19 @@ def has_nautilus() -> bool:
 def files_integration_supported() -> tuple[bool, str]:
     """(supported, reason-if-not) for the GNOME Files integration."""
     if not IS_LINUX:
-        return False, "Only available on Linux with GNOME Files."
+        return False, _("Only available on Linux with GNOME Files.")
     if IN_SNAP:
-        return False, ("Not available in the snap: strict confinement cannot register a "
-                       "D-Bus service or Files extensions for your session. For a "
-                       "“Combine Images into PDF” item in Files, install python3-nautilus and "
-                       "save the output of “snap run view --print-files-extension” as "
-                       "~/.local/share/nautilus-python/extensions/view-app.py (full command "
-                       "in the README). Space-bar previews need the .deb.")
+        return False, _("Not available in the snap: strict confinement cannot register a "
+                        "D-Bus service or Files extensions for your session. For a "
+                        "“Combine Images into PDF” item in Files, install {package} and "
+                        "save the output of “{command}” as {path} (full command in the "
+                        "README). Space-bar previews need the .deb.").format(
+            package="python3-nautilus", command="snap run view --print-files-extension",
+            path="~/.local/share/nautilus-python/extensions/view-app.py")
     if IN_FLATPAK:
-        return False, "Not available in the Flatpak sandbox."
+        return False, _("Not available in the Flatpak sandbox.")
     if not has_nautilus():
-        return False, "GNOME Files (Nautilus) is not installed."
+        return False, _("GNOME Files (Nautilus) is not installed.")
     return True, ""
 
 

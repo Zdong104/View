@@ -13,7 +13,7 @@ import threading
 
 from gi.repository import Adw, Gdk, GdkPixbuf, Gio, GLib, GObject, Gtk, Pango
 
-from .i18n import _
+from .i18n import _, ngettext
 
 ATTRS = ("standard::*,time::modified,time::created,time::access,"
          "thumbnail::path,thumbnail::is-valid,unix::mode")
@@ -1694,8 +1694,10 @@ class FolderRenderer(Renderer):
             if not ok or res is None:
                 return
             first, thumbs, total = res
-            self.grid_label.set_text(f"{total:,} item{'s' if total != 1 else ''}"
-                                     + (" — first 12" if total > 12 else ""))
+            text = ngettext("{n:,} item", "{n:,} items", total).format(n=total)
+            if total > 12:
+                text = _("{items} — first {n}").format(items=text, n=12)
+            self.grid_label.set_text(text)
             for i in first:
                 tile = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4,
                                css_classes=["ql-tile"], width_request=96)

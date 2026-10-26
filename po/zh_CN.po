@@ -1,0 +1,2192 @@
+# Simplified Chinese translation of View.
+# This file is distributed under the same license as the View package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: View\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-20 21:39-0400\n"
+"PO-Revision-Date: 2026-10-20 21:40-0400\n"
+"Last-Translator: View contributors\n"
+"Language-Team: Simplified Chinese\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "All Supported Files"
+msgstr "所有支持的文件"
+
+msgid "PDF Documents"
+msgstr "PDF 文档"
+
+msgid "Images"
+msgstr "图片"
+
+msgid "Video and Audio"
+msgstr "视频和音频"
+
+msgid "Text and Source Code"
+msgstr "文本和源代码"
+
+msgid "3D Models"
+msgstr "3D 模型"
+
+msgid "Spreadsheets (CSV/TSV)"
+msgstr "电子表格（CSV/TSV）"
+
+msgid "All Files"
+msgstr "所有文件"
+
+msgid "General"
+msgstr "常规"
+
+msgid "Open…"
+msgstr "打开…"
+
+msgid "New Window"
+msgstr "新建窗口"
+
+msgid "New from Clipboard"
+msgstr "从剪贴板新建"
+
+msgid "Show Inspector"
+msgstr "显示检查器"
+
+msgid "Full Screen"
+msgstr "全屏"
+
+msgid "Close Window"
+msgstr "关闭窗口"
+
+msgid "Quit"
+msgstr "退出"
+
+msgid "Keyboard Shortcuts"
+msgstr "键盘快捷键"
+
+msgid "Play / Pause"
+msgstr "播放 / 暂停"
+
+msgid "Back 5 Seconds"
+msgstr "后退 5 秒"
+
+msgid "Forward 5 Seconds"
+msgstr "快进 5 秒"
+
+msgid "Volume Up"
+msgstr "调高音量"
+
+msgid "Volume Down"
+msgstr "调低音量"
+
+msgid "Mute"
+msgstr "静音"
+
+msgid "Save Frame as PNG…"
+msgstr "将当前帧保存为 PNG…"
+
+msgid "Save"
+msgstr "保存"
+
+msgid "Save As…"
+msgstr "另存为…"
+
+msgid "Find"
+msgstr "查找"
+
+msgid "Go to Line…"
+msgstr "跳转到行…"
+
+msgid "Next Match"
+msgstr "下一个匹配项"
+
+msgid "Previous Match"
+msgstr "上一个匹配项"
+
+msgid "Undo"
+msgstr "撤销"
+
+msgid "Redo"
+msgstr "重做"
+
+msgid "Larger Text"
+msgstr "放大文字"
+
+msgid "Smaller Text"
+msgstr "缩小文字"
+
+msgid "Actual Text Size"
+msgstr "实际文字大小"
+
+msgid "Zoom In"
+msgstr "放大"
+
+msgid "Zoom Out"
+msgstr "缩小"
+
+msgid "Fit to Window"
+msgstr "适应窗口"
+
+msgid "Actual Size"
+msgstr "实际大小"
+
+msgid "Rotate Left"
+msgstr "向左旋转"
+
+msgid "Rotate Right"
+msgstr "向右旋转"
+
+msgid "Copy Image"
+msgstr "复制图片"
+
+msgid "Export As…"
+msgstr "导出为…"
+
+msgid "Toggle Thumbnails"
+msgstr "显示/隐藏缩略图"
+
+msgid "Select All Thumbnails"
+msgstr "全选缩略图"
+
+msgid "Previous Image"
+msgstr "上一张图片"
+
+msgid "Next Image"
+msgstr "下一张图片"
+
+msgid "Remove from List"
+msgstr "从列表中移除"
+
+msgid "Crop to Selection"
+msgstr "裁剪到选区"
+
+msgid "Adjust Color"
+msgstr "调整颜色"
+
+msgid "Print"
+msgstr "打印"
+
+msgid "Slideshow"
+msgstr "幻灯片放映"
+
+msgid "Markup Toolbar"
+msgstr "标记工具栏"
+
+msgid "Copy All Recognized Text"
+msgstr "复制所有识别的文字"
+
+msgid "Cancel Selection / Tool"
+msgstr "取消选择 / 工具"
+
+msgid "Open… (Ctrl+O)"
+msgstr "打开…（Ctrl+O）"
+
+msgid "Main Menu"
+msgstr "主菜单"
+
+msgid "Inspector (Ctrl+I)"
+msgstr "检查器（Ctrl+I）"
+
+msgid "Drop a PDF, image, video, text file or spreadsheet here"
+msgstr "将 PDF、图片、视频、文本文件或电子表格拖放到此处"
+
+msgid "Or open a file to get started."
+msgstr "或者打开一个文件开始使用。"
+
+msgid "Recent"
+msgstr "最近使用"
+
+msgid "Could not open this file"
+msgstr "无法打开此文件"
+
+msgid "Open Another File…"
+msgstr "打开其他文件…"
+
+msgid "Open"
+msgstr "打开"
+
+msgid "Discard Changes?"
+msgstr "放弃更改？"
+
+msgid "This document has unsaved changes that will be lost if you close it."
+msgstr "此文档有未保存的更改，关闭后这些更改将丢失。"
+
+msgid "Cancel"
+msgstr "取消"
+
+msgid "Discard"
+msgstr "放弃"
+
+msgid "Open Recent"
+msgstr "打开最近的文件"
+
+msgid "Combine Images into PDF…"
+msgstr "将图片合并为 PDF…"
+
+msgid "New Signature…"
+msgstr "新建签名…"
+
+msgid "Preferences"
+msgstr "偏好设置"
+
+msgid "Check for Updates…"
+msgstr "检查更新…"
+
+msgid "About View"
+msgstr "关于 View"
+
+msgid "No Recent Files"
+msgstr "没有最近使用的文件"
+
+msgid "Clear Menu"
+msgstr "清除菜单"
+
+msgid "No image in the clipboard"
+msgstr "剪贴板中没有图片"
+
+#, python-brace-format
+msgid "Unsupported file: {names}"
+msgstr "不支持的文件：{names}"
+
+#, python-brace-format
+msgid "{n} unsupported file: {names}…"
+msgid_plural "{n} unsupported files: {names}…"
+msgstr[0] "{n} 个不支持的文件：{names}…"
+
+#, python-brace-format
+msgid "No images in {folder}"
+msgstr "{folder} 中没有图片"
+
+msgid "this folder"
+msgstr "此文件夹"
+
+msgid "View PDFs, images, video, text and 3D models, combine images into PDFs and sign documents."
+msgstr "查看 PDF、图片、视频、文本和 3D 模型，将图片合并为 PDF，并为文档签名。"
+
+msgid "All Versions"
+msgstr "所有版本"
+
+msgid "Support Development"
+msgstr "支持开发"
+
+msgid "Choose Images to Combine into a PDF"
+msgstr "选择要合并为 PDF 的图片"
+
+msgid "Only local files are supported"
+msgstr "仅支持本地文件"
+
+#, python-brace-format
+msgid "Signatures are unavailable: {error}"
+msgstr "签名功能不可用：{error}"
+
+msgid "Signature saved"
+msgstr "签名已保存"
+
+msgid "Copy"
+msgstr "复制"
+
+msgid "Combine images into a PDF."
+msgstr "将图片合并为 PDF。"
+
+msgid "No images to export"
+msgstr "没有可导出的图片"
+
+msgid "Export as PDF"
+msgstr "导出为 PDF"
+
+msgid "Export"
+msgstr "导出"
+
+#, python-brace-format
+msgid "{n} image, one per page"
+msgid_plural "{n} images, one per page"
+msgstr[0] "{n} 张图片，每页一张"
+
+msgid "Fit to Image"
+msgstr "适应图片"
+
+msgid "US Letter"
+msgstr "美国信纸"
+
+msgid "Page Size"
+msgstr "页面大小"
+
+msgid "Margin"
+msgstr "边距"
+
+msgid "Millimetres"
+msgstr "毫米"
+
+msgid "Save To"
+msgstr "保存到"
+
+msgid "Choose…"
+msgstr "选择…"
+
+msgid "Save PDF"
+msgstr "保存 PDF"
+
+msgid "PDF documents"
+msgstr "PDF 文档"
+
+#, python-brace-format
+msgid "PDF export failed: {error}"
+msgstr "PDF 导出失败：{error}"
+
+#, python-brace-format
+msgid "Saved {name}"
+msgstr "已保存 {name}"
+
+msgid "Untitled"
+msgstr "未命名"
+
+msgid "Zoom Out (−)"
+msgstr "缩小（−）"
+
+msgid "Toggle Fit / Actual Size"
+msgstr "切换适应窗口 / 实际大小"
+
+msgid "Zoom In (+)"
+msgstr "放大（+）"
+
+msgid "Fit to Window (0)"
+msgstr "适应窗口（0）"
+
+msgid "Tolerance"
+msgstr "容差"
+
+msgid "Crop"
+msgstr "裁剪"
+
+msgid "Done"
+msgstr "完成"
+
+msgid "Auto Levels"
+msgstr "自动色阶"
+
+msgid "Exposure"
+msgstr "曝光"
+
+msgid "Contrast"
+msgstr "对比度"
+
+msgid "Highlights"
+msgstr "高光"
+
+msgid "Shadows"
+msgstr "阴影"
+
+msgid "Saturation"
+msgstr "饱和度"
+
+msgid "Temperature"
+msgstr "色温"
+
+msgid "Tint"
+msgstr "色调"
+
+msgid "Sepia"
+msgstr "怀旧"
+
+msgid "Sharpness"
+msgstr "锐度"
+
+msgid "Reset"
+msgstr "重置"
+
+msgid "Apply"
+msgstr "应用"
+
+msgid "Add Images…"
+msgstr "添加图片…"
+
+msgid "Remove from List (Delete)"
+msgstr "从列表中移除（Delete）"
+
+msgid "Export Selected Images…"
+msgstr "导出所选图片…"
+
+msgid "Show Thumbnails (F9)"
+msgstr "显示缩略图（F9）"
+
+msgid "Rotate Left (Ctrl+L)"
+msgstr "向左旋转（Ctrl+L）"
+
+msgid "Rotate Right (Ctrl+R)"
+msgstr "向右旋转（Ctrl+R）"
+
+msgid "Move and Zoom"
+msgstr "移动和缩放"
+
+msgid "Rectangular Selection"
+msgstr "矩形选区"
+
+msgid "Elliptical Selection"
+msgstr "椭圆选区"
+
+msgid "Instant Alpha"
+msgstr "即时透明"
+
+msgid "Adjust Color…"
+msgstr "调整颜色…"
+
+msgid "Adjust Size…"
+msgstr "调整大小…"
+
+msgid "Flip Horizontal"
+msgstr "水平翻转"
+
+msgid "Revert to Saved"
+msgstr "还原到已保存版本"
+
+msgid "Show Markup Toolbar"
+msgstr "显示标记工具栏"
+
+msgid "Recognize Text"
+msgstr "识别文字"
+
+msgid "Show Recognized Text"
+msgstr "显示识别的文字"
+
+msgid "Copy All Text"
+msgstr "复制所有文字"
+
+msgid "Set as Wallpaper…"
+msgstr "设为壁纸…"
+
+msgid "Tools"
+msgstr "工具"
+
+msgid "Export as PDF…"
+msgstr "导出为 PDF…"
+
+msgid "Print…"
+msgstr "打印…"
+
+msgid "Save, Export and Print"
+msgstr "保存、导出和打印"
+
+msgid "Markup (Ctrl+Shift+A)"
+msgstr "标记（Ctrl+Shift+A）"
+
+msgid "Could not open the selected images (only local files are supported)"
+msgstr "无法打开所选图片（仅支持本地文件）"
+
+#, python-brace-format
+msgid "Untitled {n}"
+msgstr "未命名 {n}"
+
+#, python-brace-format
+msgid "Could not open {name}"
+msgstr "无法打开 {name}"
+
+#, python-brace-format
+msgid "Edit failed: {err}"
+msgstr "编辑失败：{err}"
+
+msgid "File"
+msgstr "文件"
+
+msgid "File name"
+msgstr "文件名"
+
+msgid "Kind"
+msgstr "种类"
+
+msgid "Untitled image (not saved)"
+msgstr "未命名图片（未保存）"
+
+msgid "Image"
+msgstr "图片"
+
+msgid "Dimensions"
+msgstr "尺寸"
+
+msgid "Edited size"
+msgstr "编辑后的大小"
+
+msgid "Edits"
+msgstr "编辑"
+
+#, python-brace-format
+msgid "Added {n} image"
+msgid_plural "Added {n} images"
+msgstr[0] "已添加 {n} 张图片"
+
+msgid "Add Images"
+msgstr "添加图片"
+
+msgid "Save or revert your changes before browsing"
+msgstr "请先保存或还原更改，然后再浏览"
+
+msgid "At least one image has to stay open"
+msgstr "至少要保留一张打开的图片"
+
+msgid "Reverted to the saved version"
+msgstr "已还原到已保存的版本"
+
+msgid "Drag to select an area · Ctrl+K crops"
+msgstr "拖动以选择区域 · Ctrl+K 裁剪"
+
+msgid "Drag to select an ellipse · Ctrl+K crops"
+msgstr "拖动以选择椭圆区域 · Ctrl+K 裁剪"
+
+msgid "Click a colour to make it transparent"
+msgstr "点击一种颜色使其透明"
+
+msgid "Select an area first (Tools ▸ Rectangular Selection)"
+msgstr "请先选择一个区域（工具 ▸ 矩形选区）"
+
+msgid "Drag to move, drag the corner to resize. Backspace removes it."
+msgstr "拖动以移动，拖动角点以调整大小。按 Backspace 删除。"
+
+#, python-brace-format
+msgid "Markup is unavailable: {e}"
+msgstr "标记功能不可用：{e}"
+
+#, python-brace-format
+msgid "Touchpad drawing unavailable: {err}"
+msgstr "触摸板绘制不可用：{err}"
+
+msgid "Draw with one finger on the touchpad · any key to finish"
+msgstr "用一根手指在触摸板上绘制 · 按任意键结束"
+
+#, python-brace-format
+msgid "Text recognition is unavailable: {e}"
+msgstr "文字识别不可用：{e}"
+
+#, python-brace-format
+msgid "Text recognition failed: {err}"
+msgstr "文字识别失败：{err}"
+
+#, python-brace-format
+msgid "Recognized {n} line of text"
+msgid_plural "Recognized {n} lines of text"
+msgstr[0] "已识别 {n} 行文字"
+
+msgid "No text found"
+msgstr "未找到文字"
+
+msgid "No recognized text"
+msgstr "没有识别的文字"
+
+msgid "All text copied"
+msgstr "已复制所有文字"
+
+msgid "Text copied"
+msgstr "已复制文字"
+
+#, python-brace-format
+msgid "Copy failed: {err}"
+msgstr "复制失败：{err}"
+
+msgid "Selection copied"
+msgstr "已复制所选内容"
+
+msgid "Image copied"
+msgstr "已复制图片"
+
+#, python-brace-format
+msgid "Saving frame {k} of {n}"
+msgstr "正在保存第 {k} / {n} 帧"
+
+#, python-brace-format
+msgid "Saving {v}-frame animation…"
+msgstr "正在保存 {v} 帧的动画…"
+
+msgid "Saving…"
+msgstr "正在保存…"
+
+#, python-brace-format
+msgid "Could not save: {err}"
+msgstr "无法保存：{err}"
+
+#, python-brace-format
+msgid "Saved as {v} (the original format can't keep these edits)"
+msgstr "已另存为 {v}（原格式无法保留这些编辑）"
+
+#, python-brace-format
+msgid "Saved {n} images"
+msgstr "已保存 {n} 张图片"
+
+msgid " (first frame only; the format can't animate)"
+msgstr "（仅保存第一帧；该格式不支持动画）"
+
+msgid " (first frame only; this format can't animate)"
+msgstr "（仅保存第一帧；该格式不支持动画）"
+
+msgid "Save As"
+msgstr "另存为"
+
+msgid "Format"
+msgstr "格式"
+
+msgid "Quality"
+msgstr "质量"
+
+#, python-brace-format
+msgid "Could not export: {err}"
+msgstr "无法导出：{err}"
+
+#, python-brace-format
+msgid "Exported {name}"
+msgstr "已导出 {name}"
+
+#, python-brace-format
+msgid " — first frame only, {format} can't hold an animation"
+msgstr " — 仅第一帧，{format} 不支持动画"
+
+msgid "Export Image"
+msgstr "导出图片"
+
+msgid "Export…"
+msgstr "导出…"
+
+#, python-brace-format
+msgid "{n} image"
+msgid_plural "{n} images"
+msgstr[0] "{n} 张图片"
+
+msgid "Maximum Size"
+msgstr "最大尺寸"
+
+msgid "Longest side in pixels, 0 = original"
+msgstr "最长边的像素数，0 表示原始大小"
+
+msgid "Choose Folder…"
+msgstr "选择文件夹…"
+
+msgid "Choose Output Folder"
+msgstr "选择输出文件夹"
+
+#, python-brace-format
+msgid "Exported {v} of {n}; {v2} failed ({v3})"
+msgstr "已导出 {v} / {n}；{v2} 个失败（{v3}）"
+
+#, python-brace-format
+msgid "Exported {n} image"
+msgid_plural "Exported {n} images"
+msgstr[0] "已导出 {n} 张图片"
+
+#, python-brace-format
+msgid " ({n} animation saved as first frame only)"
+msgid_plural " ({n} animations saved as first frame only)"
+msgstr[0] "（{n} 个动画仅保存了第一帧）"
+
+msgid "Open Folder"
+msgstr "打开文件夹"
+
+msgid "Export Selected Images"
+msgstr "导出所选图片"
+
+#, python-brace-format
+msgid "Could not prepare images: {e}"
+msgstr "无法准备图片：{e}"
+
+#, python-brace-format
+msgid "Printing failed: {message}"
+msgstr "打印失败：{message}"
+
+msgid "Desktop background settings are not available"
+msgstr "桌面背景设置不可用"
+
+msgid "Set as Wallpaper?"
+msgstr "设为壁纸？"
+
+#, python-brace-format
+msgid "“{name}” will be used as the desktop background."
+msgstr "“{name}”将用作桌面背景。"
+
+#, python-brace-format
+msgid "“{name}” will be used as the desktop background for both light and dark styles."
+msgstr "“{name}”将同时用作浅色和深色样式的桌面背景。"
+
+msgid "Set Wallpaper"
+msgstr "设为壁纸"
+
+#, python-brace-format
+msgid "Could not set wallpaper: {err}"
+msgstr "无法设置壁纸：{err}"
+
+msgid "Wallpaper set"
+msgstr "壁纸已设置"
+
+msgid "Could not set wallpaper"
+msgstr "无法设置壁纸"
+
+msgid "Open several images for a slideshow"
+msgstr "打开多张图片以进行幻灯片放映"
+
+msgid "Slideshow — Esc or F5 to stop"
+msgstr "幻灯片放映 — 按 Esc 或 F5 停止"
+
+msgid "Adjust Size"
+msgstr "调整大小"
+
+#, python-brace-format
+msgid "Current size: {bw} × {bh} px"
+msgstr "当前大小：{bw} × {bh} 像素"
+
+msgid "Width"
+msgstr "宽度"
+
+msgid "Pixels"
+msgstr "像素"
+
+msgid "Height"
+msgstr "高度"
+
+msgid "Scale"
+msgstr "缩放"
+
+msgid "Percent"
+msgstr "百分比"
+
+msgid "Keep Aspect Ratio"
+msgstr "保持宽高比"
+
+msgid "Inspector"
+msgstr "检查器"
+
+msgid "No Information"
+msgstr "没有信息"
+
+msgid "Open a document to see its details."
+msgstr "打开文档以查看其详细信息。"
+
+msgid "Copied"
+msgstr "已复制"
+
+msgid "Select"
+msgstr "选择"
+
+msgid "Sketch"
+msgstr "草图"
+
+msgid "Draw"
+msgstr "绘制"
+
+msgid "Line"
+msgstr "直线"
+
+msgid "Arrow"
+msgstr "箭头"
+
+msgid "Rectangle"
+msgstr "矩形"
+
+msgid "Rounded Rectangle"
+msgstr "圆角矩形"
+
+msgid "Oval"
+msgstr "椭圆"
+
+msgid "Speech Bubble"
+msgstr "对话气泡"
+
+msgid "Star"
+msgstr "星形"
+
+msgid "Text"
+msgstr "文本"
+
+msgid "Note"
+msgstr "注释"
+
+msgid "Highlight"
+msgstr "高亮"
+
+msgid "Underline"
+msgstr "下划线"
+
+msgid "Strikethrough"
+msgstr "删除线"
+
+msgid "Ctrl+Enter to finish"
+msgstr "按 Ctrl+Enter 完成"
+
+msgid "Select (Esc)"
+msgstr "选择（Esc）"
+
+msgid "Highlight Text"
+msgstr "高亮文字"
+
+msgid "Underline Text"
+msgstr "为文字加下划线"
+
+msgid "Strike Through Text"
+msgstr "为文字加删除线"
+
+msgid "Sketch (shapes are recognised)"
+msgstr "草图（自动识别形状）"
+
+msgid "Draw (ink)"
+msgstr "绘制（墨迹）"
+
+msgid "Shapes"
+msgstr "形状"
+
+msgid "Choose Shape"
+msgstr "选择形状"
+
+msgid "Text Box"
+msgstr "文本框"
+
+msgid "Border / Ink Colour"
+msgstr "边框 / 墨迹颜色"
+
+msgid "Fill Colour"
+msgstr "填充颜色"
+
+msgid "Line Width"
+msgstr "线宽"
+
+msgid "Font"
+msgstr "字体"
+
+msgid "Draw with Touchpad — the whole pad maps onto the visible page; any key ends"
+msgstr "用触摸板绘制 — 整个触摸板对应可见页面；按任意键结束"
+
+msgid "Play (Space)"
+msgstr "播放（空格）"
+
+msgid "Mute (M)"
+msgstr "静音（M）"
+
+msgid "Volume (↑/↓)"
+msgstr "音量（↑/↓）"
+
+msgid "Playback Speed"
+msgstr "播放速度"
+
+msgid "Loop"
+msgstr "循环"
+
+msgid "Full Screen (F)"
+msgstr "全屏（F）"
+
+msgid "Pause (Space)"
+msgstr "暂停（空格）"
+
+msgid "Unmute (M)"
+msgstr "取消静音（M）"
+
+msgid "Text Recognition Unavailable"
+msgstr "文字识别不可用"
+
+msgid "OK"
+msgstr "确定"
+
+msgid "Install Text Recognition?"
+msgstr "安装文字识别？"
+
+#, python-brace-format
+msgid "Recognizing text in images and scanned PDFs needs the RapidOCR engine ({DOWNLOAD_SIZE} download from PyPI). It is installed for your user only, in {where}, and can be removed by deleting that folder."
+msgstr "识别图片和扫描版 PDF 中的文字需要 RapidOCR 引擎（从 PyPI 下载，{DOWNLOAD_SIZE}）。它仅为当前用户安装在 {where} 中，删除该文件夹即可移除。"
+
+msgid "Not Now"
+msgstr "暂不安装"
+
+#, python-brace-format
+msgid "Install ({DOWNLOAD_SIZE})"
+msgstr "安装（{DOWNLOAD_SIZE}）"
+
+msgid "Starting…"
+msgstr "正在启动…"
+
+msgid "Installing Text Recognition"
+msgstr "正在安装文字识别"
+
+msgid "Could Not Install Text Recognition"
+msgstr "无法安装文字识别"
+
+msgid "Cancelling…"
+msgstr "正在取消…"
+
+msgid "Search document"
+msgstr "搜索文档"
+
+msgid "Thumbnails"
+msgstr "缩略图"
+
+msgid "Table of Contents"
+msgstr "目录"
+
+msgid "Highlights and Notes"
+msgstr "高亮和注释"
+
+msgid "Sidebar (F9)"
+msgstr "侧边栏（F9）"
+
+msgid "Go to Page (Ctrl+G)"
+msgstr "跳转到页面（Ctrl+G）"
+
+msgid "Document Menu"
+msgstr "文档菜单"
+
+msgid "Save (Ctrl+S)"
+msgstr "保存（Ctrl+S）"
+
+msgid "Sign"
+msgstr "签名"
+
+msgid "Markup Toolbar (Ctrl+Shift+A)"
+msgstr "标记工具栏（Ctrl+Shift+A）"
+
+msgid "Fit Width"
+msgstr "适应宽度"
+
+msgid "Fit Page"
+msgstr "适应页面"
+
+msgid "Zoom"
+msgstr "缩放"
+
+msgid "Find (Ctrl+F)"
+msgstr "查找（Ctrl+F）"
+
+msgid "Save Selected Pages as New PDF…"
+msgstr "将所选页面存为新 PDF…"
+
+msgid "Merge All Documents into One PDF…"
+msgstr "将所有文档合并为一个 PDF…"
+
+msgid "Export as Images…"
+msgstr "导出为图片…"
+
+msgid "Export with Password…"
+msgstr "加密导出…"
+
+msgid "Export as Searchable PDF (OCR)…"
+msgstr "导出为可搜索的 PDF（OCR）…"
+
+msgid "Reduce File Size…"
+msgstr "减小文件大小…"
+
+msgid "Insert Blank Page"
+msgstr "插入空白页"
+
+msgid "Insert Pages from File…"
+msgstr "从文件插入页面…"
+
+msgid "Delete Selected Pages"
+msgstr "删除所选页面"
+
+msgid "Recognize Text (OCR)"
+msgstr "识别文字（OCR）"
+
+msgid "Pages"
+msgstr "页面"
+
+msgid "Continuous Scroll"
+msgstr "连续滚动"
+
+msgid "Single Page"
+msgstr "单页"
+
+msgid "Two Pages"
+msgstr "双页"
+
+msgid "View"
+msgstr "视图"
+
+msgid "Find…"
+msgstr "查找…"
+
+msgid "Go to Page…"
+msgstr "跳转到页面…"
+
+msgid "Could not open the document"
+msgstr "无法打开文档"
+
+#, python-brace-format
+msgid "Could not open “{name}”: {msg}"
+msgstr "无法打开“{name}”：{msg}"
+
+#, python-brace-format
+msgid "Could not open “{name}”"
+msgstr "无法打开“{name}”"
+
+msgid "Password Required"
+msgstr "需要密码"
+
+#, python-brace-format
+msgid "“{name}” is password-protected."
+msgstr "“{name}”受密码保护。"
+
+msgid "Unlock…"
+msgstr "解锁…"
+
+msgid "Incorrect password. Try again."
+msgstr "密码不正确，请重试。"
+
+#, python-brace-format
+msgid "Enter the password to open “{name}”."
+msgstr "输入密码以打开“{name}”。"
+
+msgid "Unlock"
+msgstr "解锁"
+
+msgid " — Edited"
+msgstr " — 已编辑"
+
+#, python-brace-format
+msgid "Page {page} of {total}"
+msgstr "第 {page} 页，共 {total} 页"
+
+#, python-brace-format
+msgid " · {n} of {total} documents"
+msgstr " · 第 {n} 个，共 {total} 个文档"
+
+msgid "Some documents can only be saved with Save As"
+msgstr "部分文档只能通过“另存为”保存"
+
+#, python-brace-format
+msgid "of {total}"
+msgstr "共 {total} 页"
+
+msgid "Add Note Here"
+msgstr "在此添加注释"
+
+msgid "Copied text"
+msgstr "已复制文字"
+
+msgid "Text recognition is not available"
+msgstr "文字识别不可用"
+
+#, python-brace-format
+msgid "Recognizing text on {n} page…"
+msgid_plural "Recognizing text on {n} pages…"
+msgstr[0] "正在识别 {n} 页上的文字…"
+
+#, python-brace-format
+msgid "Save {n} Page…"
+msgid_plural "Save {n} Pages…"
+msgstr[0] "保存 {n} 页…"
+
+msgid "Save the selected pages as a new PDF (Ctrl+S)"
+msgstr "将所选页面保存为新 PDF（Ctrl+S）"
+
+msgid "Delete"
+msgstr "删除"
+
+#, python-brace-format
+msgid "Copied {n} page"
+msgid_plural "Copied {n} pages"
+msgstr[0] "已复制 {n} 页"
+
+msgid "A document needs at least one page"
+msgstr "文档至少需要保留一页"
+
+#, python-brace-format
+msgid "Deleted {n} page"
+msgid_plural "Deleted {n} pages"
+msgstr[0] "已删除 {n} 页"
+
+msgid "Blank page"
+msgstr "空白页"
+
+msgid "Insert Pages from File"
+msgstr "从文件插入页面"
+
+msgid "PDFs and images"
+msgstr "PDF 和图片"
+
+#, python-brace-format
+msgid "“{name}” is password-protected"
+msgstr "“{name}”受密码保护"
+
+#, python-brace-format
+msgid "Inserted {n} page"
+msgid_plural "Inserted {n} pages"
+msgstr[0] "已插入 {n} 页"
+
+#, python-brace-format
+msgid "Could not insert {errors}"
+msgstr "无法插入 {errors}"
+
+msgid "No changes to save"
+msgstr "没有需要保存的更改"
+
+#, python-brace-format
+msgid "Overwrite “{name}”?"
+msgstr "覆盖“{name}”？"
+
+msgid "Your changes, including any signatures, will be written into the original file. This cannot be undone. Use Save As to keep the original."
+msgstr "您的更改（包括签名）将写入原始文件，且无法撤销。如需保留原文件，请使用“另存为”。"
+
+msgid "Overwrite"
+msgstr "覆盖"
+
+msgid "Can only save to local files"
+msgstr "只能保存到本地文件"
+
+msgid "Save Selected Pages as New PDF"
+msgstr "将所选页面存为新 PDF"
+
+msgid "Merge into One PDF"
+msgstr "合并为一个 PDF"
+
+#, python-brace-format
+msgid "Could not save “{name}”: {err}"
+msgstr "无法保存“{name}”：{err}"
+
+#, python-brace-format
+msgid "Saved “{name}”"
+msgstr "已保存“{name}”"
+
+#, python-brace-format
+msgid "Saved, but could not reopen “{name}”: {message}"
+msgstr "已保存，但无法重新打开“{name}”：{message}"
+
+msgid "Show in Files"
+msgstr "在文件管理器中显示"
+
+#, python-brace-format
+msgid "Could not open the file manager: {e}"
+msgstr "无法打开文件管理器：{e}"
+
+msgid "Resolution (dpi)"
+msgstr "分辨率（dpi）"
+
+msgid "Export as Images"
+msgstr "导出为图片"
+
+#, python-brace-format
+msgid "Each of the {n} page becomes one image file in the folder you choose."
+msgid_plural "Each of the {n} pages becomes one image file in the folder you choose."
+msgstr[0] "所选的 {n} 页将各自生成一个图片文件，保存在您选择的文件夹中。"
+
+msgid "Export to Folder"
+msgstr "导出到文件夹"
+
+#, python-brace-format
+msgid "Export failed: {e}"
+msgstr "导出失败：{e}"
+
+msgid "Exporting…"
+msgstr "正在导出…"
+
+msgid "Password to open"
+msgstr "打开密码"
+
+msgid "Owner password (optional)"
+msgstr "所有者密码（可选）"
+
+msgid "Allow printing"
+msgstr "允许打印"
+
+msgid "Allow copying text and images"
+msgstr "允许复制文字和图片"
+
+msgid "Allow changes and page assembly"
+msgstr "允许修改和组合页面"
+
+msgid "Allow comments and form filling"
+msgstr "允许添加批注和填写表单"
+
+msgid "Export with Password"
+msgstr "加密导出"
+
+msgid "The new PDF is encrypted with AES-256. Permissions are enforced by the owner password."
+msgstr "新 PDF 使用 AES-256 加密，权限由所有者密码控制。"
+
+msgid "Enter a password"
+msgstr "请输入密码"
+
+msgid "Reduce File Size needs Ghostscript (gs)"
+msgstr "减小文件大小需要 Ghostscript（gs）"
+
+msgid "Reducing file size…"
+msgstr "正在减小文件大小…"
+
+msgid "Reduce File Size"
+msgstr "减小文件大小"
+
+#, python-brace-format
+msgid "Could not reduce the file: {err}"
+msgstr "无法减小文件大小：{err}"
+
+msgid "This PDF is already compact — nothing to reduce"
+msgstr "此 PDF 已经很小了 — 无需再压缩"
+
+#, python-brace-format
+msgid "Saved {v} (was {v2})"
+msgstr "已保存 {v}（原为 {v2}）"
+
+msgid "Writing searchable PDF…"
+msgstr "正在生成可搜索的 PDF…"
+
+msgid "Export as Searchable PDF"
+msgstr "导出为可搜索的 PDF"
+
+msgid "Searching…"
+msgstr "正在搜索…"
+
+msgid "No matches"
+msgstr "没有匹配项"
+
+msgid "No table of contents"
+msgstr "没有目录"
+
+msgid "Signature"
+msgstr "签名"
+
+#, python-brace-format
+msgid "{kind} · page {page}"
+msgstr "{kind} · 第 {page} 页"
+
+#, python-brace-format
+msgid "{label} · page {page}"
+msgstr "{label} · 第 {page} 页"
+
+msgid "No highlights or notes"
+msgstr "没有高亮或注释"
+
+msgid "Title"
+msgstr "标题"
+
+msgid "Author"
+msgstr "作者"
+
+msgid "Subject"
+msgstr "主题"
+
+msgid "Keywords"
+msgstr "关键词"
+
+msgid "Creator"
+msgstr "创建者"
+
+msgid "Encoding software"
+msgstr "生成软件"
+
+msgid "PDF version"
+msgstr "PDF 版本"
+
+msgid "Created"
+msgstr "创建时间"
+
+msgid "Modified"
+msgstr "修改时间"
+
+msgid "Page size"
+msgstr "页面大小"
+
+msgid "printing"
+msgstr "打印"
+
+msgid "copying"
+msgstr "复制"
+
+msgid "modifying"
+msgstr "修改"
+
+msgid "annotating"
+msgstr "批注"
+
+msgid "form filling"
+msgstr "填写表单"
+
+msgid "Security"
+msgstr "安全性"
+
+msgid "Encrypted"
+msgstr "已加密"
+
+msgid " (password to open)"
+msgstr "（需要密码才能打开）"
+
+#, python-brace-format
+msgid " — allows {list}"
+msgstr " — 允许{list}"
+
+msgid " — no permissions"
+msgstr " — 无任何权限"
+
+msgid "None"
+msgstr "无"
+
+msgid "Linearized (fast web view)"
+msgstr "线性化（快速网页浏览）"
+
+msgid "Yes"
+msgstr "是"
+
+msgid "No"
+msgstr "否"
+
+msgid "Tagged"
+msgstr "带标签"
+
+msgid "Form fields"
+msgstr "表单字段"
+
+msgid " (not embedded)"
+msgstr "（未嵌入）"
+
+msgid "Fonts"
+msgstr "字体"
+
+msgid "Document"
+msgstr "文档"
+
+msgid "Window"
+msgstr "窗口"
+
+msgid "Documents"
+msgstr "文档"
+
+msgid "GNOME Files"
+msgstr "GNOME 文件"
+
+msgid "Space-bar previews and Files scripts"
+msgstr "空格键预览和“文件”脚本"
+
+msgid "Text Recognition"
+msgstr "文字识别"
+
+msgid "Applies to your user only. Turning these off restores the defaults."
+msgstr "仅对当前用户生效。关闭后将恢复默认设置。"
+
+msgid "Use View for Space-bar previews in Files"
+msgstr "在“文件”中使用 View 进行空格键预览"
+
+msgid "Replaces GNOME Sushi’s quick previewer"
+msgstr "替代 GNOME Sushi 的快速预览"
+
+msgid "Add “Combine Images into PDF” to Files"
+msgstr "在“文件”中添加“将图片合并为 PDF”"
+
+msgid "Right-click selected images → Scripts"
+msgstr "右键单击所选图片 → 脚本"
+
+#, python-brace-format
+msgid "Could not change the setting: {error}"
+msgstr "无法更改设置：{error}"
+
+msgid "Screenshots"
+msgstr "截图"
+
+msgid "Edit screenshots after capture"
+msgstr "截图后进行编辑"
+
+msgid "Press Print Screen and the screenshot opens in View for quick markup; Done saves it and copies it to the clipboard"
+msgstr "按下 Print Screen 后，截图会在 View 中打开以便快速标记；点击“完成”即可保存并复制到剪贴板"
+
+msgid "System default"
+msgstr "跟随系统"
+
+msgid "Language"
+msgstr "语言"
+
+msgid "Takes effect the next time View starts"
+msgstr "下次启动 View 时生效"
+
+msgid "Updates"
+msgstr "更新"
+
+msgid "Updates come from the Snap Store"
+msgstr "更新来自 Snap Store"
+
+msgid "snapd installs new versions automatically"
+msgstr "snapd 会自动安装新版本"
+
+msgid "Check for updates automatically"
+msgstr "自动检查更新"
+
+msgid "Once a day, from GitHub"
+msgstr "每天一次，来自 GitHub"
+
+msgid "Check for Updates Now"
+msgstr "立即检查更新"
+
+msgid "All versions"
+msgstr "所有版本"
+
+msgid "Download any release, including older ones"
+msgstr "下载任意版本，包括旧版本"
+
+msgid "Included with this build"
+msgstr "已包含在此版本中"
+
+msgid "Installed"
+msgstr "已安装"
+
+#, python-brace-format
+msgid "Installed in {path}"
+msgstr "已安装在 {path}"
+
+msgid "RapidOCR engine"
+msgstr "RapidOCR 引擎"
+
+#, python-brace-format
+msgid "Not installed ({size} download)"
+msgstr "未安装（需下载 {size}）"
+
+msgid "Install…"
+msgstr "安装…"
+
+msgid "Cannot render this PDF"
+msgstr "无法渲染此 PDF"
+
+#, python-brace-format
+msgid "Cannot play: {message}"
+msgstr "无法播放：{message}"
+
+msgid "Showing the first 2 MB"
+msgstr "仅显示前 2 MB"
+
+msgid "Quick Look"
+msgstr "快速查看"
+
+msgid "Open with View"
+msgstr "用 View 打开"
+
+msgid "Open with View (Enter)"
+msgstr "用 View 打开（Enter）"
+
+msgid "Could not start View"
+msgstr "无法启动 View"
+
+#, python-brace-format
+msgid "Could not open: {message}"
+msgstr "无法打开：{message}"
+
+#, python-brace-format
+msgid "Could not open: {e}"
+msgstr "无法打开：{e}"
+
+msgid "Save and copy to the clipboard (Ctrl+S)"
+msgstr "保存并复制到剪贴板（Ctrl+S）"
+
+msgid "Discard changes?"
+msgstr "放弃更改？"
+
+msgid "The screenshot and the clipboard keep the original."
+msgstr "截图和剪贴板将保留原始内容。"
+
+msgid "Black"
+msgstr "黑色"
+
+msgid "Blue"
+msgstr "蓝色"
+
+msgid "Red"
+msgstr "红色"
+
+msgid "Fine"
+msgstr "细"
+
+msgid "Medium"
+msgstr "中"
+
+msgid "Bold"
+msgstr "粗"
+
+msgid "Sign here with your mouse, pen or finger"
+msgstr "请用鼠标、手写笔或手指在此签名"
+
+msgid "Press Space or click Start, then sign on the touchpad"
+msgstr "按空格键或点击“开始”，然后在触摸板上签名"
+
+msgid "New Signature"
+msgstr "新建签名"
+
+msgid "Undo stroke (Backspace)"
+msgstr "撤销一笔（Backspace）"
+
+msgid "Clear (Delete)"
+msgstr "清除（Delete）"
+
+msgid "Start"
+msgstr "开始"
+
+msgid "Touchpad"
+msgstr "触摸板"
+
+msgid "Sign on the touchpad"
+msgstr "在触摸板上签名"
+
+msgid "Mouse or Pen"
+msgstr "鼠标或手写笔"
+
+msgid "Draw with the mouse, a pen or a finger inside the box"
+msgstr "在方框内用鼠标、手写笔或手指绘制"
+
+msgid "Sign in the box with your mouse, a pen or a finger. Backspace undoes."
+msgstr "在方框内用鼠标、手写笔或手指签名。按 Backspace 撤销。"
+
+#, python-brace-format
+msgid "Touchpad signing is unavailable ({error}) {hint}"
+msgstr "触摸板签名不可用（{error}）{hint}"
+
+#, python-brace-format
+msgid "Touchpad {w:.0f} × {h:.0f} mm — the whole pad maps onto the box."
+msgstr "触摸板 {w:.0f} × {h:.0f} 毫米 — 整个触摸板对应方框区域。"
+
+msgid "Sign Again"
+msgstr "重新签名"
+
+msgid "Lift your finger to begin…"
+msgstr "抬起手指以开始…"
+
+msgid "Sign with one finger on the touchpad. Press any key when finished · Backspace undoes · Esc cancels"
+msgstr "用一根手指在触摸板上签名。完成后按任意键 · Backspace 撤销 · Esc 取消"
+
+msgid "Looks good? Click Save. Or Sign Again to add more strokes."
+msgstr "满意吗？点击“保存”，或点击“重新签名”继续添加笔画。"
+
+msgid "Press Space or click Start, then sign on the touchpad."
+msgstr "按空格键或点击“开始”，然后在触摸板上签名。"
+
+msgid "⚠ Lost the touchpad device."
+msgstr "⚠ 触摸板设备已断开。"
+
+msgid "Stopped after 45 s without touch. Press Space to continue."
+msgstr "45 秒内没有触摸，已停止。按空格键继续。"
+
+msgid "Place this signature"
+msgstr "放置此签名"
+
+msgid "Copy as Image"
+msgstr "复制为图片"
+
+msgid "No signatures yet"
+msgstr "还没有签名"
+
+msgid "Create Signature…"
+msgstr "创建签名…"
+
+msgid "Signature copied to clipboard"
+msgstr "签名已复制到剪贴板"
+
+msgid "Front"
+msgstr "前"
+
+msgid "Back"
+msgstr "后"
+
+msgid "Left"
+msgstr "左"
+
+msgid "Right"
+msgstr "右"
+
+msgid "Top"
+msgstr "上"
+
+msgid "Bottom"
+msgstr "下"
+
+msgid "Isometric"
+msgstr "等轴测"
+
+msgid "Opening Model…"
+msgstr "正在打开模型…"
+
+msgid "Can't Open This Model"
+msgstr "无法打开此模型"
+
+msgid "3D Rendering Unavailable"
+msgstr "3D 渲染不可用"
+
+msgid "{n:,} triangles · {dims} mm"
+msgstr "{n:,} 个三角形 · {dims} 毫米"
+
+msgid "Computing…"
+msgstr "正在计算…"
+
+msgid "STL header"
+msgstr "STL 文件头"
+
+msgid "Triangles"
+msgstr "三角形"
+
+msgid "Vertices"
+msgstr "顶点"
+
+msgid "Bounding box min"
+msgstr "包围盒最小值"
+
+msgid "Bounding box max"
+msgstr "包围盒最大值"
+
+msgid "Surface area"
+msgstr "表面积"
+
+msgid "Volume"
+msgstr "体积"
+
+msgid "Watertight"
+msgstr "是否水密"
+
+msgid "Yes (closed mesh)"
+msgstr "是（封闭网格）"
+
+msgid "Centre of mass"
+msgstr "质心"
+
+msgid " (approx.)"
+msgstr "（近似）"
+
+msgid "Displayed"
+msgstr "已显示"
+
+msgid "preview, {n:,} triangles"
+msgstr "预览，{n:,} 个三角形"
+
+#, python-brace-format
+msgid "{s:.2f} s to first frame"
+msgstr "{s:.2f} 秒显示首帧"
+
+#, python-brace-format
+msgid ", {s:.2f} s total"
+msgstr "，共 {s:.2f} 秒"
+
+msgid "Load time"
+msgstr "加载时间"
+
+msgid "Model"
+msgstr "模型"
+
+msgid "{n:,} open edges"
+msgstr "{n:,} 条开放边"
+
+msgid "{n:,} non-manifold edges"
+msgstr "{n:,} 条非流形边"
+
+#, python-brace-format
+msgid "No — {reasons}"
+msgstr "否 — {reasons}"
+
+msgid "not closed"
+msgstr "未封闭"
+
+msgid "Reset View (R)"
+msgstr "重置视图（R）"
+
+msgid "Z Axis Up"
+msgstr "Z 轴向上"
+
+msgid "Y Axis Up"
+msgstr "Y 轴向上"
+
+msgid "Auto-Rotate"
+msgstr "自动旋转"
+
+msgid "Show Statistics"
+msgstr "显示统计信息"
+
+msgid "Export Snapshot…"
+msgstr "导出快照…"
+
+msgid "Wireframe (W)"
+msgstr "线框（W）"
+
+msgid "Flat Shading"
+msgstr "平面着色"
+
+msgid "Ground Grid"
+msgstr "地面网格"
+
+msgid "Not enough memory to open this model."
+msgstr "内存不足，无法打开此模型。"
+
+msgid "{v:,} triangles\n{dims} mm\nComputing…"
+msgstr "{v:,} 个三角形\n{dims} 毫米\n正在计算…"
+
+msgid "{n:,} triangles · {v:,} vertices"
+msgstr "{n:,} 个三角形 · {v:,} 个顶点"
+
+#, python-brace-format
+msgid "Area {area}"
+msgstr "面积 {area}"
+
+#, python-brace-format
+msgid "Volume {volume}"
+msgstr "体积 {volume}"
+
+msgid "Not watertight"
+msgstr "不水密"
+
+msgid "View couldn't start OpenGL 3.3, which is needed to display 3D models."
+msgstr "View 无法启动显示 3D 模型所需的 OpenGL 3.3。"
+
+msgid "This PC's graphics driver has no OpenGL 3.3. Close and reopen View to show 3D models with software rendering instead."
+msgstr "此电脑的显卡驱动不支持 OpenGL 3.3。请关闭并重新打开 View，改用软件渲染显示 3D 模型。"
+
+msgid "The model's details are still available in the Inspector (Ctrl+I)."
+msgstr "仍可在检查器中查看模型的详细信息（Ctrl+I）。"
+
+#, python-brace-format
+msgid "Couldn't render snapshot: {exc}"
+msgstr "无法渲染快照：{exc}"
+
+msgid "Export Snapshot"
+msgstr "导出快照"
+
+msgid "PNG Image"
+msgstr "PNG 图片"
+
+msgid "Can only save snapshots to local files"
+msgstr "快照只能保存到本地文件"
+
+#, python-brace-format
+msgid "Couldn't save snapshot: {error}"
+msgstr "无法保存快照：{error}"
+
+msgid "Find in table"
+msgstr "在表格中查找"
+
+msgid "Filter rows"
+msgstr "筛选行"
+
+msgid "Show only rows that match"
+msgstr "仅显示匹配的行"
+
+msgid "Previous match (Shift+F3)"
+msgstr "上一个匹配项（Shift+F3）"
+
+msgid "Next match (F3)"
+msgstr "下一个匹配项（F3）"
+
+msgid "Insert Row Above"
+msgstr "在上方插入行"
+
+msgid "Insert Row Below"
+msgstr "在下方插入行"
+
+msgid "Delete Row(s)"
+msgstr "删除行"
+
+msgid "Insert Column Left"
+msgstr "在左侧插入列"
+
+msgid "Insert Column Right"
+msgstr "在右侧插入列"
+
+msgid "Delete Column(s)"
+msgstr "删除列"
+
+msgid "Cut"
+msgstr "剪切"
+
+msgid "Paste"
+msgstr "粘贴"
+
+msgid "Clear Contents"
+msgstr "清除内容"
+
+msgid "Select All"
+msgstr "全选"
+
+msgid "First Row Is Header"
+msgstr "首行为表头"
+
+msgid "Quote All Fields When Saving"
+msgstr "保存时为所有字段加引号"
+
+msgid "Comma"
+msgstr "逗号"
+
+msgid "Tab"
+msgstr "制表符"
+
+msgid "Semicolon"
+msgstr "分号"
+
+msgid "Pipe"
+msgstr "竖线"
+
+msgid "Delimiter"
+msgstr "分隔符"
+
+msgid "Unicode (UTF-8)"
+msgstr "Unicode（UTF-8）"
+
+msgid "Unicode (UTF-16)"
+msgstr "Unicode（UTF-16）"
+
+msgid "Western (Windows-1252)"
+msgstr "西欧语言（Windows-1252）"
+
+msgid "Western (Latin-1)"
+msgstr "西欧语言（Latin-1）"
+
+msgid "Chinese (GB18030)"
+msgstr "中文（GB18030）"
+
+msgid "Chinese (Big5)"
+msgstr "中文（Big5）"
+
+msgid "Japanese (Shift-JIS)"
+msgstr "日文（Shift-JIS）"
+
+msgid "Korean (EUC-KR)"
+msgstr "韩文（EUC-KR）"
+
+msgid "Reopen With Encoding"
+msgstr "用其他编码重新打开"
+
+msgid "Unix (LF)"
+msgstr "Unix（LF）"
+
+msgid "Windows (CRLF)"
+msgstr "Windows（CRLF）"
+
+msgid "Line Endings When Saving"
+msgstr "保存时的换行符"
+
+msgid "Clear Sorting"
+msgstr "清除排序"
+
+msgid "Undo (Ctrl+Z)"
+msgstr "撤销（Ctrl+Z）"
+
+msgid "Redo (Ctrl+Shift+Z)"
+msgstr "重做（Ctrl+Shift+Z）"
+
+msgid "Table Format"
+msgstr "表格格式"
+
+msgid "Rows and Columns"
+msgstr "行和列"
+
+msgid "Table"
+msgstr "表格"
+
+msgid "Loading…"
+msgstr "正在加载…"
+
+#, python-brace-format
+msgid "{rows} × {columns}"
+msgstr "{rows} × {columns}"
+
+msgid "{n:,} row"
+msgid_plural "{n:,} rows"
+msgstr[0] "{n:,} 行"
+
+msgid "{n:,} column"
+msgid_plural "{n:,} columns"
+msgstr[0] "{n:,} 列"
+
+msgid "Loading… {n:,} rows"
+msgstr "正在加载… {n:,} 行"
+
+msgid " · {n:,} shown"
+msgstr " · 显示 {n:,} 行"
+
+#, python-brace-format
+msgid " · sorted by {column}"
+msgstr " · 按“{column}”排序"
+
+msgid "LF (Unix)"
+msgstr "LF（Unix）"
+
+msgid "CRLF (Windows)"
+msgstr "CRLF（Windows）"
+
+msgid "CR (classic Mac)"
+msgstr "CR（经典 Mac）"
+
+msgid "Rows"
+msgstr "行数"
+
+msgid "Columns"
+msgstr "列数"
+
+msgid "Encoding"
+msgstr "编码"
+
+msgid "First row is header"
+msgstr "首行为表头"
+
+msgid "Line endings"
+msgstr "换行符"
+
+msgid "Quoting"
+msgstr "引号"
+
+msgid "All fields"
+msgstr "所有字段"
+
+msgid "When needed"
+msgstr "按需添加"
+
+msgid "Status"
+msgstr "状态"
+
+msgid "Edited (unsaved)"
+msgstr "已编辑（未保存）"
+
+msgid "{n:,} empty"
+msgstr "{n:,} 个空值"
+
+msgid "{n:,} more columns"
+msgstr "另有 {n:,} 列"
+
+#, python-brace-format
+msgid "Could not read this file: {e}"
+msgstr "无法读取此文件：{e}"
+
+msgid "Sort Ascending"
+msgstr "升序排序"
+
+msgid "Sort Descending"
+msgstr "降序排序"
+
+msgid "Sort Permanently, A → Z"
+msgstr "永久排序，A → Z"
+
+msgid "Sort Permanently, Z → A"
+msgstr "永久排序，Z → A"
+
+msgid "Rename Column…"
+msgstr "重命名列…"
+
+msgid "Select Column"
+msgstr "选择列"
+
+msgid "Fit Column Width"
+msgstr "适应列宽"
+
+msgid "Delete Column"
+msgstr "删除列"
+
+msgid "No rows"
+msgstr "没有行"
+
+msgid "  ·  {n:,} characters"
+msgstr "  ·  {n:,} 个字符"
+
+msgid "{rows:,} × {cols:,} cells selected"
+msgstr "已选择 {rows:,} × {cols:,} 个单元格"
+
+msgid "  ·  {n:,} numeric  ·  Sum {sum}  ·  Avg {avg}  ·  Min {min}  ·  Max {max}"
+msgstr "  ·  {n:,} 个数值  ·  总和 {sum}  ·  平均值 {avg}  ·  最小值 {min}  ·  最大值 {max}"
+
+msgid "The file is still loading"
+msgstr "文件仍在加载"
+
+msgid "Please wait for the current operation to finish"
+msgstr "请等待当前操作完成"
+
+msgid "Edit Cell"
+msgstr "编辑单元格"
+
+#, python-brace-format
+msgid "Edit Cell {cell}"
+msgstr "编辑单元格 {cell}"
+
+msgid "The clipboard data is too large to paste."
+msgstr "剪贴板中的数据过大，无法粘贴。"
+
+msgid "Clear Cells"
+msgstr "清除单元格"
+
+msgid "A table needs at least one column"
+msgstr "表格至少需要一列"
+
+msgid "Turn on “First Row Is Header” to name columns"
+msgstr "开启“首行为表头”以命名列"
+
+msgid "Rename Column"
+msgstr "重命名列"
+
+msgid "Rename"
+msgstr "重命名"
+
+msgid "Sorting…"
+msgstr "正在排序…"
+
+msgid "Working…"
+msgstr "正在处理…"
+
+#, python-brace-format
+msgid "Could not sort: {err}"
+msgstr "无法排序：{err}"
+
+msgid "Sort"
+msgstr "排序"
+
+msgid "Filtering…"
+msgstr "正在筛选…"
+
+msgid "Save or undo your changes first"
+msgstr "请先保存或撤销更改"
+
+msgid "Line Endings"
+msgstr "换行符"
+
+msgid "CSV (comma-separated)"
+msgstr "CSV（逗号分隔）"
+
+msgid "TSV (tab-separated)"
+msgstr "TSV（制表符分隔）"
+
+msgid "Excel workbook"
+msgstr "Excel 工作簿"
+
+#, python-brace-format
+msgid "Exported “{v}”"
+msgstr "已导出“{v}”"
+
+msgid "Find in file"
+msgstr "在文件中查找"
+
+msgid "Wrap Lines"
+msgstr "自动换行"
+
+msgid "Text Options"
+msgstr "文本选项"
+
+#, python-brace-format
+msgid "{language} · {lines} · {encoding}"
+msgstr "{language} · {lines} · {encoding}"
+
+msgid "{n:,} line"
+msgid_plural "{n:,} lines"
+msgstr[0] "{n:,} 行"
+
+msgid "Loading… "
+msgstr "正在加载… "
+
+msgid "Lines"
+msgstr "行数"
+
+msgid "Words"
+msgstr "词数"
+
+msgid "Characters"
+msgstr "字符数"
+
+msgid " (mixed; saved as one style)"
+msgstr "（混用；保存时统一为一种）"
+
+msgid "Mode"
+msgstr "模式"
+
+#, python-brace-format
+msgid "Read-only — {reason}"
+msgstr "只读 — {reason}"
+
+msgid "large file"
+msgstr "大文件"
+
+#, python-brace-format
+msgid "showing only the first {mb} MB"
+msgstr "仅显示前 {mb} MB"
+
+msgid "contains NUL bytes"
+msgstr "包含 NUL 字节"
+
+#, python-brace-format
+msgid "This file is very large; showing only the first {mb} MB, read-only."
+msgstr "此文件非常大，仅显示前 {mb} MB，且为只读。"
+
+#, python-brace-format
+msgid "This file is large ({mb:.1f} MB). It is open read-only and syntax highlighting is off."
+msgstr "此文件较大（{mb:.1f} MB），已以只读方式打开，并关闭了语法高亮。"
+
+msgid "This file contains NUL bytes, so it is open read-only."
+msgstr "此文件包含 NUL 字节，因此以只读方式打开。"
+
+msgid "Ln {line:,}, Col {col:,}"
+msgstr "第 {line:,} 行，第 {col:,} 列"
+
+msgid "  ·  {n:,} selected"
+msgstr "  ·  已选择 {n:,} 个字符"
+
+msgid "  ·  Read-only"
+msgstr "  ·  只读"
+
+msgid "Go to Line"
+msgstr "跳转到行"
+
+msgid "Enter a line number from 1 to {n:,} (or line:column)."
+msgstr "请输入 1 到 {n:,} 之间的行号（或 行:列）。"
+
+msgid "Go"
+msgstr "跳转"
+
+msgid "Enter a line number"
+msgstr "请输入行号"
+
+msgid "Some characters don’t exist in the original encoding; saved as UTF-8"
+msgstr "部分字符在原编码中不存在，已保存为 UTF-8"
+
+msgid "This file is open read-only"
+msgstr "此文件以只读方式打开"
+
+#, python-brace-format
+msgid "Could not save: {v}"
+msgstr "无法保存：{v}"
+
+#, python-brace-format
+msgid "Saved “{v}”"
+msgstr "已保存“{v}”"
+
+msgid "Untitled.txt"
+msgstr "未命名.txt"
+
+#, python-brace-format
+msgid "{APP_NAME} {version} is available"
+msgstr "{APP_NAME} {version} 已发布"
+
+msgid "Update…"
+msgstr "更新…"
+
+#, python-brace-format
+msgid "{APP_NAME} {version} Is Available"
+msgstr "{APP_NAME} {version} 已发布"
+
+msgid "Later"
+msgstr "稍后"
+
+msgid "Skip This Version"
+msgstr "跳过此版本"
+
+msgid "Install and Restart"
+msgstr "安装并重启"
+
+msgid "Download"
+msgstr "下载"
+
+#, python-brace-format
+msgid "{APP_NAME} Was Updated"
+msgstr "{APP_NAME} 已更新"
+
+#, python-brace-format
+msgid "Version {version} is installed. Restart {APP_NAME} to use it."
+msgstr "已安装 {version} 版。请重启 {APP_NAME} 以使用新版本。"
+
+msgid "Restart"
+msgstr "重启"
+
+msgid "Can’t play this file"
+msgstr "无法播放此文件"
+
+msgid "Save Frame as PNG… (Ctrl+S)"
+msgstr "将当前帧保存为 PNG…（Ctrl+S）"
+
+#, python-brace-format
+msgid "{msg}\n\nIf the file is fine, GStreamer is probably missing a codec for it. On Ubuntu try:\n<tt>{CODEC_HINT}</tt>"
+msgstr "{msg}\n\n如果文件本身没有问题，可能是 GStreamer 缺少相应的编解码器。在 Ubuntu 上可尝试：\n<tt>{CODEC_HINT}</tt>"
+
+msgid "Open with Default App"
+msgstr "用默认应用打开"
+
+msgid "Audio files have no video frame to save"
+msgstr "音频文件没有可保存的视频帧"
+
+msgid "No video frame is available yet"
+msgstr "暂时没有可用的视频帧"
+
+msgid "Save Frame as PNG"
+msgstr "将当前帧保存为 PNG"
+
+msgid "Could not save the frame"
+msgstr "无法保存当前帧"

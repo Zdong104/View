@@ -34,6 +34,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, GLib, Gtk  # noqa: E402
 
 from . import runtime  # noqa: E402
+from .i18n import _
 
 REPO = "Zdong104/View"
 API_LATEST = f"https://api.github.com/repos/{REPO}/releases/latest"
@@ -305,7 +306,7 @@ class Updater:
         self._notified.add(rel.version)
         win = self.app._active_main()
         if win is not None:
-            win.show_toast(f"{runtime.APP_NAME} {rel.version} is available", "Update…",
+            win.show_toast(_("{APP_NAME} {version} is available").format(APP_NAME=runtime.APP_NAME, version=rel.version), _("Update…"),
                            lambda: self.offer(rel, win))
 
     def check_now(self, parent, toast=None):
@@ -348,14 +349,14 @@ class Updater:
                      f"<tt>sudo snap refresh {os.environ.get('SNAP_INSTANCE_NAME', 'view')}</tt>.")
         body += (f'\n\n<a href="{GLib.markup_escape_text(rel.page)}">Release notes</a> · '
                  f'<a href="{RELEASES}">All versions</a>')
-        dlg = Adw.AlertDialog(heading=f"{runtime.APP_NAME} {rel.version} Is Available",
+        dlg = Adw.AlertDialog(heading=_("{APP_NAME} {version} Is Available").format(APP_NAME=runtime.APP_NAME, version=rel.version),
                               body=body, body_use_markup=True)
-        dlg.add_response("later", "Later")
-        dlg.add_response("skip", "Skip This Version")
+        dlg.add_response("later", _("Later"))
+        dlg.add_response("skip", _("Skip This Version"))
         if kind in ("windows-installer", "deb"):
-            dlg.add_response("install", "Install and Restart" if kind != "deb" else "Install…")
+            dlg.add_response("install", _("Install and Restart") if kind != "deb" else _("Install…"))
         elif kind != "snap":
-            dlg.add_response("download", "Download")
+            dlg.add_response("download", _("Download"))
         if dlg.has_response("install") or dlg.has_response("download"):
             last = "install" if dlg.has_response("install") else "download"
             dlg.set_response_appearance(last, Adw.ResponseAppearance.SUGGESTED)
@@ -443,11 +444,10 @@ class Updater:
         return False
 
     def _restart_dialog(self, parent, rel):
-        dlg = Adw.AlertDialog(heading=f"{runtime.APP_NAME} Was Updated",
-                              body=f"Version {rel.version} is installed. Restart "
-                                   f"{runtime.APP_NAME} to use it.")
-        dlg.add_response("later", "Later")
-        dlg.add_response("restart", "Restart")
+        dlg = Adw.AlertDialog(heading=_("{APP_NAME} Was Updated").format(APP_NAME=runtime.APP_NAME),
+                              body=_("Version {version} is installed. Restart {APP_NAME} to use it.").format(version=rel.version, APP_NAME=runtime.APP_NAME))
+        dlg.add_response("later", _("Later"))
+        dlg.add_response("restart", _("Restart"))
         dlg.set_response_appearance("restart", Adw.ResponseAppearance.SUGGESTED)
         dlg.set_default_response("restart")
         dlg.set_close_response("later")
@@ -468,7 +468,7 @@ class _ProgressDialog(Adw.Dialog):
                       margin_bottom=18, margin_start=18, margin_end=18)
         self._label = Gtk.Label(label=title + "…", xalign=0, wrap=True)
         self._bar = Gtk.ProgressBar()
-        self._cancel = Gtk.Button(label="Cancel", halign=Gtk.Align.END)
+        self._cancel = Gtk.Button(label=_("Cancel"), halign=Gtk.Align.END)
         self._cancel.connect("clicked", lambda *_: self._on_cancel())
         for w in (self._label, self._bar, self._cancel):
             box.append(w)
@@ -524,7 +524,7 @@ def _have(cmd) -> bool:
 
 def _message(parent, heading, body):
     dlg = Adw.AlertDialog(heading=heading, body=body)
-    dlg.add_response("ok", "OK")
+    dlg.add_response("ok", _("OK"))
     dlg.present(parent)
 
 

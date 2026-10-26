@@ -5,6 +5,7 @@
   <project_license>PolyForm-Noncommercial-1.0.0</project_license>
   <name>View</name>
   <summary>View and annotate PDFs, images, videos, text and 3D models</summary>
+  <summary xml:lang="zh-CN">查看并标注 PDF、图片、视频、文本和 3D 模型</summary>
   <developer id="io.github.zdong104">
     <name>Zihan</name>
   </developer>

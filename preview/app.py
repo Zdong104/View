@@ -12,6 +12,7 @@ gi.require_version("Gdk", "4.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 
 from . import runtime
+from .i18n import _, N_, ngettext
 from .viewer_base import (IMAGE_EXTS, MEDIA_EXTS, MODEL_EXTS, PDF_EXTS, TABLE_EXTS, TEXT_EXTS,
                           TEXT_NAMES, VIDEO_EXTS, AUDIO_EXTS, kind_of)
 
@@ -90,50 +91,50 @@ def _make_filters():
         return f
     text_names = sorted({v for n in TEXT_NAMES if "." not in n
                          for v in (n, n.capitalize(), n.upper())})
-    allf = mk("All Supported Files",
+    allf = mk(_("All Supported Files"),
               PDF_EXTS | IMAGE_EXTS | MODEL_EXTS | TABLE_EXTS | MEDIA_EXTS | TEXT_EXTS,
               text_names)
     store.append(allf)
-    store.append(mk("PDF Documents", PDF_EXTS))
-    store.append(mk("Images", IMAGE_EXTS))
-    store.append(mk("Video and Audio", VIDEO_EXTS | AUDIO_EXTS))
-    store.append(mk("Text and Source Code", TEXT_EXTS, text_names))
-    store.append(mk("3D Models", MODEL_EXTS))
-    store.append(mk("Spreadsheets (CSV/TSV)", TABLE_EXTS))
-    anyf = Gtk.FileFilter(name="All Files")
+    store.append(mk(_("PDF Documents"), PDF_EXTS))
+    store.append(mk(_("Images"), IMAGE_EXTS))
+    store.append(mk(_("Video and Audio"), VIDEO_EXTS | AUDIO_EXTS))
+    store.append(mk(_("Text and Source Code"), TEXT_EXTS, text_names))
+    store.append(mk(_("3D Models"), MODEL_EXTS))
+    store.append(mk(_("Spreadsheets (CSV/TSV)"), TABLE_EXTS))
+    anyf = Gtk.FileFilter(name=_("All Files"))
     anyf.add_pattern("*")
     store.append(anyf)
     return store, allf
 
 
 SHORTCUT_SECTIONS = [
-    ("General", (("Open…", "<Control>o"), ("New Window", "<Control>n"),
-                     ("New from Clipboard", "<Control>v"), ("Show Inspector", "<Control>i"),
-                     ("Full Screen", "F11"), ("Close Window", "<Control>w"),
-                     ("Quit", "<Control>q"), ("Keyboard Shortcuts", "<Control>question"))),
-    ("Video and Audio", (("Play / Pause", "space"), ("Back 5 Seconds", "Left"),
-                     ("Forward 5 Seconds", "Right"), ("Volume Up", "Up"),
-                     ("Volume Down", "Down"), ("Mute", "m"), ("Full Screen", "f"),
-                     ("Save Frame as PNG…", "<Control>s"))),
-    ("Text and Source Code", (("Save", "<Control>s"), ("Save As…", "<Control><Shift>s"),
-                     ("Find", "<Control>f"), ("Go to Line…", "<Control>g"),
-                     ("Next Match", "F3"), ("Previous Match", "<Shift>F3"),
-                     ("Undo", "<Control>z"), ("Redo", "<Control><Shift>z"),
-                     ("Larger Text", "<Control>plus"), ("Smaller Text", "<Control>minus"),
-                     ("Actual Text Size", "<Control>0"))),
-    ("Images", (("Zoom In", "plus"), ("Zoom Out", "minus"), ("Fit to Window", "0"),
-                     ("Actual Size", "1"), ("Rotate Left", "<Control>l"),
-                     ("Rotate Right", "<Control>r"), ("Copy Image", "<Control>c"),
-                     ("Save", "<Control>s"), ("Save As…", "<Control><Shift>s"),
-                     ("Export As…", "<Control><Shift>e"), ("Toggle Thumbnails", "F9"),
-                     ("Select All Thumbnails", "<Control>a"), ("Previous Image", "Left"),
-                     ("Next Image", "Right"), ("Remove from List", "Delete"),
-                     ("Undo", "<Control>z"), ("Redo", "<Control><Shift>z"),
-                     ("Crop to Selection", "<Control>k"), ("Adjust Color", "<Control><Shift>c"),
-                     ("Print", "<Control>p"), ("Slideshow", "F5"),
-                     ("Markup Toolbar", "<Control><Shift>a"),
-                     ("Copy All Recognized Text", "<Control><Shift>t"),
-                     ("Cancel Selection / Tool", "Escape"))),
+    (N_("General"), ((N_("Open…"), "<Control>o"), (N_("New Window"), "<Control>n"),
+                     (N_("New from Clipboard"), "<Control>v"), (N_("Show Inspector"), "<Control>i"),
+                     (N_("Full Screen"), "F11"), (N_("Close Window"), "<Control>w"),
+                     (N_("Quit"), "<Control>q"), (N_("Keyboard Shortcuts"), "<Control>question"))),
+    (N_("Video and Audio"), ((N_("Play / Pause"), "space"), (N_("Back 5 Seconds"), "Left"),
+                     (N_("Forward 5 Seconds"), "Right"), (N_("Volume Up"), "Up"),
+                     (N_("Volume Down"), "Down"), (N_("Mute"), "m"), (N_("Full Screen"), "f"),
+                     (N_("Save Frame as PNG…"), "<Control>s"))),
+    (N_("Text and Source Code"), ((N_("Save"), "<Control>s"), (N_("Save As…"), "<Control><Shift>s"),
+                     (N_("Find"), "<Control>f"), (N_("Go to Line…"), "<Control>g"),
+                     (N_("Next Match"), "F3"), (N_("Previous Match"), "<Shift>F3"),
+                     (N_("Undo"), "<Control>z"), (N_("Redo"), "<Control><Shift>z"),
+                     (N_("Larger Text"), "<Control>plus"), (N_("Smaller Text"), "<Control>minus"),
+                     (N_("Actual Text Size"), "<Control>0"))),
+    (N_("Images"), ((N_("Zoom In"), "plus"), (N_("Zoom Out"), "minus"), (N_("Fit to Window"), "0"),
+                     (N_("Actual Size"), "1"), (N_("Rotate Left"), "<Control>l"),
+                     (N_("Rotate Right"), "<Control>r"), (N_("Copy Image"), "<Control>c"),
+                     (N_("Save"), "<Control>s"), (N_("Save As…"), "<Control><Shift>s"),
+                     (N_("Export As…"), "<Control><Shift>e"), (N_("Toggle Thumbnails"), "F9"),
+                     (N_("Select All Thumbnails"), "<Control>a"), (N_("Previous Image"), "Left"),
+                     (N_("Next Image"), "Right"), (N_("Remove from List"), "Delete"),
+                     (N_("Undo"), "<Control>z"), (N_("Redo"), "<Control><Shift>z"),
+                     (N_("Crop to Selection"), "<Control>k"), (N_("Adjust Color"), "<Control><Shift>c"),
+                     (N_("Print"), "<Control>p"), (N_("Slideshow"), "F5"),
+                     (N_("Markup Toolbar"), "<Control><Shift>a"),
+                     (N_("Copy All Recognized Text"), "<Control><Shift>t"),
+                     (N_("Cancel Selection / Tool"), "Escape"))),
 ]
 
 
@@ -242,14 +243,14 @@ class MainWindow(Adw.ApplicationWindow):
         self.header = Adw.HeaderBar()
         self.win_title = Adw.WindowTitle(title=APP_NAME, subtitle="")
         self.header.set_title_widget(self.win_title)
-        open_btn = Gtk.Button(icon_name="document-open-symbolic", tooltip_text="Open… (Ctrl+O)",
+        open_btn = Gtk.Button(icon_name="document-open-symbolic", tooltip_text=_("Open… (Ctrl+O)"),
                               action_name="win.open")
         self.header.pack_start(open_btn)
         menu_btn = Gtk.MenuButton(icon_name="open-menu-symbolic", primary=True,
-                                  tooltip_text="Main Menu", menu_model=app.primary_menu)
+                                  tooltip_text=_("Main Menu"), menu_model=app.primary_menu)
         self.header.pack_end(menu_btn)
         self.header.pack_end(Gtk.Button(icon_name="dialog-information-symbolic",
-                                        tooltip_text="Inspector (Ctrl+I)",
+                                        tooltip_text=_("Inspector (Ctrl+I)"),
                                         action_name="win.inspector"))
         self.inspector = None
 
@@ -302,10 +303,10 @@ class MainWindow(Adw.ApplicationWindow):
     # ---- empty state -------------------------------------------------------
     def _build_empty(self):
         page = Adw.StatusPage(icon_name="document-open-symbolic",
-                              title="Drop a PDF, image, video, text file or spreadsheet here",
-                              description="Or open a file to get started.")
+                              title=_("Drop a PDF, image, video, text file or spreadsheet here"),
+                              description=_("Or open a file to get started."))
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18, halign=Gtk.Align.CENTER)
-        box.append(Gtk.Button(label="Open…", halign=Gtk.Align.CENTER,
+        box.append(Gtk.Button(label=_("Open…"), halign=Gtk.Align.CENTER,
                               css_classes=["pill", "suggested-action"], action_name="win.open"))
         self._recent_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
         box.append(self._recent_box)
@@ -323,7 +324,7 @@ class MainWindow(Adw.ApplicationWindow):
             box.remove(child)
         recents = items[:5]
         if recents:
-            box.append(Gtk.Label(label="Recent", css_classes=["heading"], halign=Gtk.Align.START))
+            box.append(Gtk.Label(label=_("Recent"), css_classes=["heading"], halign=Gtk.Align.START))
             lb = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=["boxed-list"],
                              width_request=380)
             for uri, f in recents:
@@ -431,9 +432,9 @@ class MainWindow(Adw.ApplicationWindow):
     def _show_error(self, e):
         self.viewer = None
         page = Adw.StatusPage(icon_name="dialog-error-symbolic",
-                              title="Could not open this file",
+                              title=_("Could not open this file"),
                               description=f"{type(e).__name__}: {e}")
-        btn = Gtk.Button(label="Open Another File…", halign=Gtk.Align.CENTER,
+        btn = Gtk.Button(label=_("Open Another File…"), halign=Gtk.Align.CENTER,
                          css_classes=["pill"], action_name="win.open")
         page.set_child(btn)
         self.bin.set_child(page)
@@ -467,7 +468,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.get_application().route_files(list(files), self)
 
     def open_dialog(self):
-        fd = Gtk.FileDialog(title="Open")
+        fd = Gtk.FileDialog(title=_("Open"))
         filters, default = _make_filters()
         fd.set_filters(filters)
         fd.set_default_filter(default)
@@ -503,7 +504,7 @@ class MainWindow(Adw.ApplicationWindow):
         return True
 
     # ---- closing ---------------------------------------------------------------------
-    def _on_close_request(self, *_):
+    def _on_close_request(self, *_a):
         v = self.viewer
         if self._confirmed_close or v is None:
             return False
@@ -514,14 +515,14 @@ class MainWindow(Adw.ApplicationWindow):
         if not dirty:
             return False
         can_save = hasattr(v, "save_changes")
-        dlg = Adw.AlertDialog(heading="Discard Changes?",
-                              body="This document has unsaved changes that will be lost "
-                                   "if you close it.")
-        dlg.add_response("cancel", "Cancel")
-        dlg.add_response("discard", "Discard")
+        dlg = Adw.AlertDialog(heading=_("Discard Changes?"),
+                              body=_("This document has unsaved changes that will be lost "
+                                     "if you close it."))
+        dlg.add_response("cancel", _("Cancel"))
+        dlg.add_response("discard", _("Discard"))
         dlg.set_response_appearance("discard", Adw.ResponseAppearance.DESTRUCTIVE)
         if can_save:
-            dlg.add_response("save", "Save")
+            dlg.add_response("save", _("Save"))
             dlg.set_response_appearance("save", Adw.ResponseAppearance.SUGGESTED)
             dlg.set_default_response("save")
         else:
@@ -578,25 +579,25 @@ class PreviewApp(Adw.Application):
     def _build_menu(self):
         m = Gio.Menu()
         s1 = Gio.Menu()
-        s1.append("New Window", "app.new-window")
-        s1.append("Open…", "win.open")
-        s1.append_submenu("Open Recent", self.recent_menu)
-        s1.append("New from Clipboard", "app.new-from-clipboard")
+        s1.append(_("New Window"), "app.new-window")
+        s1.append(_("Open…"), "win.open")
+        s1.append_submenu(_("Open Recent"), self.recent_menu)
+        s1.append(_("New from Clipboard"), "app.new-from-clipboard")
         m.append_section(None, s1)
         s4 = Gio.Menu()
-        s4.append("Show Inspector", "win.inspector")
-        s4.append("Full Screen", "win.fullscreen")
+        s4.append(_("Show Inspector"), "win.inspector")
+        s4.append(_("Full Screen"), "win.fullscreen")
         m.append_section(None, s4)
         s2 = Gio.Menu()
-        s2.append("Combine Images into PDF…", "app.combine-images")
-        s2.append("New Signature…", "app.new-signature")
+        s2.append(_("Combine Images into PDF…"), "app.combine-images")
+        s2.append(_("New Signature…"), "app.new-signature")
         m.append_section(None, s2)
         s3 = Gio.Menu()
-        s3.append("Preferences", "app.preferences")
-        s3.append("Keyboard Shortcuts", "app.shortcuts")
-        s3.append("Check for Updates…", "app.check-updates")
-        s3.append("About View", "app.about")
-        s3.append("Quit", "app.quit")
+        s3.append(_("Preferences"), "app.preferences")
+        s3.append(_("Keyboard Shortcuts"), "app.shortcuts")
+        s3.append(_("Check for Updates…"), "app.check-updates")
+        s3.append(_("About View"), "app.about")
+        s3.append(_("Quit"), "app.quit")
         m.append_section(None, s3)
         return m
 
@@ -679,11 +680,11 @@ class PreviewApp(Adw.Application):
             item.set_action_and_target_value("app.open-recent", GLib.Variant("s", uri))
             sec.append_item(item)
         if not items:
-            sec.append("No Recent Files", "app.none")
+            sec.append(_("No Recent Files"), "app.none")
         self.recent_menu.append_section(None, sec)
         if items:
             clear = Gio.Menu()
-            clear.append("Clear Menu", "app.clear-recent")
+            clear.append(_("Clear Menu"), "app.clear-recent")
             self.recent_menu.append_section(None, clear)
 
     def _clear_recent(self):
@@ -720,7 +721,7 @@ class PreviewApp(Adw.Application):
             except GLib.Error:
                 tex = None
             if tex is None:
-                win.show_toast("No image in the clipboard")
+                win.show_toast(_("No image in the clipboard"))
                 return
             data = tex.save_to_png_bytes().get_data()
             im = Image.open(io.BytesIO(data))
@@ -836,15 +837,18 @@ class PreviewApp(Adw.Application):
             w.present()
         if unknown:
             names = ", ".join(f.get_basename() or "?" for f in unknown[:3])
-            msg = (f"Unsupported file: {names}" if len(unknown) == 1
-                   else f"{len(unknown)} unsupported files: {names}…")
+            msg = (_("Unsupported file: {names}").format(names=names) if len(unknown) == 1
+                   else ngettext("{n} unsupported file: {names}…",
+                                 "{n} unsupported files: {names}…",
+                                 len(unknown)).format(n=len(unknown), names=names))
             anchor = first[0] or target or self._active_main() or MainWindow(self)
             anchor.present()
             anchor.show_toast(msg)
         if empty:
             anchor = first[0] or target or self._active_main() or MainWindow(self)
             anchor.present()
-            anchor.show_toast(f"No images in {empty[0].get_basename() or 'this folder'}")
+            anchor.show_toast(_("No images in {folder}").format(
+                folder=empty[0].get_basename() or _("this folder")))
 
     @staticmethod
     def _expand_folders(files):
@@ -896,16 +900,16 @@ class PreviewApp(Adw.Application):
         dlg = Adw.AboutDialog(application_name=APP_NAME, application_icon=icon,
                               developer_name="Zihan", version=runtime.VERSION,
                               website=runtime.HOMEPAGE, issue_url=runtime.ISSUES,
-                              comments="View PDFs, images, video, text and 3D models, "
-                                       "combine images into PDFs and sign documents.",
+                              comments=_("View PDFs, images, video, text and 3D models, "
+                                         "combine images into PDFs and sign documents."),
                               license_type=Gtk.License.CUSTOM,
                               license="PolyForm Noncommercial License 1.0.0\n\n"
                                       "Free for personal, research, educational and other "
                                       "noncommercial use. Commercial use requires a separate "
                                       "license from the author.\n\n"
                                       "https://polyformproject.org/licenses/noncommercial/1.0.0/")
-        dlg.add_link("All Versions", runtime.HOMEPAGE + "/releases")
-        dlg.add_link("Support Development", runtime.DONATE)
+        dlg.add_link(_("All Versions"), runtime.HOMEPAGE + "/releases")
+        dlg.add_link(_("Support Development"), runtime.DONATE)
         win = self._any_window()
         dlg.set_debug_info(debug_info(win))
         dlg.set_debug_info_filename("view-debug-info.txt")
@@ -926,31 +930,31 @@ class PreviewApp(Adw.Application):
             return self._shortcuts_fallback()
         dlg = Adw.ShortcutsDialog()
         for title, items in SHORTCUT_SECTIONS:
-            sec = Adw.ShortcutsSection(title=title)
+            sec = Adw.ShortcutsSection(title=_(title))
             for t, a in items:
-                sec.add(Adw.ShortcutsItem(title=t, accelerator=a))
+                sec.add(Adw.ShortcutsItem(title=_(t), accelerator=a))
             dlg.add(sec)
         dlg.present(self._any_window())
 
     def _shortcuts_fallback(self):
         page = Adw.PreferencesPage()
         for title, items in SHORTCUT_SECTIONS:
-            grp = Adw.PreferencesGroup(title=title)
+            grp = Adw.PreferencesGroup(title=_(title))
             for t, a in items:
-                row = Adw.ActionRow(title=t)
+                row = Adw.ActionRow(title=_(t))
                 row.add_suffix(Gtk.ShortcutLabel(accelerator=a, valign=Gtk.Align.CENTER))
                 grp.add(row)
             page.add(grp)
         tb = Adw.ToolbarView(content=page)
         tb.add_top_bar(Adw.HeaderBar())
-        Adw.Dialog(title="Keyboard Shortcuts", child=tb, content_width=520,
+        Adw.Dialog(title=_("Keyboard Shortcuts"), child=tb, content_width=520,
                    content_height=640).present(self._any_window())
 
     def _combine_images(self):
         from . import convert
         win = self._any_window()
-        fd = Gtk.FileDialog(title="Choose Images to Combine into a PDF")
-        f = Gtk.FileFilter(name="Images")
+        fd = Gtk.FileDialog(title=_("Choose Images to Combine into a PDF"))
+        f = Gtk.FileFilter(name=_("Images"))
         for e in _suffixes(IMAGE_EXTS):
             f.add_suffix(e)
         fd.set_default_filter(f)
@@ -964,7 +968,7 @@ class PreviewApp(Adw.Application):
             paths = sorted((p for p in paths if p), key=lambda p: convert.natural_key(
                 os.path.basename(p)))
             if not paths:
-                win.show_toast("Only local files are supported")
+                win.show_toast(_("Only local files are supported"))
                 return
             convert.show_export_dialog(win, paths)
         fd.open_multiple(win, None, done)
@@ -976,11 +980,11 @@ class PreviewApp(Adw.Application):
         except Exception as e:  # noqa: BLE001
             traceback.print_exc()
             win.present()
-            win.show_toast(f"Signatures are unavailable: {e}")
+            win.show_toast(_("Signatures are unavailable: {error}").format(error=e))
             return
 
         def saved(sig):
-            win.show_toast("Signature saved", "Copy",
+            win.show_toast(_("Signature saved"), _("Copy"),
                            lambda: copy_signature_to_clipboard(sig))
         win.present()
         SignatureCaptureWindow(win, saved).present()

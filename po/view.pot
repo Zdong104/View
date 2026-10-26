@@ -1,0 +1,2241 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the View package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: View\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-20 21:39-0400\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+msgid "All Supported Files"
+msgstr ""
+
+msgid "PDF Documents"
+msgstr ""
+
+msgid "Images"
+msgstr ""
+
+msgid "Video and Audio"
+msgstr ""
+
+msgid "Text and Source Code"
+msgstr ""
+
+msgid "3D Models"
+msgstr ""
+
+msgid "Spreadsheets (CSV/TSV)"
+msgstr ""
+
+msgid "All Files"
+msgstr ""
+
+msgid "General"
+msgstr ""
+
+msgid "Open…"
+msgstr ""
+
+msgid "New Window"
+msgstr ""
+
+msgid "New from Clipboard"
+msgstr ""
+
+msgid "Show Inspector"
+msgstr ""
+
+msgid "Full Screen"
+msgstr ""
+
+msgid "Close Window"
+msgstr ""
+
+msgid "Quit"
+msgstr ""
+
+msgid "Keyboard Shortcuts"
+msgstr ""
+
+msgid "Play / Pause"
+msgstr ""
+
+msgid "Back 5 Seconds"
+msgstr ""
+
+msgid "Forward 5 Seconds"
+msgstr ""
+
+msgid "Volume Up"
+msgstr ""
+
+msgid "Volume Down"
+msgstr ""
+
+msgid "Mute"
+msgstr ""
+
+msgid "Save Frame as PNG…"
+msgstr ""
+
+msgid "Save"
+msgstr ""
+
+msgid "Save As…"
+msgstr ""
+
+msgid "Find"
+msgstr ""
+
+msgid "Go to Line…"
+msgstr ""
+
+msgid "Next Match"
+msgstr ""
+
+msgid "Previous Match"
+msgstr ""
+
+msgid "Undo"
+msgstr ""
+
+msgid "Redo"
+msgstr ""
+
+msgid "Larger Text"
+msgstr ""
+
+msgid "Smaller Text"
+msgstr ""
+
+msgid "Actual Text Size"
+msgstr ""
+
+msgid "Zoom In"
+msgstr ""
+
+msgid "Zoom Out"
+msgstr ""
+
+msgid "Fit to Window"
+msgstr ""
+
+msgid "Actual Size"
+msgstr ""
+
+msgid "Rotate Left"
+msgstr ""
+
+msgid "Rotate Right"
+msgstr ""
+
+msgid "Copy Image"
+msgstr ""
+
+msgid "Export As…"
+msgstr ""
+
+msgid "Toggle Thumbnails"
+msgstr ""
+
+msgid "Select All Thumbnails"
+msgstr ""
+
+msgid "Previous Image"
+msgstr ""
+
+msgid "Next Image"
+msgstr ""
+
+msgid "Remove from List"
+msgstr ""
+
+msgid "Crop to Selection"
+msgstr ""
+
+msgid "Adjust Color"
+msgstr ""
+
+msgid "Print"
+msgstr ""
+
+msgid "Slideshow"
+msgstr ""
+
+msgid "Markup Toolbar"
+msgstr ""
+
+msgid "Copy All Recognized Text"
+msgstr ""
+
+msgid "Cancel Selection / Tool"
+msgstr ""
+
+msgid "Open… (Ctrl+O)"
+msgstr ""
+
+msgid "Main Menu"
+msgstr ""
+
+msgid "Inspector (Ctrl+I)"
+msgstr ""
+
+msgid "Drop a PDF, image, video, text file or spreadsheet here"
+msgstr ""
+
+msgid "Or open a file to get started."
+msgstr ""
+
+msgid "Recent"
+msgstr ""
+
+msgid "Could not open this file"
+msgstr ""
+
+msgid "Open Another File…"
+msgstr ""
+
+msgid "Open"
+msgstr ""
+
+msgid "Discard Changes?"
+msgstr ""
+
+msgid "This document has unsaved changes that will be lost if you close it."
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
+msgid "Discard"
+msgstr ""
+
+msgid "Open Recent"
+msgstr ""
+
+msgid "Combine Images into PDF…"
+msgstr ""
+
+msgid "New Signature…"
+msgstr ""
+
+msgid "Preferences"
+msgstr ""
+
+msgid "Check for Updates…"
+msgstr ""
+
+msgid "About View"
+msgstr ""
+
+msgid "No Recent Files"
+msgstr ""
+
+msgid "Clear Menu"
+msgstr ""
+
+msgid "No image in the clipboard"
+msgstr ""
+
+#, python-brace-format
+msgid "Unsupported file: {names}"
+msgstr ""
+
+#, python-brace-format
+msgid "{n} unsupported file: {names}…"
+msgid_plural "{n} unsupported files: {names}…"
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-brace-format
+msgid "No images in {folder}"
+msgstr ""
+
+msgid "this folder"
+msgstr ""
+
+msgid ""
+"View PDFs, images, video, text and 3D models, combine images into PDFs and "
+"sign documents."
+msgstr ""
+
+msgid "All Versions"
+msgstr ""
+
+msgid "Support Development"
+msgstr ""
+
+msgid "Choose Images to Combine into a PDF"
+msgstr ""
+
+msgid "Only local files are supported"
+msgstr ""
+
+#, python-brace-format
+msgid "Signatures are unavailable: {error}"
+msgstr ""
+
+msgid "Signature saved"
+msgstr ""
+
+msgid "Copy"
+msgstr ""
+
+msgid "Combine images into a PDF."
+msgstr ""
+
+msgid "No images to export"
+msgstr ""
+
+msgid "Export as PDF"
+msgstr ""
+
+msgid "Export"
+msgstr ""
+
+#, python-brace-format
+msgid "{n} image, one per page"
+msgid_plural "{n} images, one per page"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Fit to Image"
+msgstr ""
+
+msgid "US Letter"
+msgstr ""
+
+msgid "Page Size"
+msgstr ""
+
+msgid "Margin"
+msgstr ""
+
+msgid "Millimetres"
+msgstr ""
+
+msgid "Save To"
+msgstr ""
+
+msgid "Choose…"
+msgstr ""
+
+msgid "Save PDF"
+msgstr ""
+
+msgid "PDF documents"
+msgstr ""
+
+#, python-brace-format
+msgid "PDF export failed: {error}"
+msgstr ""
+
+#, python-brace-format
+msgid "Saved {name}"
+msgstr ""
+
+msgid "Untitled"
+msgstr ""
+
+msgid "Zoom Out (−)"
+msgstr ""
+
+msgid "Toggle Fit / Actual Size"
+msgstr ""
+
+msgid "Zoom In (+)"
+msgstr ""
+
+msgid "Fit to Window (0)"
+msgstr ""
+
+msgid "Tolerance"
+msgstr ""
+
+msgid "Crop"
+msgstr ""
+
+msgid "Done"
+msgstr ""
+
+msgid "Auto Levels"
+msgstr ""
+
+msgid "Exposure"
+msgstr ""
+
+msgid "Contrast"
+msgstr ""
+
+msgid "Highlights"
+msgstr ""
+
+msgid "Shadows"
+msgstr ""
+
+msgid "Saturation"
+msgstr ""
+
+msgid "Temperature"
+msgstr ""
+
+msgid "Tint"
+msgstr ""
+
+msgid "Sepia"
+msgstr ""
+
+msgid "Sharpness"
+msgstr ""
+
+msgid "Reset"
+msgstr ""
+
+msgid "Apply"
+msgstr ""
+
+msgid "Add Images…"
+msgstr ""
+
+msgid "Remove from List (Delete)"
+msgstr ""
+
+msgid "Export Selected Images…"
+msgstr ""
+
+msgid "Show Thumbnails (F9)"
+msgstr ""
+
+msgid "Rotate Left (Ctrl+L)"
+msgstr ""
+
+msgid "Rotate Right (Ctrl+R)"
+msgstr ""
+
+msgid "Move and Zoom"
+msgstr ""
+
+msgid "Rectangular Selection"
+msgstr ""
+
+msgid "Elliptical Selection"
+msgstr ""
+
+msgid "Instant Alpha"
+msgstr ""
+
+msgid "Adjust Color…"
+msgstr ""
+
+msgid "Adjust Size…"
+msgstr ""
+
+msgid "Flip Horizontal"
+msgstr ""
+
+msgid "Revert to Saved"
+msgstr ""
+
+msgid "Show Markup Toolbar"
+msgstr ""
+
+msgid "Recognize Text"
+msgstr ""
+
+msgid "Show Recognized Text"
+msgstr ""
+
+msgid "Copy All Text"
+msgstr ""
+
+msgid "Set as Wallpaper…"
+msgstr ""
+
+msgid "Tools"
+msgstr ""
+
+msgid "Export as PDF…"
+msgstr ""
+
+msgid "Print…"
+msgstr ""
+
+msgid "Save, Export and Print"
+msgstr ""
+
+msgid "Markup (Ctrl+Shift+A)"
+msgstr ""
+
+msgid "Could not open the selected images (only local files are supported)"
+msgstr ""
+
+#, python-brace-format
+msgid "Untitled {n}"
+msgstr ""
+
+#, python-brace-format
+msgid "Could not open {name}"
+msgstr ""
+
+#, python-brace-format
+msgid "Edit failed: {err}"
+msgstr ""
+
+msgid "File"
+msgstr ""
+
+msgid "File name"
+msgstr ""
+
+msgid "Kind"
+msgstr ""
+
+msgid "Untitled image (not saved)"
+msgstr ""
+
+msgid "Image"
+msgstr ""
+
+msgid "Dimensions"
+msgstr ""
+
+msgid "Edited size"
+msgstr ""
+
+msgid "Edits"
+msgstr ""
+
+#, python-brace-format
+msgid "Added {n} image"
+msgid_plural "Added {n} images"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Add Images"
+msgstr ""
+
+msgid "Save or revert your changes before browsing"
+msgstr ""
+
+msgid "At least one image has to stay open"
+msgstr ""
+
+msgid "Reverted to the saved version"
+msgstr ""
+
+msgid "Drag to select an area · Ctrl+K crops"
+msgstr ""
+
+msgid "Drag to select an ellipse · Ctrl+K crops"
+msgstr ""
+
+msgid "Click a colour to make it transparent"
+msgstr ""
+
+msgid "Select an area first (Tools ▸ Rectangular Selection)"
+msgstr ""
+
+msgid "Drag to move, drag the corner to resize. Backspace removes it."
+msgstr ""
+
+#, python-brace-format
+msgid "Markup is unavailable: {e}"
+msgstr ""
+
+#, python-brace-format
+msgid "Touchpad drawing unavailable: {err}"
+msgstr ""
+
+msgid "Draw with one finger on the touchpad · any key to finish"
+msgstr ""
+
+#, python-brace-format
+msgid "Text recognition is unavailable: {e}"
+msgstr ""
+
+#, python-brace-format
+msgid "Text recognition failed: {err}"
+msgstr ""
+
+#, python-brace-format
+msgid "Recognized {n} line of text"
+msgid_plural "Recognized {n} lines of text"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "No text found"
+msgstr ""
+
+msgid "No recognized text"
+msgstr ""
+
+msgid "All text copied"
+msgstr ""
+
+msgid "Text copied"
+msgstr ""
+
+#, python-brace-format
+msgid "Copy failed: {err}"
+msgstr ""
+
+msgid "Selection copied"
+msgstr ""
+
+msgid "Image copied"
+msgstr ""
+
+#, python-brace-format
+msgid "Saving frame {k} of {n}"
+msgstr ""
+
+#, python-brace-format
+msgid "Saving {v}-frame animation…"
+msgstr ""
+
+msgid "Saving…"
+msgstr ""
+
+#, python-brace-format
+msgid "Could not save: {err}"
+msgstr ""
+
+#, python-brace-format
+msgid "Saved as {v} (the original format can't keep these edits)"
+msgstr ""
+
+#, python-brace-format
+msgid "Saved {n} images"
+msgstr ""
+
+msgid " (first frame only; the format can't animate)"
+msgstr ""
+
+msgid " (first frame only; this format can't animate)"
+msgstr ""
+
+msgid "Save As"
+msgstr ""
+
+msgid "Format"
+msgstr ""
+
+msgid "Quality"
+msgstr ""
+
+#, python-brace-format
+msgid "Could not export: {err}"
+msgstr ""
+
+#, python-brace-format
+msgid "Exported {name}"
+msgstr ""
+
+#, python-brace-format
+msgid " — first frame only, {format} can't hold an animation"
+msgstr ""
+
+msgid "Export Image"
+msgstr ""
+
+msgid "Export…"
+msgstr ""
+
+#, python-brace-format
+msgid "{n} image"
+msgid_plural "{n} images"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Maximum Size"
+msgstr ""
+
+msgid "Longest side in pixels, 0 = original"
+msgstr ""
+
+msgid "Choose Folder…"
+msgstr ""
+
+msgid "Choose Output Folder"
+msgstr ""
+
+#, python-brace-format
+msgid "Exported {v} of {n}; {v2} failed ({v3})"
+msgstr ""
+
+#, python-brace-format
+msgid "Exported {n} image"
+msgid_plural "Exported {n} images"
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-brace-format
+msgid " ({n} animation saved as first frame only)"
+msgid_plural " ({n} animations saved as first frame only)"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Open Folder"
+msgstr ""
+
+msgid "Export Selected Images"
+msgstr ""
+
+#, python-brace-format
+msgid "Could not prepare images: {e}"
+msgstr ""
+
+#, python-brace-format
+msgid "Printing failed: {message}"
+msgstr ""
+
+msgid "Desktop background settings are not available"
+msgstr ""
+
+msgid "Set as Wallpaper?"
+msgstr ""
+
+#, python-brace-format
+msgid "“{name}” will be used as the desktop background."
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"“{name}” will be used as the desktop background for both light and dark "
+"styles."
+msgstr ""
+
+msgid "Set Wallpaper"
+msgstr ""
+
+#, python-brace-format
+msgid "Could not set wallpaper: {err}"
+msgstr ""
+
+msgid "Wallpaper set"
+msgstr ""
+
+msgid "Could not set wallpaper"
+msgstr ""
+
+msgid "Open several images for a slideshow"
+msgstr ""
+
+msgid "Slideshow — Esc or F5 to stop"
+msgstr ""
+
+msgid "Adjust Size"
+msgstr ""
+
+#, python-brace-format
+msgid "Current size: {bw} × {bh} px"
+msgstr ""
+
+msgid "Width"
+msgstr ""
+
+msgid "Pixels"
+msgstr ""
+
+msgid "Height"
+msgstr ""
+
+msgid "Scale"
+msgstr ""
+
+msgid "Percent"
+msgstr ""
+
+msgid "Keep Aspect Ratio"
+msgstr ""
+
+msgid "Inspector"
+msgstr ""
+
+msgid "No Information"
+msgstr ""
+
+msgid "Open a document to see its details."
+msgstr ""
+
+msgid "Copied"
+msgstr ""
+
+msgid "Select"
+msgstr ""
+
+msgid "Sketch"
+msgstr ""
+
+msgid "Draw"
+msgstr ""
+
+msgid "Line"
+msgstr ""
+
+msgid "Arrow"
+msgstr ""
+
+msgid "Rectangle"
+msgstr ""
+
+msgid "Rounded Rectangle"
+msgstr ""
+
+msgid "Oval"
+msgstr ""
+
+msgid "Speech Bubble"
+msgstr ""
+
+msgid "Star"
+msgstr ""
+
+msgid "Text"
+msgstr ""
+
+msgid "Note"
+msgstr ""
+
+msgid "Highlight"
+msgstr ""
+
+msgid "Underline"
+msgstr ""
+
+msgid "Strikethrough"
+msgstr ""
+
+msgid "Ctrl+Enter to finish"
+msgstr ""
+
+msgid "Select (Esc)"
+msgstr ""
+
+msgid "Highlight Text"
+msgstr ""
+
+msgid "Underline Text"
+msgstr ""
+
+msgid "Strike Through Text"
+msgstr ""
+
+msgid "Sketch (shapes are recognised)"
+msgstr ""
+
+msgid "Draw (ink)"
+msgstr ""
+
+msgid "Shapes"
+msgstr ""
+
+msgid "Choose Shape"
+msgstr ""
+
+msgid "Text Box"
+msgstr ""
+
+msgid "Border / Ink Colour"
+msgstr ""
+
+msgid "Fill Colour"
+msgstr ""
+
+msgid "Line Width"
+msgstr ""
+
+msgid "Font"
+msgstr ""
+
+msgid ""
+"Draw with Touchpad — the whole pad maps onto the visible page; any key ends"
+msgstr ""
+
+msgid "Play (Space)"
+msgstr ""
+
+msgid "Mute (M)"
+msgstr ""
+
+msgid "Volume (↑/↓)"
+msgstr ""
+
+msgid "Playback Speed"
+msgstr ""
+
+msgid "Loop"
+msgstr ""
+
+msgid "Full Screen (F)"
+msgstr ""
+
+msgid "Pause (Space)"
+msgstr ""
+
+msgid "Unmute (M)"
+msgstr ""
+
+msgid "Text Recognition Unavailable"
+msgstr ""
+
+msgid "OK"
+msgstr ""
+
+msgid "Install Text Recognition?"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"Recognizing text in images and scanned PDFs needs the RapidOCR engine "
+"({DOWNLOAD_SIZE} download from PyPI). It is installed for your user only, in "
+"{where}, and can be removed by deleting that folder."
+msgstr ""
+
+msgid "Not Now"
+msgstr ""
+
+#, python-brace-format
+msgid "Install ({DOWNLOAD_SIZE})"
+msgstr ""
+
+msgid "Starting…"
+msgstr ""
+
+msgid "Installing Text Recognition"
+msgstr ""
+
+msgid "Could Not Install Text Recognition"
+msgstr ""
+
+msgid "Cancelling…"
+msgstr ""
+
+msgid "Search document"
+msgstr ""
+
+msgid "Thumbnails"
+msgstr ""
+
+msgid "Table of Contents"
+msgstr ""
+
+msgid "Highlights and Notes"
+msgstr ""
+
+msgid "Sidebar (F9)"
+msgstr ""
+
+msgid "Go to Page (Ctrl+G)"
+msgstr ""
+
+msgid "Document Menu"
+msgstr ""
+
+msgid "Save (Ctrl+S)"
+msgstr ""
+
+msgid "Sign"
+msgstr ""
+
+msgid "Markup Toolbar (Ctrl+Shift+A)"
+msgstr ""
+
+msgid "Fit Width"
+msgstr ""
+
+msgid "Fit Page"
+msgstr ""
+
+msgid "Zoom"
+msgstr ""
+
+msgid "Find (Ctrl+F)"
+msgstr ""
+
+msgid "Save Selected Pages as New PDF…"
+msgstr ""
+
+msgid "Merge All Documents into One PDF…"
+msgstr ""
+
+msgid "Export as Images…"
+msgstr ""
+
+msgid "Export with Password…"
+msgstr ""
+
+msgid "Export as Searchable PDF (OCR)…"
+msgstr ""
+
+msgid "Reduce File Size…"
+msgstr ""
+
+msgid "Insert Blank Page"
+msgstr ""
+
+msgid "Insert Pages from File…"
+msgstr ""
+
+msgid "Delete Selected Pages"
+msgstr ""
+
+msgid "Recognize Text (OCR)"
+msgstr ""
+
+msgid "Pages"
+msgstr ""
+
+msgid "Continuous Scroll"
+msgstr ""
+
+msgid "Single Page"
+msgstr ""
+
+msgid "Two Pages"
+msgstr ""
+
+msgid "View"
+msgstr ""
+
+msgid "Find…"
+msgstr ""
+
+msgid "Go to Page…"
+msgstr ""
+
+msgid "Could not open the document"
+msgstr ""
+
+#, python-brace-format
+msgid "Could not open “{name}”: {msg}"
+msgstr ""
+
+#, python-brace-format
+msgid "Could not open “{name}”"
+msgstr ""
+
+msgid "Password Required"
+msgstr ""
+
+#, python-brace-format
+msgid "“{name}” is password-protected."
+msgstr ""
+
+msgid "Unlock…"
+msgstr ""
+
+msgid "Incorrect password. Try again."
+msgstr ""
+
+#, python-brace-format
+msgid "Enter the password to open “{name}”."
+msgstr ""
+
+msgid "Unlock"
+msgstr ""
+
+msgid " — Edited"
+msgstr ""
+
+#, python-brace-format
+msgid "Page {page} of {total}"
+msgstr ""
+
+#, python-brace-format
+msgid " · {n} of {total} documents"
+msgstr ""
+
+msgid "Some documents can only be saved with Save As"
+msgstr ""
+
+#, python-brace-format
+msgid "of {total}"
+msgstr ""
+
+msgid "Add Note Here"
+msgstr ""
+
+msgid "Copied text"
+msgstr ""
+
+msgid "Text recognition is not available"
+msgstr ""
+
+#, python-brace-format
+msgid "Recognizing text on {n} page…"
+msgid_plural "Recognizing text on {n} pages…"
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-brace-format
+msgid "Save {n} Page…"
+msgid_plural "Save {n} Pages…"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Save the selected pages as a new PDF (Ctrl+S)"
+msgstr ""
+
+msgid "Delete"
+msgstr ""
+
+#, python-brace-format
+msgid "Copied {n} page"
+msgid_plural "Copied {n} pages"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "A document needs at least one page"
+msgstr ""
+
+#, python-brace-format
+msgid "Deleted {n} page"
+msgid_plural "Deleted {n} pages"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Blank page"
+msgstr ""
+
+msgid "Insert Pages from File"
+msgstr ""
+
+msgid "PDFs and images"
+msgstr ""
+
+#, python-brace-format
+msgid "“{name}” is password-protected"
+msgstr ""
+
+#, python-brace-format
+msgid "Inserted {n} page"
+msgid_plural "Inserted {n} pages"
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-brace-format
+msgid "Could not insert {errors}"
+msgstr ""
+
+msgid "No changes to save"
+msgstr ""
+
+#, python-brace-format
+msgid "Overwrite “{name}”?"
+msgstr ""
+
+msgid ""
+"Your changes, including any signatures, will be written into the original "
+"file. This cannot be undone. Use Save As to keep the original."
+msgstr ""
+
+msgid "Overwrite"
+msgstr ""
+
+msgid "Can only save to local files"
+msgstr ""
+
+msgid "Save Selected Pages as New PDF"
+msgstr ""
+
+msgid "Merge into One PDF"
+msgstr ""
+
+#, python-brace-format
+msgid "Could not save “{name}”: {err}"
+msgstr ""
+
+#, python-brace-format
+msgid "Saved “{name}”"
+msgstr ""
+
+#, python-brace-format
+msgid "Saved, but could not reopen “{name}”: {message}"
+msgstr ""
+
+msgid "Show in Files"
+msgstr ""
+
+#, python-brace-format
+msgid "Could not open the file manager: {e}"
+msgstr ""
+
+msgid "Resolution (dpi)"
+msgstr ""
+
+msgid "Export as Images"
+msgstr ""
+
+#, python-brace-format
+msgid "Each of the {n} page becomes one image file in the folder you choose."
+msgid_plural ""
+"Each of the {n} pages becomes one image file in the folder you choose."
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Export to Folder"
+msgstr ""
+
+#, python-brace-format
+msgid "Export failed: {e}"
+msgstr ""
+
+msgid "Exporting…"
+msgstr ""
+
+msgid "Password to open"
+msgstr ""
+
+msgid "Owner password (optional)"
+msgstr ""
+
+msgid "Allow printing"
+msgstr ""
+
+msgid "Allow copying text and images"
+msgstr ""
+
+msgid "Allow changes and page assembly"
+msgstr ""
+
+msgid "Allow comments and form filling"
+msgstr ""
+
+msgid "Export with Password"
+msgstr ""
+
+msgid ""
+"The new PDF is encrypted with AES-256. Permissions are enforced by the owner "
+"password."
+msgstr ""
+
+msgid "Enter a password"
+msgstr ""
+
+msgid "Reduce File Size needs Ghostscript (gs)"
+msgstr ""
+
+msgid "Reducing file size…"
+msgstr ""
+
+msgid "Reduce File Size"
+msgstr ""
+
+#, python-brace-format
+msgid "Could not reduce the file: {err}"
+msgstr ""
+
+msgid "This PDF is already compact — nothing to reduce"
+msgstr ""
+
+#, python-brace-format
+msgid "Saved {v} (was {v2})"
+msgstr ""
+
+msgid "Writing searchable PDF…"
+msgstr ""
+
+msgid "Export as Searchable PDF"
+msgstr ""
+
+msgid "Searching…"
+msgstr ""
+
+msgid "No matches"
+msgstr ""
+
+msgid "No table of contents"
+msgstr ""
+
+msgid "Signature"
+msgstr ""
+
+#, python-brace-format
+msgid "{kind} · page {page}"
+msgstr ""
+
+#, python-brace-format
+msgid "{label} · page {page}"
+msgstr ""
+
+msgid "No highlights or notes"
+msgstr ""
+
+msgid "Title"
+msgstr ""
+
+msgid "Author"
+msgstr ""
+
+msgid "Subject"
+msgstr ""
+
+msgid "Keywords"
+msgstr ""
+
+msgid "Creator"
+msgstr ""
+
+msgid "Encoding software"
+msgstr ""
+
+msgid "PDF version"
+msgstr ""
+
+msgid "Created"
+msgstr ""
+
+msgid "Modified"
+msgstr ""
+
+msgid "Page size"
+msgstr ""
+
+msgid "printing"
+msgstr ""
+
+msgid "copying"
+msgstr ""
+
+msgid "modifying"
+msgstr ""
+
+msgid "annotating"
+msgstr ""
+
+msgid "form filling"
+msgstr ""
+
+msgid "Security"
+msgstr ""
+
+msgid "Encrypted"
+msgstr ""
+
+msgid " (password to open)"
+msgstr ""
+
+#, python-brace-format
+msgid " — allows {list}"
+msgstr ""
+
+msgid " — no permissions"
+msgstr ""
+
+msgid "None"
+msgstr ""
+
+msgid "Linearized (fast web view)"
+msgstr ""
+
+msgid "Yes"
+msgstr ""
+
+msgid "No"
+msgstr ""
+
+msgid "Tagged"
+msgstr ""
+
+msgid "Form fields"
+msgstr ""
+
+msgid " (not embedded)"
+msgstr ""
+
+msgid "Fonts"
+msgstr ""
+
+msgid "Document"
+msgstr ""
+
+msgid "Window"
+msgstr ""
+
+msgid "Documents"
+msgstr ""
+
+msgid "GNOME Files"
+msgstr ""
+
+msgid "Space-bar previews and Files scripts"
+msgstr ""
+
+msgid "Text Recognition"
+msgstr ""
+
+msgid "Applies to your user only. Turning these off restores the defaults."
+msgstr ""
+
+msgid "Use View for Space-bar previews in Files"
+msgstr ""
+
+msgid "Replaces GNOME Sushi’s quick previewer"
+msgstr ""
+
+msgid "Add “Combine Images into PDF” to Files"
+msgstr ""
+
+msgid "Right-click selected images → Scripts"
+msgstr ""
+
+#, python-brace-format
+msgid "Could not change the setting: {error}"
+msgstr ""
+
+msgid "Screenshots"
+msgstr ""
+
+msgid "Edit screenshots after capture"
+msgstr ""
+
+msgid ""
+"Press Print Screen and the screenshot opens in View for quick markup; Done "
+"saves it and copies it to the clipboard"
+msgstr ""
+
+msgid "System default"
+msgstr ""
+
+msgid "Language"
+msgstr ""
+
+msgid "Takes effect the next time View starts"
+msgstr ""
+
+msgid "Updates"
+msgstr ""
+
+msgid "Updates come from the Snap Store"
+msgstr ""
+
+msgid "snapd installs new versions automatically"
+msgstr ""
+
+msgid "Check for updates automatically"
+msgstr ""
+
+msgid "Once a day, from GitHub"
+msgstr ""
+
+msgid "Check for Updates Now"
+msgstr ""
+
+msgid "All versions"
+msgstr ""
+
+msgid "Download any release, including older ones"
+msgstr ""
+
+msgid "Included with this build"
+msgstr ""
+
+msgid "Installed"
+msgstr ""
+
+#, python-brace-format
+msgid "Installed in {path}"
+msgstr ""
+
+msgid "RapidOCR engine"
+msgstr ""
+
+#, python-brace-format
+msgid "Not installed ({size} download)"
+msgstr ""
+
+msgid "Install…"
+msgstr ""
+
+msgid "Cannot render this PDF"
+msgstr ""
+
+#, python-brace-format
+msgid "Cannot play: {message}"
+msgstr ""
+
+msgid "Showing the first 2 MB"
+msgstr ""
+
+msgid "Quick Look"
+msgstr ""
+
+msgid "Open with View"
+msgstr ""
+
+msgid "Open with View (Enter)"
+msgstr ""
+
+msgid "Could not start View"
+msgstr ""
+
+#, python-brace-format
+msgid "Could not open: {message}"
+msgstr ""
+
+#, python-brace-format
+msgid "Could not open: {e}"
+msgstr ""
+
+msgid "Save and copy to the clipboard (Ctrl+S)"
+msgstr ""
+
+msgid "Discard changes?"
+msgstr ""
+
+msgid "The screenshot and the clipboard keep the original."
+msgstr ""
+
+msgid "Black"
+msgstr ""
+
+msgid "Blue"
+msgstr ""
+
+msgid "Red"
+msgstr ""
+
+msgid "Fine"
+msgstr ""
+
+msgid "Medium"
+msgstr ""
+
+msgid "Bold"
+msgstr ""
+
+msgid "Sign here with your mouse, pen or finger"
+msgstr ""
+
+msgid "Press Space or click Start, then sign on the touchpad"
+msgstr ""
+
+msgid "New Signature"
+msgstr ""
+
+msgid "Undo stroke (Backspace)"
+msgstr ""
+
+msgid "Clear (Delete)"
+msgstr ""
+
+msgid "Start"
+msgstr ""
+
+msgid "Touchpad"
+msgstr ""
+
+msgid "Sign on the touchpad"
+msgstr ""
+
+msgid "Mouse or Pen"
+msgstr ""
+
+msgid "Draw with the mouse, a pen or a finger inside the box"
+msgstr ""
+
+msgid "Sign in the box with your mouse, a pen or a finger. Backspace undoes."
+msgstr ""
+
+#, python-brace-format
+msgid "Touchpad signing is unavailable ({error}) {hint}"
+msgstr ""
+
+#, python-brace-format
+msgid "Touchpad {w:.0f} × {h:.0f} mm — the whole pad maps onto the box."
+msgstr ""
+
+msgid "Sign Again"
+msgstr ""
+
+msgid "Lift your finger to begin…"
+msgstr ""
+
+msgid ""
+"Sign with one finger on the touchpad. Press any key when finished · "
+"Backspace undoes · Esc cancels"
+msgstr ""
+
+msgid "Looks good? Click Save. Or Sign Again to add more strokes."
+msgstr ""
+
+msgid "Press Space or click Start, then sign on the touchpad."
+msgstr ""
+
+msgid "⚠ Lost the touchpad device."
+msgstr ""
+
+msgid "Stopped after 45 s without touch. Press Space to continue."
+msgstr ""
+
+msgid "Place this signature"
+msgstr ""
+
+msgid "Copy as Image"
+msgstr ""
+
+msgid "No signatures yet"
+msgstr ""
+
+msgid "Create Signature…"
+msgstr ""
+
+msgid "Signature copied to clipboard"
+msgstr ""
+
+msgid "Front"
+msgstr ""
+
+msgid "Back"
+msgstr ""
+
+msgid "Left"
+msgstr ""
+
+msgid "Right"
+msgstr ""
+
+msgid "Top"
+msgstr ""
+
+msgid "Bottom"
+msgstr ""
+
+msgid "Isometric"
+msgstr ""
+
+msgid "Opening Model…"
+msgstr ""
+
+msgid "Can't Open This Model"
+msgstr ""
+
+msgid "3D Rendering Unavailable"
+msgstr ""
+
+msgid "{n:,} triangles · {dims} mm"
+msgstr ""
+
+msgid "Computing…"
+msgstr ""
+
+msgid "STL header"
+msgstr ""
+
+msgid "Triangles"
+msgstr ""
+
+msgid "Vertices"
+msgstr ""
+
+msgid "Bounding box min"
+msgstr ""
+
+msgid "Bounding box max"
+msgstr ""
+
+msgid "Surface area"
+msgstr ""
+
+msgid "Volume"
+msgstr ""
+
+msgid "Watertight"
+msgstr ""
+
+msgid "Yes (closed mesh)"
+msgstr ""
+
+msgid "Centre of mass"
+msgstr ""
+
+msgid " (approx.)"
+msgstr ""
+
+msgid "Displayed"
+msgstr ""
+
+msgid "preview, {n:,} triangles"
+msgstr ""
+
+#, python-brace-format
+msgid "{s:.2f} s to first frame"
+msgstr ""
+
+#, python-brace-format
+msgid ", {s:.2f} s total"
+msgstr ""
+
+msgid "Load time"
+msgstr ""
+
+msgid "Model"
+msgstr ""
+
+msgid "{n:,} open edges"
+msgstr ""
+
+msgid "{n:,} non-manifold edges"
+msgstr ""
+
+#, python-brace-format
+msgid "No — {reasons}"
+msgstr ""
+
+msgid "not closed"
+msgstr ""
+
+msgid "Reset View (R)"
+msgstr ""
+
+msgid "Z Axis Up"
+msgstr ""
+
+msgid "Y Axis Up"
+msgstr ""
+
+msgid "Auto-Rotate"
+msgstr ""
+
+msgid "Show Statistics"
+msgstr ""
+
+msgid "Export Snapshot…"
+msgstr ""
+
+msgid "Wireframe (W)"
+msgstr ""
+
+msgid "Flat Shading"
+msgstr ""
+
+msgid "Ground Grid"
+msgstr ""
+
+msgid "Not enough memory to open this model."
+msgstr ""
+
+msgid ""
+"{v:,} triangles\n"
+"{dims} mm\n"
+"Computing…"
+msgstr ""
+
+msgid "{n:,} triangles · {v:,} vertices"
+msgstr ""
+
+#, python-brace-format
+msgid "Area {area}"
+msgstr ""
+
+#, python-brace-format
+msgid "Volume {volume}"
+msgstr ""
+
+msgid "Not watertight"
+msgstr ""
+
+msgid "View couldn't start OpenGL 3.3, which is needed to display 3D models."
+msgstr ""
+
+msgid ""
+"This PC's graphics driver has no OpenGL 3.3. Close and reopen View to show "
+"3D models with software rendering instead."
+msgstr ""
+
+msgid "The model's details are still available in the Inspector (Ctrl+I)."
+msgstr ""
+
+#, python-brace-format
+msgid "Couldn't render snapshot: {exc}"
+msgstr ""
+
+msgid "Export Snapshot"
+msgstr ""
+
+msgid "PNG Image"
+msgstr ""
+
+msgid "Can only save snapshots to local files"
+msgstr ""
+
+#, python-brace-format
+msgid "Couldn't save snapshot: {error}"
+msgstr ""
+
+msgid "Find in table"
+msgstr ""
+
+msgid "Filter rows"
+msgstr ""
+
+msgid "Show only rows that match"
+msgstr ""
+
+msgid "Previous match (Shift+F3)"
+msgstr ""
+
+msgid "Next match (F3)"
+msgstr ""
+
+msgid "Insert Row Above"
+msgstr ""
+
+msgid "Insert Row Below"
+msgstr ""
+
+msgid "Delete Row(s)"
+msgstr ""
+
+msgid "Insert Column Left"
+msgstr ""
+
+msgid "Insert Column Right"
+msgstr ""
+
+msgid "Delete Column(s)"
+msgstr ""
+
+msgid "Cut"
+msgstr ""
+
+msgid "Paste"
+msgstr ""
+
+msgid "Clear Contents"
+msgstr ""
+
+msgid "Select All"
+msgstr ""
+
+msgid "First Row Is Header"
+msgstr ""
+
+msgid "Quote All Fields When Saving"
+msgstr ""
+
+msgid "Comma"
+msgstr ""
+
+msgid "Tab"
+msgstr ""
+
+msgid "Semicolon"
+msgstr ""
+
+msgid "Pipe"
+msgstr ""
+
+msgid "Delimiter"
+msgstr ""
+
+msgid "Unicode (UTF-8)"
+msgstr ""
+
+msgid "Unicode (UTF-16)"
+msgstr ""
+
+msgid "Western (Windows-1252)"
+msgstr ""
+
+msgid "Western (Latin-1)"
+msgstr ""
+
+msgid "Chinese (GB18030)"
+msgstr ""
+
+msgid "Chinese (Big5)"
+msgstr ""
+
+msgid "Japanese (Shift-JIS)"
+msgstr ""
+
+msgid "Korean (EUC-KR)"
+msgstr ""
+
+msgid "Reopen With Encoding"
+msgstr ""
+
+msgid "Unix (LF)"
+msgstr ""
+
+msgid "Windows (CRLF)"
+msgstr ""
+
+msgid "Line Endings When Saving"
+msgstr ""
+
+msgid "Clear Sorting"
+msgstr ""
+
+msgid "Undo (Ctrl+Z)"
+msgstr ""
+
+msgid "Redo (Ctrl+Shift+Z)"
+msgstr ""
+
+msgid "Table Format"
+msgstr ""
+
+msgid "Rows and Columns"
+msgstr ""
+
+msgid "Table"
+msgstr ""
+
+msgid "Loading…"
+msgstr ""
+
+#, python-brace-format
+msgid "{rows} × {columns}"
+msgstr ""
+
+msgid "{n:,} row"
+msgid_plural "{n:,} rows"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "{n:,} column"
+msgid_plural "{n:,} columns"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Loading… {n:,} rows"
+msgstr ""
+
+msgid " · {n:,} shown"
+msgstr ""
+
+#, python-brace-format
+msgid " · sorted by {column}"
+msgstr ""
+
+msgid "LF (Unix)"
+msgstr ""
+
+msgid "CRLF (Windows)"
+msgstr ""
+
+msgid "CR (classic Mac)"
+msgstr ""
+
+msgid "Rows"
+msgstr ""
+
+msgid "Columns"
+msgstr ""
+
+msgid "Encoding"
+msgstr ""
+
+msgid "First row is header"
+msgstr ""
+
+msgid "Line endings"
+msgstr ""
+
+msgid "Quoting"
+msgstr ""
+
+msgid "All fields"
+msgstr ""
+
+msgid "When needed"
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Edited (unsaved)"
+msgstr ""
+
+msgid "{n:,} empty"
+msgstr ""
+
+msgid "{n:,} more columns"
+msgstr ""
+
+#, python-brace-format
+msgid "Could not read this file: {e}"
+msgstr ""
+
+msgid "Sort Ascending"
+msgstr ""
+
+msgid "Sort Descending"
+msgstr ""
+
+msgid "Sort Permanently, A → Z"
+msgstr ""
+
+msgid "Sort Permanently, Z → A"
+msgstr ""
+
+msgid "Rename Column…"
+msgstr ""
+
+msgid "Select Column"
+msgstr ""
+
+msgid "Fit Column Width"
+msgstr ""
+
+msgid "Delete Column"
+msgstr ""
+
+msgid "No rows"
+msgstr ""
+
+msgid "  ·  {n:,} characters"
+msgstr ""
+
+msgid "{rows:,} × {cols:,} cells selected"
+msgstr ""
+
+msgid ""
+"  ·  {n:,} numeric  ·  Sum {sum}  ·  Avg {avg}  ·  Min {min}  ·  Max {max}"
+msgstr ""
+
+msgid "The file is still loading"
+msgstr ""
+
+msgid "Please wait for the current operation to finish"
+msgstr ""
+
+msgid "Edit Cell"
+msgstr ""
+
+#, python-brace-format
+msgid "Edit Cell {cell}"
+msgstr ""
+
+msgid "The clipboard data is too large to paste."
+msgstr ""
+
+msgid "Clear Cells"
+msgstr ""
+
+msgid "A table needs at least one column"
+msgstr ""
+
+msgid "Turn on “First Row Is Header” to name columns"
+msgstr ""
+
+msgid "Rename Column"
+msgstr ""
+
+msgid "Rename"
+msgstr ""
+
+msgid "Sorting…"
+msgstr ""
+
+msgid "Working…"
+msgstr ""
+
+#, python-brace-format
+msgid "Could not sort: {err}"
+msgstr ""
+
+msgid "Sort"
+msgstr ""
+
+msgid "Filtering…"
+msgstr ""
+
+msgid "Save or undo your changes first"
+msgstr ""
+
+msgid "Line Endings"
+msgstr ""
+
+msgid "CSV (comma-separated)"
+msgstr ""
+
+msgid "TSV (tab-separated)"
+msgstr ""
+
+msgid "Excel workbook"
+msgstr ""
+
+#, python-brace-format
+msgid "Exported “{v}”"
+msgstr ""
+
+msgid "Find in file"
+msgstr ""
+
+msgid "Wrap Lines"
+msgstr ""
+
+msgid "Text Options"
+msgstr ""
+
+#, python-brace-format
+msgid "{language} · {lines} · {encoding}"
+msgstr ""
+
+msgid "{n:,} line"
+msgid_plural "{n:,} lines"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Loading… "
+msgstr ""
+
+msgid "Lines"
+msgstr ""
+
+msgid "Words"
+msgstr ""
+
+msgid "Characters"
+msgstr ""
+
+msgid " (mixed; saved as one style)"
+msgstr ""
+
+msgid "Mode"
+msgstr ""
+
+#, python-brace-format
+msgid "Read-only — {reason}"
+msgstr ""
+
+msgid "large file"
+msgstr ""
+
+#, python-brace-format
+msgid "showing only the first {mb} MB"
+msgstr ""
+
+msgid "contains NUL bytes"
+msgstr ""
+
+#, python-brace-format
+msgid "This file is very large; showing only the first {mb} MB, read-only."
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"This file is large ({mb:.1f} MB). It is open read-only and syntax "
+"highlighting is off."
+msgstr ""
+
+msgid "This file contains NUL bytes, so it is open read-only."
+msgstr ""
+
+msgid "Ln {line:,}, Col {col:,}"
+msgstr ""
+
+msgid "  ·  {n:,} selected"
+msgstr ""
+
+msgid "  ·  Read-only"
+msgstr ""
+
+msgid "Go to Line"
+msgstr ""
+
+msgid "Enter a line number from 1 to {n:,} (or line:column)."
+msgstr ""
+
+msgid "Go"
+msgstr ""
+
+msgid "Enter a line number"
+msgstr ""
+
+msgid "Some characters don’t exist in the original encoding; saved as UTF-8"
+msgstr ""
+
+msgid "This file is open read-only"
+msgstr ""
+
+#, python-brace-format
+msgid "Could not save: {v}"
+msgstr ""
+
+#, python-brace-format
+msgid "Saved “{v}”"
+msgstr ""
+
+msgid "Untitled.txt"
+msgstr ""
+
+#, python-brace-format
+msgid "{APP_NAME} {version} is available"
+msgstr ""
+
+msgid "Update…"
+msgstr ""
+
+#, python-brace-format
+msgid "{APP_NAME} {version} Is Available"
+msgstr ""
+
+msgid "Later"
+msgstr ""
+
+msgid "Skip This Version"
+msgstr ""
+
+msgid "Install and Restart"
+msgstr ""
+
+msgid "Download"
+msgstr ""
+
+#, python-brace-format
+msgid "{APP_NAME} Was Updated"
+msgstr ""
+
+#, python-brace-format
+msgid "Version {version} is installed. Restart {APP_NAME} to use it."
+msgstr ""
+
+msgid "Restart"
+msgstr ""
+
+msgid "Can’t play this file"
+msgstr ""
+
+msgid "Save Frame as PNG… (Ctrl+S)"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"{msg}\n"
+"\n"
+"If the file is fine, GStreamer is probably missing a codec for it. On Ubuntu "
+"try:\n"
+"<tt>{CODEC_HINT}</tt>"
+msgstr ""
+
+msgid "Open with Default App"
+msgstr ""
+
+msgid "Audio files have no video frame to save"
+msgstr ""
+
+msgid "No video frame is available yet"
+msgstr ""
+
+msgid "Save Frame as PNG"
+msgstr ""
+
+msgid "Could not save the frame"
+msgstr ""

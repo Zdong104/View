@@ -32,6 +32,7 @@
 - **3D models**: STL / OBJ / PLY, orbit with the touchpad, dimensions / volume / area (10M triangles tested).
 - **Tables and text**: CSV / TSV viewer and editor (1M rows), text and code viewer with syntax highlighting.
 - **Video and audio**, with hardware (VA-API) decoding on Linux.
+- **Languages**: English and 简体中文 (Preferences → Language, or follow the system). Translations welcome, see [CONTRIBUTING.md](CONTRIBUTING.md#translations).
 - **Quick Look for GNOME Files**: press Space to preview a file (replaces Sushi; opt-in).
 
 ## Install

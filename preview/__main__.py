@@ -15,7 +15,7 @@ Everything else (files, --new-signature, GApplication options) goes to the app.
 """
 import sys
 
-from . import runtime
+from . import i18n, runtime
 
 runtime.configure_gl_env()
 runtime.configure_frozen_env()
@@ -51,6 +51,7 @@ def _safe_stdio():
 
 def main(argv=None):
     _safe_stdio()
+    i18n.setup()
     argv = list(sys.argv if argv is None else argv)
     args = argv[1:]
     first = args[0] if args else ""

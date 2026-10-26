@@ -22,6 +22,7 @@ import sysconfig
 import threading
 
 from . import runtime
+from .i18n import _
 
 PACKAGES = ["rapidocr", "onnxruntime"]
 DOWNLOAD_SIZE = "~280 MB"
@@ -242,18 +243,16 @@ def offer(parent, on_installed=None):
     mark_offer_shown()
     ok, reason = can_install()
     if not ok:
-        dlg = Adw.AlertDialog(heading="Text Recognition Unavailable", body=reason)
-        dlg.add_response("ok", "OK")
+        dlg = Adw.AlertDialog(heading=_("Text Recognition Unavailable"), body=reason)
+        dlg.add_response("ok", _("OK"))
         dlg.present(parent)
         return
     where = venv_dir().replace(os.path.expanduser("~"), "~", 1)
     dlg = Adw.AlertDialog(
-        heading="Install Text Recognition?",
-        body=(f"Recognizing text in images and scanned PDFs needs the RapidOCR engine "
-              f"({DOWNLOAD_SIZE} download from PyPI). It is installed for your user only, "
-              f"in {where}, and can be removed by deleting that folder."))
-    dlg.add_response("cancel", "Not Now")
-    dlg.add_response("install", f"Install ({DOWNLOAD_SIZE})")
+        heading=_("Install Text Recognition?"),
+        body=(_("Recognizing text in images and scanned PDFs needs the RapidOCR engine ({DOWNLOAD_SIZE} download from PyPI). It is installed for your user only, in {where}, and can be removed by deleting that folder.").format(DOWNLOAD_SIZE=DOWNLOAD_SIZE, where=where)))
+    dlg.add_response("cancel", _("Not Now"))
+    dlg.add_response("install", _("Install ({DOWNLOAD_SIZE})").format(DOWNLOAD_SIZE=DOWNLOAD_SIZE))
     dlg.set_response_appearance("install", Adw.ResponseAppearance.SUGGESTED)
     dlg.set_default_response("install")
     dlg.set_close_response("cancel")
@@ -268,15 +267,15 @@ def offer(parent, on_installed=None):
 def _progress_dialog(parent, on_installed):
     from gi.repository import Adw, Gtk
     bar = Gtk.ProgressBar(show_text=False)
-    label = Gtk.Label(label="Starting…", wrap=True, xalign=0, css_classes=["dim-label"])
+    label = Gtk.Label(label=_("Starting…"), wrap=True, xalign=0, css_classes=["dim-label"])
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin_top=18,
                   margin_bottom=18, margin_start=18, margin_end=18, width_request=360)
-    box.append(Gtk.Label(label="Installing Text Recognition", css_classes=["title-3"], xalign=0))
+    box.append(Gtk.Label(label=_("Installing Text Recognition"), css_classes=["title-3"], xalign=0))
     box.append(bar)
     box.append(label)
-    cancel = Gtk.Button(label="Cancel", halign=Gtk.Align.END)
+    cancel = Gtk.Button(label=_("Cancel"), halign=Gtk.Align.END)
     box.append(cancel)
-    dlg = Adw.Dialog(child=box, can_close=False, title="Installing Text Recognition")
+    dlg = Adw.Dialog(child=box, can_close=False, title=_("Installing Text Recognition"))
     state = {}
 
     def progress(frac, text):
@@ -298,11 +297,11 @@ def _progress_dialog(parent, on_installed):
             if on_installed:
                 on_installed()
         elif str(err) != "Cancelled":
-            a = Adw.AlertDialog(heading="Could Not Install Text Recognition", body=str(err))
-            a.add_response("ok", "OK")
+            a = Adw.AlertDialog(heading=_("Could Not Install Text Recognition"), body=str(err))
+            a.add_response("ok", _("OK"))
             a.present(parent)
 
     inst = Installer(progress, done)
-    cancel.connect("clicked", lambda *_: (inst.cancel(), label.set_label("Cancelling…")))
+    cancel.connect("clicked", lambda *_a: (inst.cancel(), label.set_label(_("Cancelling…"))))
     dlg.present(parent)
     inst.start()

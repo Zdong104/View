@@ -14,6 +14,7 @@ Interaction (turntable camera, Z up):
 import os
 
 from . import opengl_win
+from .i18n import _, N_
 from .runtime import configure_gl_env
 
 configure_gl_env()
@@ -322,13 +323,13 @@ def _fmt_num(v, unit):
 
 
 VIEWS = {   # name: (label, yaw, pitch)
-    "front": ("Front", 0.0, 0.0),
-    "back": ("Back", 180.0, 0.0),
-    "left": ("Left", -90.0, 0.0),
-    "right": ("Right", 90.0, 0.0),
-    "top": ("Top", 0.0, 90.0),
-    "bottom": ("Bottom", 0.0, -90.0),
-    "iso": ("Isometric", 45.0, 35.264),
+    "front": (N_("Front"), 0.0, 0.0),
+    "back": (N_("Back"), 180.0, 0.0),
+    "left": (N_("Left"), -90.0, 0.0),
+    "right": (N_("Right"), 90.0, 0.0),
+    "top": (N_("Top"), 0.0, 90.0),
+    "bottom": (N_("Bottom"), 0.0, -90.0),
+    "iso": (N_("Isometric"), 45.0, 35.264),
 }
 DEFAULT_YAW, DEFAULT_PITCH = 30.0, 22.0
 FOV = 30.0
@@ -525,15 +526,15 @@ class ModelViewer(Viewer):
                                     halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER,
                                     can_target=False)
         self.spinner_page.append(Adw.Spinner(width_request=48, height_request=48))
-        self.spinner_label = Gtk.Label(label="Opening Model…", css_classes=["title-4", "dim-label"])
+        self.spinner_label = Gtk.Label(label=_("Opening Model…"), css_classes=["title-4", "dim-label"])
         self.spinner_page.append(self.spinner_label)
 
         self.error_page = Adw.StatusPage(icon_name="dialog-error-symbolic",
-                                         title="Can't Open This Model")
+                                         title=_("Can't Open This Model"))
         self.stack.add_named(self.error_page, "error")
 
         self.gl_error_page = Adw.StatusPage(icon_name="video-display-symbolic",
-                                            title="3D Rendering Unavailable")
+                                            title=_("3D Rendering Unavailable"))
         self.stack.add_named(self.gl_error_page, "gl-error")
 
         self.glarea = Gtk.GLArea(hexpand=True, vexpand=True, focusable=True)
@@ -635,7 +636,7 @@ class ModelViewer(Viewer):
             return ""
         s = self._mesh.stats
         dims = " × ".join(_fmt_len(v) for v in s["size"])
-        return f"{s['triangles']:,} triangles · {dims} mm"
+        return _("{n:,} triangles · {dims} mm").format(n=s['triangles'], dims=dims)
 
     def get_info(self):
         """Sections for the shell's Get Info inspector (Ctrl+I)."""
@@ -652,38 +653,39 @@ class ModelViewer(Viewer):
             return sections
         s = self._mesh.stats
         done = self._mesh.analyzed
-        pending = "Computing…" if self._display is self._mesh else "—"
+        pending = _("Computing…") if self._display is self._mesh else "—"
         sx, sy, sz = s["size"]
         mm_in = 25.4
-        rows = [("Format", self._mesh.fmt)]
+        rows = [(_("Format"), self._mesh.fmt)]
         if self._mesh.header:
-            rows.append(("STL header", self._mesh.header))
+            rows.append((_("STL header"), self._mesh.header))
         rows += [
-            ("Triangles", f"{s['triangles']:,}"),
-            ("Vertices", f"{s['vertices']:,}" if done else pending),
-            ("Dimensions", f"{_fmt_len(sx)} × {_fmt_len(sy)} × {_fmt_len(sz)} mm"),
+            (_("Triangles"), f"{s['triangles']:,}"),
+            (_("Vertices"), f"{s['vertices']:,}" if done else pending),
+            (_("Dimensions"), f"{_fmt_len(sx)} × {_fmt_len(sy)} × {_fmt_len(sz)} mm"),
             ("", f"{sx / mm_in:.2f} × {sy / mm_in:.2f} × {sz / mm_in:.2f} in"),
-            ("Bounding box min", ", ".join(_fmt_coord(c) for c in s["bbox_min"])),
-            ("Bounding box max", ", ".join(_fmt_coord(c) for c in s["bbox_max"])),
+            (_("Bounding box min"), ", ".join(_fmt_coord(c) for c in s["bbox_min"])),
+            (_("Bounding box max"), ", ".join(_fmt_coord(c) for c in s["bbox_max"])),
         ]
         if done:
             com = ", ".join(_fmt_coord(c) for c in s["center_of_mass"])
             rows += [
-                ("Surface area", _fmt_num(s["area"], "mm²")),
-                ("Volume", self._volume_text()),
-                ("Watertight", "Yes (closed mesh)" if s["closed"] else self._open_text()),
-                ("Centre of mass", com + ("" if s["closed"] else " (approx.)")),
+                (_("Surface area"), _fmt_num(s["area"], "mm²")),
+                (_("Volume"), self._volume_text()),
+                (_("Watertight"), _("Yes (closed mesh)") if s["closed"] else self._open_text()),
+                (_("Centre of mass"), com + ("" if s["closed"] else _(" (approx.)"))),
             ]
         else:
-            rows += [(k, pending) for k in ("Surface area", "Volume", "Watertight")]
+            rows += [(k, pending) for k in (_("Surface area"), _("Volume"), _("Watertight"))]
         if self._display is not None and self._display is not self._mesh:
-            rows.append(("Displayed", f"preview, {self._display.n_triangles:,} triangles"))
+            rows.append((_("Displayed"),
+                         _("preview, {n:,} triangles").format(n=self._display.n_triangles)))
         if self._load_seconds is not None:
-            t = f"{self._load_seconds:.2f} s to first frame"
+            t = _("{s:.2f} s to first frame").format(s=self._load_seconds)
             if getattr(self, "_analyze_seconds", None):
-                t += f", {self._analyze_seconds:.2f} s total"
-            rows.append(("Load time", t))
-        sections.append(("Model", rows))
+                t += _(", {s:.2f} s total").format(s=self._analyze_seconds)
+            rows.append((_("Load time"), t))
+        sections.append((_("Model"), rows))
         return sections
 
     def _volume_text(self):
@@ -698,10 +700,10 @@ class ModelViewer(Viewer):
         s = self._mesh.stats
         bits = []
         if s["boundary_edges"]:
-            bits.append(f"{s['boundary_edges']:,} open edges")
+            bits.append(_("{n:,} open edges").format(n=s['boundary_edges']))
         if s["nonmanifold_edges"]:
-            bits.append(f"{s['nonmanifold_edges']:,} non-manifold edges")
-        return "No — " + ", ".join(bits or ["not closed"])
+            bits.append(_("{n:,} non-manifold edges").format(n=s['nonmanifold_edges']))
+        return _("No — {reasons}").format(reasons=", ".join(bits or [_("not closed")]))
 
     def load(self, files):
         """Load a model. May be called again on the same viewer to swap the
@@ -724,37 +726,37 @@ class ModelViewer(Viewer):
         self._build_actions()
         start = Gtk.Box(spacing=6)
         start.append(Gtk.Button(icon_name="zoom-fit-best-symbolic", action_name="model.reset",
-                                tooltip_text="Reset View (R)"))
+                                tooltip_text=_("Reset View (R)")))
         views = Gio.Menu()
         sec = Gio.Menu()
-        for key, (label, _, _) in VIEWS.items():
-            sec.append(label, f"model.view::{key}")
+        for key, (label, _v1, _v2) in VIEWS.items():
+            sec.append(_(label), f"model.view::{key}")
         views.append_section(None, sec)
         sec = Gio.Menu()
-        sec.append("Z Axis Up", "model.up::z")
-        sec.append("Y Axis Up", "model.up::y")
+        sec.append(_("Z Axis Up"), "model.up::z")
+        sec.append(_("Y Axis Up"), "model.up::y")
         views.append_section(None, sec)
         sec = Gio.Menu()
-        sec.append("Auto-Rotate", "model.autorotate")
-        sec.append("Show Statistics", "model.stats")
+        sec.append(_("Auto-Rotate"), "model.autorotate")
+        sec.append(_("Show Statistics"), "model.stats")
         views.append_section(None, sec)
         start.append(Gtk.MenuButton(icon_name="preview-model-views-symbolic", menu_model=views,
-                                    tooltip_text="View"))
+                                    tooltip_text=_("View")))
         start.append(Gtk.Button(icon_name="camera-photo-symbolic", action_name="model.snapshot",
-                                tooltip_text="Export Snapshot…"))
+                                tooltip_text=_("Export Snapshot…")))
         header.pack_start(start)
 
         end = Gtk.Box(spacing=6)
         toggles = Gtk.Box(css_classes=["linked"])
         toggles.append(Gtk.ToggleButton(icon_name="preview-model-wireframe-symbolic",
                                         action_name="model.wireframe",
-                                        tooltip_text="Wireframe (W)"))
+                                        tooltip_text=_("Wireframe (W)")))
         toggles.append(Gtk.ToggleButton(icon_name="preview-model-shading-symbolic",
                                         action_name="model.flat",
-                                        tooltip_text="Flat Shading"))
+                                        tooltip_text=_("Flat Shading")))
         toggles.append(Gtk.ToggleButton(icon_name="preview-model-grid-symbolic",
                                         action_name="model.grid",
-                                        tooltip_text="Ground Grid"))
+                                        tooltip_text=_("Ground Grid")))
         end.append(toggles)
         # packed after the shell's main menu, so it sits just left of it
         header.pack_end(end)
@@ -837,7 +839,7 @@ class ModelViewer(Viewer):
             if path:
                 mesh = mesh_io.read_mesh(path)
             else:
-                ok, data, _ = gfile.load_contents(None)
+                ok, data, _etag = gfile.load_contents(None)
                 mesh = mesh_io.read_mesh(name, bytes(data))
                 del data
             t1 = time.perf_counter()
@@ -874,7 +876,7 @@ class ModelViewer(Viewer):
         except mesh_io.MeshError as exc:
             GLib.idle_add(self._on_load_error, str(exc), gen)
         except MemoryError:
-            GLib.idle_add(self._on_load_error, "Not enough memory to open this model.", gen)
+            GLib.idle_add(self._on_load_error, _("Not enough memory to open this model."), gen)
         except GLib.Error as exc:
             GLib.idle_add(self._on_load_error, exc.message, gen)
         except Exception as exc:  # noqa: BLE001
@@ -983,7 +985,7 @@ class ModelViewer(Viewer):
     def set_view(self, name):
         if name not in VIEWS:
             return
-        _, yaw, pitch = VIEWS[name]
+        _label, yaw, pitch = VIEWS[name]
         self._animate_to(yaw, pitch, self._fit_distance(yaw, pitch), np.zeros(3), True)
 
     def _animate_to(self, yaw, pitch, dist, target, animate):
@@ -1193,14 +1195,14 @@ class ModelViewer(Viewer):
         s = self._mesh.stats
         dims = " × ".join(_fmt_len(v) for v in s["size"])
         if not self._mesh.analyzed:
-            self.stats_label.set_label(f"{s['triangles']:,} triangles\n{dims} mm\nComputing…")
+            self.stats_label.set_label(_("{v:,} triangles\n{dims} mm\nComputing…").format(v=s['triangles'], dims=dims))
             return
-        lines = [f"{s['triangles']:,} triangles · {s['vertices']:,} vertices",
+        lines = [_("{n:,} triangles · {v:,} vertices").format(n=s['triangles'], v=s['vertices']),
                  f"{dims} mm",
-                 f"Area {_fmt_num(s['area'], 'mm²')}",
-                 f"Volume {self._volume_text()}"]
+                 _("Area {area}").format(area=_fmt_num(s['area'], 'mm²')),
+                 _("Volume {volume}").format(volume=self._volume_text())]
         if not s["closed"]:
-            lines.append("Not watertight")
+            lines.append(_("Not watertight"))
         self.stats_label.set_label("\n".join(lines))
 
     # ------------------------------------------------------------------
@@ -1208,13 +1210,13 @@ class ModelViewer(Viewer):
     # ------------------------------------------------------------------
     def _show_gl_error(self, message):
         self._gl_failed = message or "Unknown error"
-        desc = ("View couldn't start OpenGL 3.3, which is needed to display 3D models.\n\n"
+        desc = (_("View couldn't start OpenGL 3.3, which is needed to display 3D models.") + "\n\n"
                 f"<small>{GLib.markup_escape_text(self._gl_failed)}</small>")
         if opengl_win.remember_failure():
-            desc += ("\n\nThis PC's graphics driver has no OpenGL 3.3. Close and reopen "
-                     "View to show 3D models with software rendering instead.")
+            desc += "\n\n" + _("This PC's graphics driver has no OpenGL 3.3. Close and reopen "
+                                "View to show 3D models with software rendering instead.")
         if self._mesh is not None and not self._compact:
-            desc += "\n\nThe model's details are still available in the Inspector (Ctrl+I)."
+            desc += "\n\n" + _("The model's details are still available in the Inspector (Ctrl+I).")
         self.gl_error_page.set_description(desc)
         if self._mesh is not None or self.stack.get_visible_child_name() == "view":
             self.stack.set_visible_child_name("gl-error")
@@ -1259,7 +1261,7 @@ class ModelViewer(Viewer):
         if area.get_error() is not None:
             return
         try:
-            for prog, _ in self._progs.values():
+            for prog, _p in self._progs.values():
                 GL.glDeleteProgram(prog)
             self._progs.clear()
             for g in self._all_gpu():
@@ -1575,15 +1577,15 @@ class ModelViewer(Viewer):
         try:
             img = self.render_image()
         except Exception as exc:  # noqa: BLE001
-            self.toast(f"Couldn't render snapshot: {exc}")
+            self.toast(_("Couldn't render snapshot: {exc}").format(exc=exc))
             return
         finally:
             self.glarea.queue_render()
         stem = os.path.splitext(self._name)[0] or "model"
-        dialog = Gtk.FileDialog(title="Export Snapshot", initial_name=f"{stem}.png")
+        dialog = Gtk.FileDialog(title=_("Export Snapshot"), initial_name=f"{stem}.png")
         if self._path:
             dialog.set_initial_folder(Gio.File.new_for_path(os.path.dirname(self._path)))
-        f = Gtk.FileFilter(name="PNG Image")
+        f = Gtk.FileFilter(name=_("PNG Image"))
         f.add_mime_type("image/png")
         filters = Gio.ListStore.new(Gtk.FileFilter)
         filters.append(f)
@@ -1596,7 +1598,7 @@ class ModelViewer(Viewer):
                 return              # cancelled
             path = gfile.get_path()
             if not path:
-                self.toast("Can only save snapshots to local files")
+                self.toast(_("Can only save snapshots to local files"))
                 return
             if not path.lower().endswith(".png"):
                 path += ".png"
@@ -1604,10 +1606,11 @@ class ModelViewer(Viewer):
                 try:
                     img.save(path, "PNG")
                 except OSError as exc:
-                    GLib.idle_add(self.toast, f"Couldn't save snapshot: {exc.strerror or exc}")
+                    GLib.idle_add(self.toast, _("Couldn't save snapshot: {error}").format(
+                        error=exc.strerror or exc))
                     return
                 uri = Gio.File.new_for_path(path).get_uri()
-                GLib.idle_add(self.toast, f"Saved {os.path.basename(path)}", "Open",
+                GLib.idle_add(self.toast, _("Saved {name}").format(name=os.path.basename(path)), _("Open"),
                               lambda: Gio.AppInfo.launch_default_for_uri(uri, None))
             threading.Thread(target=save, daemon=True).start()
         parent = self.window if isinstance(self.window, Gtk.Window) else self.get_root()

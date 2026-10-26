@@ -7,6 +7,8 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gdk, GLib, Gtk
 
+from .i18n import _
+
 _LINK_RE = re.compile(r"^\[(.+)\]\((https?://.+)\)$")
 
 
@@ -15,7 +17,7 @@ class Inspector(Adw.Window):
     `get_viewer`); show_toast() is used when present."""
 
     def __init__(self, main_window, get_viewer=None):
-        super().__init__(title="Inspector", modal=False, hide_on_close=True,
+        super().__init__(title=_("Inspector"), modal=False, hide_on_close=True,
                          default_width=360, default_height=640)
         if isinstance(main_window, Gtk.Window):
             self.set_transient_for(main_window)
@@ -29,8 +31,8 @@ class Inspector(Adw.Window):
         tv.add_top_bar(Adw.HeaderBar())
         self.page = Adw.PreferencesPage()
         self.empty = Adw.StatusPage(icon_name="document-properties-symbolic",
-                                    title="No Information",
-                                    description="Open a document to see its details.")
+                                    title=_("No Information"),
+                                    description=_("Open a document to see its details."))
         self.stack = Gtk.Stack()
         self.stack.add_named(self.page, "info")
         self.stack.add_named(self.empty, "empty")
@@ -105,8 +107,7 @@ class Inspector(Adw.Window):
                             title_lines=1)
         if m:
             text, url = m.group(1), m.group(2)
-            row.set_subtitle(f'<a href="{GLib.markup_escape_text(url)}">'
-                             f'{GLib.markup_escape_text(text)}</a>')
+            row.set_subtitle(f'<a href="{GLib.markup_escape_text(url)}">{GLib.markup_escape_text(text)}</a>')
             row.set_activatable(True)
             row.connect("activated", lambda *_: self._open_url(url))
             copy_value = url
@@ -116,7 +117,7 @@ class Inspector(Adw.Window):
         row.set_subtitle_selectable(True)
         row.add_css_class("property")
         btn = Gtk.Button(icon_name="edit-copy-symbolic", valign=Gtk.Align.CENTER,
-                         tooltip_text="Copy", css_classes=["flat", "circular"])
+                         tooltip_text=_("Copy"), css_classes=["flat", "circular"])
         btn.connect("clicked", lambda *_: self._copy(copy_value))
         row.add_suffix(btn)
         return row
@@ -124,7 +125,7 @@ class Inspector(Adw.Window):
     def _copy(self, text):
         self.get_clipboard().set(text)
         if hasattr(self.main_window, "show_toast"):
-            self.main_window.show_toast("Copied")
+            self.main_window.show_toast(_("Copied"))
 
     def _open_url(self, url):
         try:

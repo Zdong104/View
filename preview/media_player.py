@@ -34,6 +34,8 @@ gi.require_version("Gst", "1.0")
 gi.require_version("Graphene", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Graphene, Gst, Gtk  # noqa: E402
 
+from .i18n import _  # noqa: E402
+
 RATES = ("0.5", "1", "1.25", "1.5", "2")
 HIDE_DELAY_MS = 2000
 POS_INTERVAL_MS = 250
@@ -307,7 +309,7 @@ class MediaPlayer(Adw.Bin):
         if self.compact:
             bar.add_css_class("mp-compact")
         self.play_btn = Gtk.Button(icon_name="media-playback-start-symbolic",
-                                   tooltip_text="Play (Space)", css_classes=["flat"])
+                                   tooltip_text=_("Play (Space)"), css_classes=["flat"])
         self.play_btn.connect("clicked", lambda *_: self.toggle_play())
         bar.append(self.play_btn)
         self.pos_label = Gtk.Label(label="0:00", css_classes=["mp-time", "numeric"], xalign=1)
@@ -330,7 +332,7 @@ class MediaPlayer(Adw.Bin):
             return bar
 
         self.mute_btn = Gtk.Button(icon_name="audio-volume-high-symbolic",
-                                   tooltip_text="Mute (M)", css_classes=["flat"])
+                                   tooltip_text=_("Mute (M)"), css_classes=["flat"])
         self.mute_btn.connect("clicked", lambda *_: self.toggle_mute())
         bar.append(self.mute_btn)
         self.vol_scale = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 1, 0.05)
@@ -338,7 +340,7 @@ class MediaPlayer(Adw.Bin):
         self.vol_scale.set_size_request(90, -1)
         self.vol_scale.set_valign(Gtk.Align.CENTER)
         self.vol_scale.set_value(self.volume)
-        self.vol_scale.set_tooltip_text("Volume (↑/↓)")
+        self.vol_scale.set_tooltip_text(_("Volume (↑/↓)"))
         self.vol_scale.connect("value-changed", self._on_vol_scale)
         bar.append(self.vol_scale)
 
@@ -352,16 +354,16 @@ class MediaPlayer(Adw.Bin):
         menu = Gio.Menu()
         for r in RATES:
             menu.append(_rate_label(float(r)), f"player.rate::{r}")
-        self.rate_btn = Gtk.MenuButton(label="1×", menu_model=menu, tooltip_text="Playback Speed",
+        self.rate_btn = Gtk.MenuButton(label="1×", menu_model=menu, tooltip_text=_("Playback Speed"),
                                        css_classes=["flat"], direction=Gtk.ArrowType.UP)
         self.rate_btn.connect("notify::active", lambda *_: self._poke())
         bar.append(self.rate_btn)
         self.loop_btn = Gtk.ToggleButton(icon_name="media-playlist-repeat-symbolic",
-                                         tooltip_text="Loop", css_classes=["flat"])
+                                         tooltip_text=_("Loop"), css_classes=["flat"])
         self.loop_btn.connect("toggled", lambda b: self.set_loop(b.get_active()))
         bar.append(self.loop_btn)
         self.fs_btn = Gtk.Button(icon_name="view-fullscreen-symbolic",
-                                 tooltip_text="Full Screen (F)", css_classes=["flat"])
+                                 tooltip_text=_("Full Screen (F)"), css_classes=["flat"])
         self.fs_btn.connect("clicked", lambda *_: self.toggle_fullscreen())
         bar.append(self.fs_btn)
         return bar
@@ -857,7 +859,7 @@ class MediaPlayer(Adw.Bin):
         playing = self._want_playing and not self.ended
         self.play_btn.set_icon_name("media-playback-pause-symbolic" if playing
                                     else "media-playback-start-symbolic")
-        self.play_btn.set_tooltip_text("Pause (Space)" if playing else "Play (Space)")
+        self.play_btn.set_tooltip_text(_("Pause (Space)") if playing else _("Play (Space)"))
         sens = self.pipeline is not None and not self.failed
         self.play_btn.set_sensitive(sens)
         self.scale.set_sensitive(sens and (self._seekable or self.duration > 0))
@@ -871,7 +873,7 @@ class MediaPlayer(Adw.Bin):
             else:
                 icon = "audio-volume-high-symbolic"
             self.mute_btn.set_icon_name(icon)
-            self.mute_btn.set_tooltip_text("Unmute (M)" if self.muted else "Mute (M)")
+            self.mute_btn.set_tooltip_text(_("Unmute (M)") if self.muted else _("Mute (M)"))
         if self.fs_btn is not None:
             root = self.get_root()
             fs = isinstance(root, Gtk.Window) and root.is_fullscreen()

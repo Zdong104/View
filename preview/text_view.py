@@ -28,6 +28,7 @@ gi.require_version("Graphene", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Graphene, Gtk, Pango  # noqa: E402
 
 from . import syntax  # noqa: E402
+from .i18n import _, N_, ngettext
 from .viewer_base import Viewer, file_info_section  # noqa: E402
 from .runtime import replace_file
 
@@ -113,7 +114,7 @@ def split_eol(text: str) -> tuple[str, str, bool]:
 
 
 EOL_CHARS = {"LF": "\n", "CRLF": "\r\n", "CR": "\r"}
-EOL_NAMES = {"LF": "LF (Unix)", "CRLF": "CRLF (Windows)", "CR": "CR (classic Mac)"}
+EOL_NAMES = {"LF": N_("LF (Unix)"), "CRLF": N_("CRLF (Windows)"), "CR": N_("CR (classic Mac)")}
 
 
 def read_text_file(gfile: Gio.File):
@@ -310,11 +311,11 @@ class TextViewer(Viewer):
     # ===================================================================
     def _build_ui(self):
         # --- search bar
-        self.search_entry = Gtk.SearchEntry(placeholder_text="Find in file", hexpand=True)
+        self.search_entry = Gtk.SearchEntry(placeholder_text=_("Find in file"), hexpand=True)
         self.match_label = Gtk.Label(label="", css_classes=["dim-label"], width_chars=11,
                                      xalign=1.0)
-        prev = Gtk.Button(icon_name="go-up-symbolic", tooltip_text="Previous match (Shift+F3)")
-        nxt = Gtk.Button(icon_name="go-down-symbolic", tooltip_text="Next match (F3)")
+        prev = Gtk.Button(icon_name="go-up-symbolic", tooltip_text=_("Previous match (Shift+F3)"))
+        nxt = Gtk.Button(icon_name="go-down-symbolic", tooltip_text=_("Next match (F3)"))
         box = Gtk.Box(spacing=6)
         for w in (self.search_entry, self.match_label, prev, nxt):
             box.append(w)
@@ -429,16 +430,16 @@ class TextViewer(Viewer):
 
         m = Gio.Menu()
         s = Gio.Menu()
-        s.append("Wrap Lines", "text.wrap")
-        s.append("Go to Line…", "text.goto")
+        s.append(_("Wrap Lines"), "text.wrap")
+        s.append(_("Go to Line…"), "text.goto")
         m.append_section(None, s)
         s = Gio.Menu()
-        s.append("Larger Text", "text.zoom-in")
-        s.append("Smaller Text", "text.zoom-out")
-        s.append("Actual Size", "text.zoom-reset")
+        s.append(_("Larger Text"), "text.zoom-in")
+        s.append(_("Smaller Text"), "text.zoom-out")
+        s.append(_("Actual Size"), "text.zoom-reset")
         m.append_section(None, s)
         self.menu_save = Gio.Menu()
-        self.menu_save.append("Save As…", "text.save-as")
+        self.menu_save.append(_("Save As…"), "text.save-as")
         m.append_section(None, self.menu_save)
         self.menu = m
 
@@ -473,24 +474,24 @@ class TextViewer(Viewer):
     def build_header(self, header: Adw.HeaderBar) -> None:
         if self.compact:
             return
-        self.btn_undo = Gtk.Button(icon_name="edit-undo-symbolic", tooltip_text="Undo (Ctrl+Z)",
+        self.btn_undo = Gtk.Button(icon_name="edit-undo-symbolic", tooltip_text=_("Undo (Ctrl+Z)"),
                                    action_name="text.undo")
         self.btn_redo = Gtk.Button(icon_name="edit-redo-symbolic",
-                                   tooltip_text="Redo (Ctrl+Shift+Z)", action_name="text.redo")
+                                   tooltip_text=_("Redo (Ctrl+Shift+Z)"), action_name="text.redo")
         self.btn_save = Gtk.Button(icon_name="document-save-symbolic",
-                                   tooltip_text="Save (Ctrl+S)", action_name="text.save")
+                                   tooltip_text=_("Save (Ctrl+S)"), action_name="text.save")
         box = Gtk.Box(css_classes=["linked"])
         box.append(self.btn_undo)
         box.append(self.btn_redo)
         header.pack_start(box)
         header.pack_start(self.btn_save)
         self.search_btn = Gtk.ToggleButton(icon_name="system-search-symbolic",
-                                           tooltip_text="Find (Ctrl+F)")
+                                           tooltip_text=_("Find (Ctrl+F)"))
         self.search_btn.bind_property("active", self.search_bar, "search-mode-enabled",
                                       GObject.BindingFlags.BIDIRECTIONAL |
                                       GObject.BindingFlags.SYNC_CREATE)
         header.pack_end(self.search_btn)
-        header.pack_end(Gtk.MenuButton(icon_name="view-more-symbolic", tooltip_text="Text Options",
+        header.pack_end(Gtk.MenuButton(icon_name="view-more-symbolic", tooltip_text=_("Text Options"),
                                        menu_model=self.menu))
         self._update_sensitivity()
 
@@ -517,9 +518,9 @@ class TextViewer(Viewer):
         return self.gfile
 
     def get_title(self) -> str:
-        name = (self.gfile.get_basename() if self.gfile is not None else None) or "Text"
+        name = (self.gfile.get_basename() if self.gfile is not None else None) or _("Text")
         if self.buf.get_modified() and not self.readonly:
-            name += " — Edited"
+            name += _(" — Edited")
         return name
 
     def _line_count(self) -> int:
@@ -528,11 +529,14 @@ class TextViewer(Viewer):
 
     def get_subtitle(self) -> str:
         if self._loading and self.buf.get_char_count() == 0:
-            return "Loading…"
+            return _("Loading…")
         n = self._line_count()
-        s = f"{self.language} · {n:,} line{'s' if n != 1 else ''} · {self.encoding.label}"
+        s = _("{language} · {lines} · {encoding}").format(
+            language=self.language,
+            lines=ngettext("{n:,} line", "{n:,} lines", n).format(n=n),
+            encoding=self.encoding.label)
         if self._loading:
-            s = "Loading… " + s
+            s = _("Loading… ") + s
         return s
 
     def has_unsaved_changes(self) -> bool:
@@ -563,18 +567,18 @@ class TextViewer(Viewer):
         sections = [file_info_section(self.gfile)] if self.gfile is not None else []
         n = self._line_count()
         words = self._words()
-        rows = [("Language", self.language),
-                ("Lines", f"{n:,}" + ("…" if self._loading else "")),
-                ("Words", "…" if words is None else f"{words:,}"),
-                ("Characters", f"{self.buf.get_char_count():,}"),
-                ("Encoding", self.encoding.label),
-                ("Line endings", EOL_NAMES[self.eol] + (" (mixed; saved as one style)"
+        rows = [(_("Language"), self.language),
+                (_("Lines"), f"{n:,}" + ("…" if self._loading else "")),
+                (_("Words"), "…" if words is None else f"{words:,}"),
+                (_("Characters"), f"{self.buf.get_char_count():,}"),
+                (_("Encoding"), self.encoding.label),
+                (_("Line endings"), _(EOL_NAMES[self.eol]) + (_(" (mixed; saved as one style)")
                                                  if self.eol_mixed else ""))]
         if self.readonly_reason:
-            rows.append(("Mode", "Read-only — " + self.readonly_reason))
+            rows.append((_("Mode"), _("Read-only — {reason}").format(reason=self.readonly_reason)))
         if self.has_unsaved_changes():
-            rows.append(("Status", "Edited (unsaved)"))
-        sections.append(("Text", rows))
+            rows.append((_("Status"), _("Edited (unsaved)")))
+        sections.append((_("Text"), rows))
         return sections
 
     # ===================================================================
@@ -622,12 +626,12 @@ class TextViewer(Viewer):
         large = res["size"] > LARGE_BYTES
         reasons = []
         if large:
-            reasons.append("large file")
+            reasons.append(_("large file"))
         if res["truncated"]:
-            reasons.append("showing only the first "
-                           f"{MAX_LOAD_BYTES // 1048576} MB")
+            reasons.append(_("showing only the first {mb} MB").format(
+                    mb=MAX_LOAD_BYTES // 1048576))
         if res["nul"]:
-            reasons.append("contains NUL bytes")
+            reasons.append(_("contains NUL bytes"))
         if self.compact:
             self.readonly = True
         if reasons:
@@ -635,12 +639,13 @@ class TextViewer(Viewer):
             self.readonly_reason = ", ".join(reasons)
             mb = res["size"] / 1_000_000
             if res["truncated"]:
-                msg = f"This file is very large; showing only the first {MAX_LOAD_BYTES // 1048576} MB, read-only."
+                msg = _("This file is very large; showing only the first {mb} MB, read-only.").format(
+                    mb=MAX_LOAD_BYTES // 1048576)
             elif large:
-                msg = (f"This file is large ({mb:.1f} MB). It is open read-only "
-                       "and syntax highlighting is off.")
+                msg = _("This file is large ({mb:.1f} MB). It is open read-only "
+                        "and syntax highlighting is off.").format(mb=mb)
             else:
-                msg = "This file contains NUL bytes, so it is open read-only."
+                msg = _("This file contains NUL bytes, so it is open read-only.")
             self.banner.set_title(msg)
             self.banner.set_revealed(True)
         self._can_highlight = not large and not res["truncated"]
@@ -865,13 +870,14 @@ class TextViewer(Viewer):
     def _update_status(self):
         buf = self.buf
         it = buf.get_iter_at_mark(buf.get_insert())
-        txt = f"Ln {it.get_line() + 1:,}, Col {it.get_line_offset() + 1:,}"
+        txt = _("Ln {line:,}, Col {col:,}").format(line=it.get_line() + 1,
+                                                  col=it.get_line_offset() + 1)
         if buf.get_has_selection():
             a, b = buf.get_selection_bounds()
-            txt += f"  ·  {abs(b.get_offset() - a.get_offset()):,} selected"
+            txt += _("  ·  {n:,} selected").format(n=abs(b.get_offset() - a.get_offset()))
         txt += f"  ·  {self.language}  ·  {self.encoding.label}  ·  {self.eol}"
         if self.readonly:
-            txt += "  ·  Read-only"
+            txt += _("  ·  Read-only")
         self.status.set_text(txt)
 
     def _words(self):
@@ -997,7 +1003,7 @@ class TextViewer(Viewer):
             e.set_offset(b)
             buf.apply_tag(self.tag_match, s, e)
         if not self._matches:
-            self.match_label.set_text("No matches")
+            self.match_label.set_text(_("No matches"))
             return
         # first match at or after the cursor
         cur = buf.get_iter_at_mark(buf.get_insert()).get_offset()
@@ -1034,13 +1040,13 @@ class TextViewer(Viewer):
     # ===================================================================
     def goto_line_dialog(self):
         n = max(1, self._line_count())
-        dlg = Adw.AlertDialog(heading="Go to Line",
-                              body=f"Enter a line number from 1 to {n:,} (or line:column).")
+        dlg = Adw.AlertDialog(heading=_("Go to Line"),
+                              body=_("Enter a line number from 1 to {n:,} (or line:column).").format(n=n))
         entry = Gtk.Entry(input_purpose=Gtk.InputPurpose.DIGITS, activates_default=True,
-                          placeholder_text="Line")
+                          placeholder_text=_("Line"))
         dlg.set_extra_child(entry)
-        dlg.add_response("cancel", "Cancel")
-        dlg.add_response("go", "Go")
+        dlg.add_response("cancel", _("Cancel"))
+        dlg.add_response("go", _("Go"))
         dlg.set_response_appearance("go", Adw.ResponseAppearance.SUGGESTED)
         dlg.set_default_response("go")
         dlg.set_close_response("cancel")
@@ -1055,7 +1061,7 @@ class TextViewer(Viewer):
     def goto_line(self, spec):
         m = re.fullmatch(r"\s*(\d+)\s*(?:[:,]\s*(\d+))?\s*", spec or "")
         if not m:
-            self.toast("Enter a line number")
+            self.toast(_("Enter a line number"))
             return
         line = max(1, min(int(m.group(1)), max(1, self._line_count())))
         col = int(m.group(2)) if m.group(2) else 1
@@ -1078,7 +1084,7 @@ class TextViewer(Viewer):
             return self.encoding.encode(text)
         except UnicodeEncodeError:
             self.encoding = Encoding("utf-8", "UTF-8")
-            self.toast("Some characters don’t exist in the original encoding; saved as UTF-8")
+            self.toast(_("Some characters don’t exist in the original encoding; saved as UTF-8"))
             return self.encoding.encode(text)
 
     def _write(self, path):
@@ -1089,7 +1095,7 @@ class TextViewer(Viewer):
         """Ctrl+S / close prompt: save to the current file; on_done(ok)."""
         if self.readonly or self._loading:
             if self.readonly:
-                self.toast("This file is open read-only")
+                self.toast(_("This file is open read-only"))
             if on_done:
                 on_done(False)
             return
@@ -1100,12 +1106,12 @@ class TextViewer(Viewer):
         try:
             self._write(path)
         except OSError as e:
-            self.toast(f"Could not save: {e.strerror or e}")
+            self.toast(_("Could not save: {v}").format(v=e.strerror or e))
             if on_done:
                 on_done(False)
             return
         self.buf.set_modified(False)
-        self.toast(f"Saved “{os.path.basename(path)}”")
+        self.toast(_("Saved “{v}”").format(v=os.path.basename(path)))
         self.refresh_title()
         self._update_status()
         if on_done:
@@ -1114,13 +1120,13 @@ class TextViewer(Viewer):
     def save_as(self, on_done=None):
         if self._loading:
             return
-        dlg = Gtk.FileDialog(title="Save As")
+        dlg = Gtk.FileDialog(title=_("Save As"))
         if self.gfile is not None:
             dlg.set_initial_name(self.gfile.get_basename())
             if self.gfile.get_parent() is not None:
                 dlg.set_initial_folder(self.gfile.get_parent())
         else:
-            dlg.set_initial_name("Untitled.txt")
+            dlg.set_initial_name(_("Untitled.txt"))
 
         def done(d, res):
             try:
@@ -1131,14 +1137,14 @@ class TextViewer(Viewer):
                 return
             path = gf.get_path()
             if path is None:
-                self.toast("Only local files are supported")
+                self.toast(_("Only local files are supported"))
                 if on_done:
                     on_done(False)
                 return
             try:
                 self._write(path)
             except OSError as e:
-                self.toast(f"Could not save: {e.strerror or e}")
+                self.toast(_("Could not save: {v}").format(v=e.strerror or e))
                 if on_done:
                     on_done(False)
                 return
@@ -1152,7 +1158,7 @@ class TextViewer(Viewer):
                 self.window.get_application().add_recent(gf)
             except Exception:  # noqa: BLE001
                 pass
-            self.toast(f"Saved “{name}”")
+            self.toast(_("Saved “{name}”").format(name=name))
             self.refresh_title()
             self._update_status()
             if on_done:

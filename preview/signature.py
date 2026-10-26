@@ -22,12 +22,14 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gdk, GLib, Gtk
 
+from .i18n import _, N_
+
 
 _pictures = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES)
 SIG_DIR = Path(_pictures or Path.home() / "Pictures") / "Signatures"
 
-INKS = [("Black", "#141414"), ("Blue", "#1c3f94"), ("Red", "#a51d2d")]
-PENS = [("Fine", 0.6), ("Medium", 0.9), ("Bold", 1.3)]
+INKS = [(N_("Black"), "#141414"), (N_("Blue"), "#1c3f94"), (N_("Red"), "#a51d2d")]
+PENS = [(N_("Fine"), 0.6), (N_("Medium"), 0.9), (N_("Bold"), 1.3)]
 PAD_MARGIN_MM = 1.5         # ignore the outermost edge of the pad
 MIN_STEP_MM = 0.12          # drop points closer than this
 
@@ -254,8 +256,8 @@ class SignaturePad(Gtk.DrawingArea):
             cr.set_source_rgba(0, 0, 0, 0.45)
             cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
             cr.set_font_size(15)
-            msg = ("Sign here with your mouse, pen or finger" if self.draw_mode
-                   else "Press Space or click Start, then sign on the touchpad")
+            msg = (_("Sign here with your mouse, pen or finger") if self.draw_mode
+                   else _("Press Space or click Start, then sign on the touchpad"))
             ext = cr.text_extents(msg)
             cr.move_to(x + (pw - ext.width) / 2, y + ph * 0.42)
             cr.show_text(msg)
@@ -277,7 +279,7 @@ class SignatureCaptureWindow(Adw.Window):
     mouse / pen / finger inside the box (everywhere), then Save."""
 
     def __init__(self, parent, on_saved=None, draw_mode=None):
-        super().__init__(title="New Signature", modal=True, transient_for=parent,
+        super().__init__(title=_("New Signature"), modal=True, transient_for=parent,
                          default_width=780, default_height=560)
         self.on_saved = on_saved
         self.pad = None
@@ -314,10 +316,10 @@ class SignatureCaptureWindow(Adw.Window):
         self.canvas.add_controller(drag)
 
         header = Adw.HeaderBar()
-        cancel = Gtk.Button(label="Cancel")
+        cancel = Gtk.Button(label=_("Cancel"))
         cancel.connect("clicked", lambda *_: self.close())
         header.pack_start(cancel)
-        self.save_btn = Gtk.Button(label="Save", sensitive=False)
+        self.save_btn = Gtk.Button(label=_("Save"), sensitive=False)
         self.save_btn.add_css_class("suggested-action")
         self.save_btn.connect("clicked", self._save)
         header.pack_end(self.save_btn)
@@ -330,7 +332,7 @@ class SignatureCaptureWindow(Adw.Window):
         ink_box = Gtk.Box(css_classes=["linked"])
         first = None
         for name, color in INKS:
-            b = Gtk.ToggleButton(tooltip_text=name)
+            b = Gtk.ToggleButton(tooltip_text=_(name))
             b.set_child(Gtk.Label(use_markup=True,
                                   label=f"<span foreground='{color}' size='x-large'>●</span>"))
             b.set_group(first)
@@ -341,7 +343,7 @@ class SignatureCaptureWindow(Adw.Window):
         pen_box = Gtk.Box(css_classes=["linked"])
         first = None
         for name, width in PENS:
-            b = Gtk.ToggleButton(label=name)
+            b = Gtk.ToggleButton(label=_(name))
             b.set_group(first)
             first = first or b
             b.connect("toggled", self._set_pen, width)
@@ -350,20 +352,20 @@ class SignatureCaptureWindow(Adw.Window):
         tools.append(ink_box)
         tools.append(pen_box)
         tools.append(Gtk.Box(hexpand=True))
-        self.undo_btn = Gtk.Button(icon_name="edit-undo-symbolic", tooltip_text="Undo stroke (Backspace)")
+        self.undo_btn = Gtk.Button(icon_name="edit-undo-symbolic", tooltip_text=_("Undo stroke (Backspace)"))
         self.undo_btn.connect("clicked", lambda *_: self._undo())
-        self.clear_btn = Gtk.Button(icon_name="edit-clear-all-symbolic", tooltip_text="Clear (Delete)")
+        self.clear_btn = Gtk.Button(icon_name="edit-clear-all-symbolic", tooltip_text=_("Clear (Delete)"))
         self.clear_btn.connect("clicked", lambda *_: self._clear())
-        self.start_btn = Gtk.Button(label="Start", sensitive=self.pad is not None)
+        self.start_btn = Gtk.Button(label=_("Start"), sensitive=self.pad is not None)
         self.start_btn.add_css_class("pill")
         self.start_btn.add_css_class("suggested-action")
         self.start_btn.connect("clicked", lambda *_: self._toggle())
         # input source: touchpad (absolute) or mouse / pen / touch
         self.src_box = Gtk.Box(css_classes=["linked"], visible=self.pad is not None)
-        self.src_pad = Gtk.ToggleButton(label="Touchpad", tooltip_text="Sign on the touchpad")
-        self.src_draw = Gtk.ToggleButton(label="Mouse or Pen", group=self.src_pad,
-                                         tooltip_text="Draw with the mouse, a pen or a "
-                                                      "finger inside the box")
+        self.src_pad = Gtk.ToggleButton(label=_("Touchpad"), tooltip_text=_("Sign on the touchpad"))
+        self.src_draw = Gtk.ToggleButton(label=_("Mouse or Pen"), group=self.src_pad,
+                                         tooltip_text=_("Draw with the mouse, a pen or a "
+                                                      "finger inside the box"))
         self.src_box.append(self.src_pad)
         self.src_box.append(self.src_draw)
         tools.append(self.src_box)
@@ -401,13 +403,14 @@ class SignatureCaptureWindow(Adw.Window):
         self.canvas.draw_mode = on
         self.start_btn.set_visible(not on)
         if on:
-            hint = "Sign in the box with your mouse, a pen or a finger. Backspace undoes."
+            hint = _("Sign in the box with your mouse, a pen or a finger. Backspace undoes.")
             if self.touchpad_error:
-                hint = f"Touchpad signing is unavailable ({self.touchpad_error}) {hint}"
+                hint = _("Touchpad signing is unavailable ({error}) {hint}").format(
+                    error=self.touchpad_error, hint=hint)
             self._set_status(hint)
         elif self.pad is not None:
-            self._set_status(f"Touchpad {self.pad.width_mm:.0f} × {self.pad.height_mm:.0f} mm "
-                             "— the whole pad maps onto the box.")
+            self._set_status(_("Touchpad {w:.0f} × {h:.0f} mm — the whole pad maps onto the box.")
+                             .format(w=self.pad.width_mm, h=self.pad.height_mm))
         self._sync()
 
     # ---- mouse / pen / touch drawing ----
@@ -461,7 +464,7 @@ class SignatureCaptureWindow(Adw.Window):
         self.save_btn.set_sensitive(has and not live)
         self.undo_btn.set_sensitive(has)
         self.clear_btn.set_sensitive(has)
-        self.start_btn.set_label("Done" if live else ("Sign Again" if has else "Start"))
+        self.start_btn.set_label(_("Done") if live else (_("Sign Again") if has else _("Start")))
         self.canvas.queue_draw()
 
     def _toggle(self):
@@ -474,13 +477,13 @@ class SignatureCaptureWindow(Adw.Window):
         if not self.pad or self.canvas.live or self.canvas.draw_mode:
             return
         self.history = [list(s) for s in self.canvas.strokes]
-        self._set_status("Lift your finger to begin…")
+        self._set_status(_("Lift your finger to begin…"))
 
         def grabbed():
             self.canvas.live = True
             self.last_touch = time.monotonic()
-            self._set_status("Sign with one finger on the touchpad. "
-                             "Press any key when finished · Backspace undoes · Esc cancels")
+            self._set_status(_("Sign with one finger on the touchpad. "
+                               "Press any key when finished · Backspace undoes · Esc cancels"))
             self._sync()
 
         self.pad.grab(grabbed)
@@ -494,9 +497,9 @@ class SignatureCaptureWindow(Adw.Window):
         self.canvas.finger = None
         self.active_id = None
         if self.canvas.strokes:
-            self._set_status("Looks good? Click Save. Or Sign Again to add more strokes.")
+            self._set_status(_("Looks good? Click Save. Or Sign Again to add more strokes."))
         elif not self.canvas.draw_mode:
-            self._set_status("Press Space or click Start, then sign on the touchpad.")
+            self._set_status(_("Press Space or click Start, then sign on the touchpad."))
         self._sync()
 
     def _undo(self):
@@ -549,7 +552,7 @@ class SignatureCaptureWindow(Adw.Window):
 
     def _on_lost(self):
         self._stop()
-        self._set_status("⚠ Lost the touchpad device.")
+        self._set_status(_("⚠ Lost the touchpad device."))
 
     # ---- safety + keys ----
     def _on_active(self, *_):
@@ -559,7 +562,7 @@ class SignatureCaptureWindow(Adw.Window):
     def _check_idle(self):
         if self.canvas.live and time.monotonic() - self.last_touch > 45:
             self._stop()
-            self._set_status("Stopped after 45 s without touch. Press Space to continue.")
+            self._set_status(_("Stopped after 45 s without touch. Press Space to continue."))
         return GLib.SOURCE_CONTINUE
 
     MODIFIERS = {Gdk.KEY_Shift_L, Gdk.KEY_Shift_R, Gdk.KEY_Control_L, Gdk.KEY_Control_R,
@@ -627,7 +630,7 @@ class SignatureButton(Gtk.MenuButton):
     """Header-bar button like Preview's: pick a saved signature or draw one."""
 
     def __init__(self, window, on_chosen):
-        super().__init__(icon_name="document-edit-symbolic", tooltip_text="Sign")
+        super().__init__(icon_name="document-edit-symbolic", tooltip_text=_("Sign"))
         self.window = window
         self.on_chosen = on_chosen
         self.pop = Gtk.Popover()
@@ -644,15 +647,15 @@ class SignatureButton(Gtk.MenuButton):
             for sig in sigs[:8]:
                 row = Gtk.Box(spacing=6)
                 pick = Gtk.Button(child=_Thumb(sig), css_classes=["flat"],
-                                  tooltip_text="Place this signature")
+                                  tooltip_text=_("Place this signature"))
                 pick.connect("clicked", self._pick, sig)
                 more = Gtk.MenuButton(icon_name="view-more-symbolic", valign=Gtk.Align.CENTER,
                                       css_classes=["flat"])
                 mp = Gtk.Popover()
                 mbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-                copy = Gtk.Button(label="Copy as Image", css_classes=["flat"])
+                copy = Gtk.Button(label=_("Copy as Image"), css_classes=["flat"])
                 copy.connect("clicked", self._copy, sig, mp)
-                dele = Gtk.Button(label="Delete", css_classes=["flat", "destructive-action"])
+                dele = Gtk.Button(label=_("Delete"), css_classes=["flat", "destructive-action"])
                 dele.connect("clicked", self._delete, sig, mp)
                 mbox.append(copy)
                 mbox.append(dele)
@@ -663,9 +666,9 @@ class SignatureButton(Gtk.MenuButton):
                 lb.append(row)
             box.append(lb)
         else:
-            box.append(Gtk.Label(label="No signatures yet", css_classes=["dim-label"],
+            box.append(Gtk.Label(label=_("No signatures yet"), css_classes=["dim-label"],
                                  margin_top=6, margin_bottom=6))
-        new = Gtk.Button(label="Create Signature…")
+        new = Gtk.Button(label=_("Create Signature…"))
         new.connect("clicked", self._new)
         box.append(new)
         self.pop.set_child(box)
@@ -678,7 +681,7 @@ class SignatureButton(Gtk.MenuButton):
         mp.popdown()
         copy_signature_to_clipboard(sig)
         if hasattr(self.window, "show_toast"):
-            self.window.show_toast("Signature copied to clipboard")
+            self.window.show_toast(_("Signature copied to clipboard"))
 
     def _delete(self, _btn, sig, mp):
         mp.popdown()

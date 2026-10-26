@@ -20,6 +20,7 @@ hiddenimports += ["OpenGL.GL", "openpyxl", "img2pdf", "pypdf", "certifi"]
 datas = [
     (os.path.join(ROOT, "data", APP_ID + ".svg"), "share/icons/hicolor/scalable/apps"),
     (os.path.join(ROOT, "LICENSE"), "."),
+    (os.path.join(ROOT, "preview", "locale"), "preview/locale"),     # UI translations (.mo)
 ]
 binaries = []
 

@@ -1,4 +1,4 @@
-"""UI translation (gettext).  No GTK imports, so it is safe to call first.
+"""UI translation (gettext).  No GTK imports (GLib only), so it is safe to call first.
 
 Modules do ``from .i18n import _, ngettext, N_`` and write ``_("Open")``.
 ``setup()`` runs once at start-up, before any widget is built; the language is
@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import gettext as _gettext
 import json
-import locale
 import os
 import sys
 
@@ -29,11 +28,10 @@ def locale_dir() -> str:
 
 
 def settings_path() -> str:
-    if sys.platform == "win32":
-        base = os.environ.get("APPDATA") or os.path.expanduser("~")
-    else:
-        base = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
-    return os.path.join(base, "view", "settings.json")
+    """``view/settings.json`` in the user config dir, next to View's other
+    settings files (GLib's dir: ~/.config, or %LOCALAPPDATA% on Windows)."""
+    from gi.repository import GLib      # GLib only; GTK is not loaded here
+    return os.path.join(GLib.get_user_config_dir(), "view", "settings.json")
 
 
 def _read() -> dict:
@@ -62,25 +60,30 @@ def set_chosen(lang: str):
     os.replace(tmp, path)
 
 
-def _system_languages() -> list[str]:
+def _windows_ui_language() -> str | None:
+    """The Windows display language as a gettext code (zh-CN -> zh_CN).  Not
+    GetUserDefaultLocaleName: that is the regional format, not the UI."""
+    try:
+        import ctypes
+        k32 = ctypes.windll.kernel32
+        buf = ctypes.create_unicode_buffer(85)
+        if k32.LCIDToLocaleName(k32.GetUserDefaultUILanguage(), buf, 85, 0):
+            return buf.value.replace("-", "_")
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
+def _system_languages() -> list[str] | None:
+    """Languages to try for the "system" choice.  None on POSIX: gettext then
+    reads LANGUAGE, LC_ALL, LC_MESSAGES and LANG itself, like GTK does."""
+    if sys.platform != "win32":
+        return None
     langs = [l for l in os.environ.get("LANGUAGE", "").split(":") if l]
-    if langs:
-        return langs
-    code = None
-    if sys.platform == "win32":
-        try:
-            import ctypes
-            buf = ctypes.create_unicode_buffer(85)
-            if ctypes.windll.kernel32.GetUserDefaultLocaleName(buf, 85):
-                code = buf.value.replace("-", "_")          # zh-CN -> zh_CN
-        except Exception:  # noqa: BLE001
-            pass
-    else:
-        try:
-            code = locale.getlocale()[0]
-        except ValueError:
-            pass
-    return [code] if code else []
+    if not langs:
+        code = _windows_ui_language()
+        langs = [code] if code else []
+    return langs or None
 
 
 def setup():
@@ -94,7 +97,7 @@ def setup():
         # GTK and libadwaita read LANGUAGE for their own strings
         os.environ["LANGUAGE"] = choice
     _translation = _gettext.translation(
-        DOMAIN, locale_dir(), languages=langs or None, fallback=True)
+        DOMAIN, locale_dir(), languages=langs, fallback=True)
 
 
 def _(message: str) -> str:

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: View\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-20 21:39-0400\n"
+"POT-Creation-Date: 2026-10-26 15:31-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -882,10 +882,58 @@ msgstr ""
 msgid "Full Screen (F)"
 msgstr ""
 
+#, python-brace-format
+msgid "GStreamer’s GTK 4 video sink ({element}) is not installed"
+msgstr ""
+
+msgid "Could not create the GStreamer playback pipeline"
+msgstr ""
+
+msgid "Playback failed"
+msgstr ""
+
 msgid "Pause (Space)"
 msgstr ""
 
 msgid "Unmute (M)"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"Text recognition is not included in this build ({path} is missing). "
+"Reinstall {APP_NAME} to get it back."
+msgstr ""
+
+msgid "Text recognition should be bundled with this build."
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"Python’s venv module is missing. Install it first (e.g. {command}), then try "
+"again."
+msgstr ""
+
+msgid "Creating a private Python environment…"
+msgstr ""
+
+msgid "Downloading the text recognition engine…"
+msgstr ""
+
+#, python-brace-format
+msgid "Installation finished but {path} is missing"
+msgstr ""
+
+#, python-brace-format
+msgid "Downloading {name}…"
+msgstr ""
+
+msgid "Installing…"
+msgstr ""
+
+msgid "Text recognition is not installed"
+msgstr ""
+
+msgid "Install…"
 msgstr ""
 
 msgid "Text Recognition Unavailable"
@@ -915,6 +963,9 @@ msgid "Starting…"
 msgstr ""
 
 msgid "Installing Text Recognition"
+msgstr ""
+
+msgid "Text recognition installed"
 msgstr ""
 
 msgid "Could Not Install Text Recognition"
@@ -1371,7 +1422,7 @@ msgstr ""
 msgid "GNOME Files"
 msgstr ""
 
-msgid "Space-bar previews and Files scripts"
+msgid "Space-bar previews and Combine Images into PDF"
 msgstr ""
 
 msgid "Text Recognition"
@@ -1389,7 +1440,11 @@ msgstr ""
 msgid "Add “Combine Images into PDF” to Files"
 msgstr ""
 
-msgid "Right-click selected images → Scripts"
+msgid ""
+"Right-click selected images; if it is missing, restart Files (nautilus -q)"
+msgstr ""
+
+msgid "Installed for all users by the View package"
 msgstr ""
 
 #, python-brace-format
@@ -1457,19 +1512,6 @@ msgstr ""
 msgid "Not installed ({size} download)"
 msgstr ""
 
-msgid "Install…"
-msgstr ""
-
-msgid "Cannot render this PDF"
-msgstr ""
-
-#, python-brace-format
-msgid "Cannot play: {message}"
-msgstr ""
-
-msgid "Showing the first 2 MB"
-msgstr ""
-
 msgid "Quick Look"
 msgstr ""
 
@@ -1488,6 +1530,42 @@ msgstr ""
 
 #, python-brace-format
 msgid "Could not open: {e}"
+msgstr ""
+
+msgid "Cannot render this PDF"
+msgstr ""
+
+#, python-brace-format
+msgid "Cannot play: {message}"
+msgstr ""
+
+msgid "Showing the first 2 MB"
+msgstr ""
+
+msgid "{n:,} item"
+msgid_plural "{n:,} items"
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-brace-format
+msgid "{items} — first {n}"
+msgstr ""
+
+msgid "Only available on Linux with GNOME Files."
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"Not available in the snap: strict confinement cannot register a D-Bus "
+"service or Files extensions for your session. For a “Combine Images into "
+"PDF” item in Files, install {package} and save the output of “{command}” as "
+"{path} (full command in the README). Space-bar previews need the .deb."
+msgstr ""
+
+msgid "Not available in the Flatpak sandbox."
+msgstr ""
+
+msgid "GNOME Files (Nautilus) is not installed."
 msgstr ""
 
 msgid "Save and copy to the clipboard (Ctrl+S)"
@@ -1776,6 +1854,27 @@ msgstr ""
 msgid "Couldn't save snapshot: {error}"
 msgstr ""
 
+msgid "Edit Cells"
+msgstr ""
+
+msgid "Toggle Header"
+msgstr ""
+
+msgid "Insert Rows"
+msgstr ""
+
+msgid "Delete Rows"
+msgstr ""
+
+msgid "Insert Columns"
+msgstr ""
+
+msgid "Delete Columns"
+msgstr ""
+
+msgid "Sort"
+msgstr ""
+
 msgid "Find in table"
 msgstr ""
 
@@ -2050,9 +2149,6 @@ msgstr ""
 msgid "Could not sort: {err}"
 msgstr ""
 
-msgid "Sort"
-msgstr ""
-
 msgid "Filtering…"
 msgstr ""
 
@@ -2184,6 +2280,26 @@ msgid "Update…"
 msgstr ""
 
 #, python-brace-format
+msgid "Could not check for updates: {error}"
+msgstr ""
+
+#, python-brace-format
+msgid "{APP_NAME} {version} is up to date"
+msgstr ""
+
+#, python-brace-format
+msgid "You have version {version}."
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"The Snap Store installs updates automatically. To update now, run {command}."
+msgstr ""
+
+msgid "Release notes"
+msgstr ""
+
+#, python-brace-format
 msgid "{APP_NAME} {version} Is Available"
 msgstr ""
 
@@ -2200,6 +2316,28 @@ msgid "Download"
 msgstr ""
 
 #, python-brace-format
+msgid "Downloading {APP_NAME} {version}"
+msgstr ""
+
+msgid "Update Failed"
+msgstr ""
+
+msgid "Update Not Installed"
+msgstr ""
+
+msgid "apt could not install the update:"
+msgstr ""
+
+msgid "Unsaved Changes"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"Save or close the documents with unsaved changes, then try again. The update "
+"has to close {APP_NAME}."
+msgstr ""
+
+#, python-brace-format
 msgid "{APP_NAME} Was Updated"
 msgstr ""
 
@@ -2208,6 +2346,17 @@ msgid "Version {version} is installed. Restart {APP_NAME} to use it."
 msgstr ""
 
 msgid "Restart"
+msgstr ""
+
+#, python-brace-format
+msgid "GitHub’s certificate could not be verified ({reason})"
+msgstr ""
+
+#, python-brace-format
+msgid "no connection to GitHub ({reason})"
+msgstr ""
+
+msgid "pkexec not found"
 msgstr ""
 
 msgid "Can’t play this file"

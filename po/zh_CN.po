@@ -5,8 +5,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: View\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-20 21:39-0400\n"
-"PO-Revision-Date: 2026-10-20 21:40-0400\n"
+"POT-Creation-Date: 2026-10-26 15:31-0400\n"
+"PO-Revision-Date: 2026-10-26 15:40-0400\n"
 "Last-Translator: View contributors\n"
 "Language-Team: Simplified Chinese\n"
 "Language: zh_CN\n"
@@ -262,7 +262,9 @@ msgstr "{folder} 中没有图片"
 msgid "this folder"
 msgstr "此文件夹"
 
-msgid "View PDFs, images, video, text and 3D models, combine images into PDFs and sign documents."
+msgid ""
+"View PDFs, images, video, text and 3D models, combine images into PDFs and "
+"sign documents."
 msgstr "查看 PDF、图片、视频、文本和 3D 模型，将图片合并为 PDF，并为文档签名。"
 
 msgid "All Versions"
@@ -700,7 +702,9 @@ msgid "“{name}” will be used as the desktop background."
 msgstr "“{name}”将用作桌面背景。"
 
 #, python-brace-format
-msgid "“{name}” will be used as the desktop background for both light and dark styles."
+msgid ""
+"“{name}” will be used as the desktop background for both light and dark "
+"styles."
 msgstr "“{name}”将同时用作浅色和深色样式的桌面背景。"
 
 msgid "Set Wallpaper"
@@ -846,7 +850,8 @@ msgstr "线宽"
 msgid "Font"
 msgstr "字体"
 
-msgid "Draw with Touchpad — the whole pad maps onto the visible page; any key ends"
+msgid ""
+"Draw with Touchpad — the whole pad maps onto the visible page; any key ends"
 msgstr "用触摸板绘制 — 整个触摸板对应可见页面；按任意键结束"
 
 msgid "Play (Space)"
@@ -867,11 +872,60 @@ msgstr "循环"
 msgid "Full Screen (F)"
 msgstr "全屏（F）"
 
+#, python-brace-format
+msgid "GStreamer’s GTK 4 video sink ({element}) is not installed"
+msgstr "未安装 GStreamer 的 GTK 4 视频输出组件（{element}）"
+
+msgid "Could not create the GStreamer playback pipeline"
+msgstr "无法创建 GStreamer 播放管道"
+
+msgid "Playback failed"
+msgstr "播放失败"
+
 msgid "Pause (Space)"
 msgstr "暂停（空格）"
 
 msgid "Unmute (M)"
 msgstr "取消静音（M）"
+
+#, python-brace-format
+msgid ""
+"Text recognition is not included in this build ({path} is missing). "
+"Reinstall {APP_NAME} to get it back."
+msgstr ""
+"此版本未包含文字识别（缺少 {path}）。请重新安装 {APP_NAME} 以恢复该功能。"
+
+msgid "Text recognition should be bundled with this build."
+msgstr "此版本应已内置文字识别。"
+
+#, python-brace-format
+msgid ""
+"Python’s venv module is missing. Install it first (e.g. {command}), then try "
+"again."
+msgstr "缺少 Python 的 venv 模块。请先安装（例如 {command}），然后重试。"
+
+msgid "Creating a private Python environment…"
+msgstr "正在创建独立的 Python 环境…"
+
+msgid "Downloading the text recognition engine…"
+msgstr "正在下载文字识别引擎…"
+
+#, python-brace-format
+msgid "Installation finished but {path} is missing"
+msgstr "安装已完成，但缺少 {path}"
+
+#, python-brace-format
+msgid "Downloading {name}…"
+msgstr "正在下载 {name}…"
+
+msgid "Installing…"
+msgstr "正在安装…"
+
+msgid "Text recognition is not installed"
+msgstr "未安装文字识别"
+
+msgid "Install…"
+msgstr "安装…"
 
 msgid "Text Recognition Unavailable"
 msgstr "文字识别不可用"
@@ -883,8 +937,13 @@ msgid "Install Text Recognition?"
 msgstr "安装文字识别？"
 
 #, python-brace-format
-msgid "Recognizing text in images and scanned PDFs needs the RapidOCR engine ({DOWNLOAD_SIZE} download from PyPI). It is installed for your user only, in {where}, and can be removed by deleting that folder."
-msgstr "识别图片和扫描版 PDF 中的文字需要 RapidOCR 引擎（从 PyPI 下载，{DOWNLOAD_SIZE}）。它仅为当前用户安装在 {where} 中，删除该文件夹即可移除。"
+msgid ""
+"Recognizing text in images and scanned PDFs needs the RapidOCR engine "
+"({DOWNLOAD_SIZE} download from PyPI). It is installed for your user only, in "
+"{where}, and can be removed by deleting that folder."
+msgstr ""
+"识别图片和扫描版 PDF 中的文字需要 RapidOCR 引擎（从 PyPI 下载，"
+"{DOWNLOAD_SIZE}）。它仅为当前用户安装在 {where} 中，删除该文件夹即可移除。"
 
 msgid "Not Now"
 msgstr "暂不安装"
@@ -898,6 +957,9 @@ msgstr "正在启动…"
 
 msgid "Installing Text Recognition"
 msgstr "正在安装文字识别"
+
+msgid "Text recognition installed"
+msgstr "文字识别已安装"
 
 msgid "Could Not Install Text Recognition"
 msgstr "无法安装文字识别"
@@ -1114,8 +1176,12 @@ msgstr "没有需要保存的更改"
 msgid "Overwrite “{name}”?"
 msgstr "覆盖“{name}”？"
 
-msgid "Your changes, including any signatures, will be written into the original file. This cannot be undone. Use Save As to keep the original."
-msgstr "您的更改（包括签名）将写入原始文件，且无法撤销。如需保留原文件，请使用“另存为”。"
+msgid ""
+"Your changes, including any signatures, will be written into the original "
+"file. This cannot be undone. Use Save As to keep the original."
+msgstr ""
+"您的更改（包括签名）将写入原始文件，且无法撤销。如需保留原文件，请使用“另存"
+"为”。"
 
 msgid "Overwrite"
 msgstr "覆盖"
@@ -1156,7 +1222,8 @@ msgstr "导出为图片"
 
 #, python-brace-format
 msgid "Each of the {n} page becomes one image file in the folder you choose."
-msgid_plural "Each of the {n} pages becomes one image file in the folder you choose."
+msgid_plural ""
+"Each of the {n} pages becomes one image file in the folder you choose."
 msgstr[0] "所选的 {n} 页将各自生成一个图片文件，保存在您选择的文件夹中。"
 
 msgid "Export to Folder"
@@ -1190,7 +1257,9 @@ msgstr "允许添加批注和填写表单"
 msgid "Export with Password"
 msgstr "加密导出"
 
-msgid "The new PDF is encrypted with AES-256. Permissions are enforced by the owner password."
+msgid ""
+"The new PDF is encrypted with AES-256. Permissions are enforced by the owner "
+"password."
 msgstr "新 PDF 使用 AES-256 加密，权限由所有者密码控制。"
 
 msgid "Enter a password"
@@ -1342,8 +1411,8 @@ msgstr "文档"
 msgid "GNOME Files"
 msgstr "GNOME 文件"
 
-msgid "Space-bar previews and Files scripts"
-msgstr "空格键预览和“文件”脚本"
+msgid "Space-bar previews and Combine Images into PDF"
+msgstr "空格键预览和“将图片合并为 PDF”"
 
 msgid "Text Recognition"
 msgstr "文字识别"
@@ -1360,8 +1429,12 @@ msgstr "替代 GNOME Sushi 的快速预览"
 msgid "Add “Combine Images into PDF” to Files"
 msgstr "在“文件”中添加“将图片合并为 PDF”"
 
-msgid "Right-click selected images → Scripts"
-msgstr "右键单击所选图片 → 脚本"
+msgid ""
+"Right-click selected images; if it is missing, restart Files (nautilus -q)"
+msgstr "右键单击所选图片；如果没有该菜单项，请重启“文件”（nautilus -q）"
+
+msgid "Installed for all users by the View package"
+msgstr "已由 View 软件包为所有用户安装"
 
 #, python-brace-format
 msgid "Could not change the setting: {error}"
@@ -1373,8 +1446,12 @@ msgstr "截图"
 msgid "Edit screenshots after capture"
 msgstr "截图后进行编辑"
 
-msgid "Press Print Screen and the screenshot opens in View for quick markup; Done saves it and copies it to the clipboard"
-msgstr "按下 Print Screen 后，截图会在 View 中打开以便快速标记；点击“完成”即可保存并复制到剪贴板"
+msgid ""
+"Press Print Screen and the screenshot opens in View for quick markup; Done "
+"saves it and copies it to the clipboard"
+msgstr ""
+"按下 Print Screen 后，截图会在 View 中打开以便快速标记；点击“完成”即可保存并"
+"复制到剪贴板"
 
 msgid "System default"
 msgstr "跟随系统"
@@ -1426,19 +1503,6 @@ msgstr "RapidOCR 引擎"
 msgid "Not installed ({size} download)"
 msgstr "未安装（需下载 {size}）"
 
-msgid "Install…"
-msgstr "安装…"
-
-msgid "Cannot render this PDF"
-msgstr "无法渲染此 PDF"
-
-#, python-brace-format
-msgid "Cannot play: {message}"
-msgstr "无法播放：{message}"
-
-msgid "Showing the first 2 MB"
-msgstr "仅显示前 2 MB"
-
 msgid "Quick Look"
 msgstr "快速查看"
 
@@ -1458,6 +1522,44 @@ msgstr "无法打开：{message}"
 #, python-brace-format
 msgid "Could not open: {e}"
 msgstr "无法打开：{e}"
+
+msgid "Cannot render this PDF"
+msgstr "无法渲染此 PDF"
+
+#, python-brace-format
+msgid "Cannot play: {message}"
+msgstr "无法播放：{message}"
+
+msgid "Showing the first 2 MB"
+msgstr "仅显示前 2 MB"
+
+msgid "{n:,} item"
+msgid_plural "{n:,} items"
+msgstr[0] "{n:,} 项"
+
+#, python-brace-format
+msgid "{items} — first {n}"
+msgstr "{items} — 显示前 {n} 项"
+
+msgid "Only available on Linux with GNOME Files."
+msgstr "仅适用于装有 GNOME 文件的 Linux。"
+
+#, python-brace-format
+msgid ""
+"Not available in the snap: strict confinement cannot register a D-Bus "
+"service or Files extensions for your session. For a “Combine Images into "
+"PDF” item in Files, install {package} and save the output of “{command}” as "
+"{path} (full command in the README). Space-bar previews need the .deb."
+msgstr ""
+"snap 版本不可用：严格限制模式无法为您的会话注册 D-Bus 服务或“文件”扩展。如需"
+"在“文件”中使用“将图片合并为 PDF”菜单项，请安装 {package}，并将“{command}”的输"
+"出保存为 {path}（完整命令见 README）。空格键预览需要 .deb 版本。"
+
+msgid "Not available in the Flatpak sandbox."
+msgstr "在 Flatpak 沙盒中不可用。"
+
+msgid "GNOME Files (Nautilus) is not installed."
+msgstr "未安装 GNOME 文件（Nautilus）。"
 
 msgid "Save and copy to the clipboard (Ctrl+S)"
 msgstr "保存并复制到剪贴板（Ctrl+S）"
@@ -1533,7 +1635,9 @@ msgstr "重新签名"
 msgid "Lift your finger to begin…"
 msgstr "抬起手指以开始…"
 
-msgid "Sign with one finger on the touchpad. Press any key when finished · Backspace undoes · Esc cancels"
+msgid ""
+"Sign with one finger on the touchpad. Press any key when finished · "
+"Backspace undoes · Esc cancels"
 msgstr "用一根手指在触摸板上签名。完成后按任意键 · Backspace 撤销 · Esc 取消"
 
 msgid "Looks good? Click Save. Or Sign Again to add more strokes."
@@ -1695,8 +1799,14 @@ msgstr "地面网格"
 msgid "Not enough memory to open this model."
 msgstr "内存不足，无法打开此模型。"
 
-msgid "{v:,} triangles\n{dims} mm\nComputing…"
-msgstr "{v:,} 个三角形\n{dims} 毫米\n正在计算…"
+msgid ""
+"{v:,} triangles\n"
+"{dims} mm\n"
+"Computing…"
+msgstr ""
+"{v:,} 个三角形\n"
+"{dims} 毫米\n"
+"正在计算…"
 
 msgid "{n:,} triangles · {v:,} vertices"
 msgstr "{n:,} 个三角形 · {v:,} 个顶点"
@@ -1715,8 +1825,12 @@ msgstr "不水密"
 msgid "View couldn't start OpenGL 3.3, which is needed to display 3D models."
 msgstr "View 无法启动显示 3D 模型所需的 OpenGL 3.3。"
 
-msgid "This PC's graphics driver has no OpenGL 3.3. Close and reopen View to show 3D models with software rendering instead."
-msgstr "此电脑的显卡驱动不支持 OpenGL 3.3。请关闭并重新打开 View，改用软件渲染显示 3D 模型。"
+msgid ""
+"This PC's graphics driver has no OpenGL 3.3. Close and reopen View to show "
+"3D models with software rendering instead."
+msgstr ""
+"此电脑的显卡驱动不支持 OpenGL 3.3。请关闭并重新打开 View，改用软件渲染显示 "
+"3D 模型。"
 
 msgid "The model's details are still available in the Inspector (Ctrl+I)."
 msgstr "仍可在检查器中查看模型的详细信息（Ctrl+I）。"
@@ -1737,6 +1851,27 @@ msgstr "快照只能保存到本地文件"
 #, python-brace-format
 msgid "Couldn't save snapshot: {error}"
 msgstr "无法保存快照：{error}"
+
+msgid "Edit Cells"
+msgstr "编辑单元格"
+
+msgid "Toggle Header"
+msgstr "切换首行表头"
+
+msgid "Insert Rows"
+msgstr "插入行"
+
+msgid "Delete Rows"
+msgstr "删除行"
+
+msgid "Insert Columns"
+msgstr "插入列"
+
+msgid "Delete Columns"
+msgstr "删除列"
+
+msgid "Sort"
+msgstr "排序"
 
 msgid "Find in table"
 msgstr "在表格中查找"
@@ -1965,8 +2100,11 @@ msgstr "  ·  {n:,} 个字符"
 msgid "{rows:,} × {cols:,} cells selected"
 msgstr "已选择 {rows:,} × {cols:,} 个单元格"
 
-msgid "  ·  {n:,} numeric  ·  Sum {sum}  ·  Avg {avg}  ·  Min {min}  ·  Max {max}"
-msgstr "  ·  {n:,} 个数值  ·  总和 {sum}  ·  平均值 {avg}  ·  最小值 {min}  ·  最大值 {max}"
+msgid ""
+"  ·  {n:,} numeric  ·  Sum {sum}  ·  Avg {avg}  ·  Min {min}  ·  Max {max}"
+msgstr ""
+"  ·  {n:,} 个数值  ·  总和 {sum}  ·  平均值 {avg}  ·  最小值 {min}  ·  最大"
+"值 {max}"
 
 msgid "The file is still loading"
 msgstr "文件仍在加载"
@@ -2008,9 +2146,6 @@ msgstr "正在处理…"
 #, python-brace-format
 msgid "Could not sort: {err}"
 msgstr "无法排序：{err}"
-
-msgid "Sort"
-msgstr "排序"
 
 msgid "Filtering…"
 msgstr "正在筛选…"
@@ -2088,7 +2223,9 @@ msgid "This file is very large; showing only the first {mb} MB, read-only."
 msgstr "此文件非常大，仅显示前 {mb} MB，且为只读。"
 
 #, python-brace-format
-msgid "This file is large ({mb:.1f} MB). It is open read-only and syntax highlighting is off."
+msgid ""
+"This file is large ({mb:.1f} MB). It is open read-only and syntax "
+"highlighting is off."
 msgstr "此文件较大（{mb:.1f} MB），已以只读方式打开，并关闭了语法高亮。"
 
 msgid "This file contains NUL bytes, so it is open read-only."
@@ -2140,6 +2277,26 @@ msgid "Update…"
 msgstr "更新…"
 
 #, python-brace-format
+msgid "Could not check for updates: {error}"
+msgstr "无法检查更新：{error}"
+
+#, python-brace-format
+msgid "{APP_NAME} {version} is up to date"
+msgstr "{APP_NAME} {version} 已是最新版本"
+
+#, python-brace-format
+msgid "You have version {version}."
+msgstr "您当前的版本为 {version}。"
+
+#, python-brace-format
+msgid ""
+"The Snap Store installs updates automatically. To update now, run {command}."
+msgstr "Snap Store 会自动安装更新。如需立即更新，请运行 {command}。"
+
+msgid "Release notes"
+msgstr "发行说明"
+
+#, python-brace-format
 msgid "{APP_NAME} {version} Is Available"
 msgstr "{APP_NAME} {version} 已发布"
 
@@ -2156,6 +2313,28 @@ msgid "Download"
 msgstr "下载"
 
 #, python-brace-format
+msgid "Downloading {APP_NAME} {version}"
+msgstr "正在下载 {APP_NAME} {version}"
+
+msgid "Update Failed"
+msgstr "更新失败"
+
+msgid "Update Not Installed"
+msgstr "未安装更新"
+
+msgid "apt could not install the update:"
+msgstr "apt 无法安装此更新："
+
+msgid "Unsaved Changes"
+msgstr "有未保存的更改"
+
+#, python-brace-format
+msgid ""
+"Save or close the documents with unsaved changes, then try again. The update "
+"has to close {APP_NAME}."
+msgstr "请保存或关闭有未保存更改的文档，然后重试。更新需要关闭 {APP_NAME}。"
+
+#, python-brace-format
 msgid "{APP_NAME} Was Updated"
 msgstr "{APP_NAME} 已更新"
 
@@ -2166,6 +2345,17 @@ msgstr "已安装 {version} 版。请重启 {APP_NAME} 以使用新版本。"
 msgid "Restart"
 msgstr "重启"
 
+#, python-brace-format
+msgid "GitHub’s certificate could not be verified ({reason})"
+msgstr "无法验证 GitHub 的证书（{reason}）"
+
+#, python-brace-format
+msgid "no connection to GitHub ({reason})"
+msgstr "无法连接到 GitHub（{reason}）"
+
+msgid "pkexec not found"
+msgstr "未找到 pkexec"
+
 msgid "Can’t play this file"
 msgstr "无法播放此文件"
 
@@ -2173,8 +2363,18 @@ msgid "Save Frame as PNG… (Ctrl+S)"
 msgstr "将当前帧保存为 PNG…（Ctrl+S）"
 
 #, python-brace-format
-msgid "{msg}\n\nIf the file is fine, GStreamer is probably missing a codec for it. On Ubuntu try:\n<tt>{CODEC_HINT}</tt>"
-msgstr "{msg}\n\n如果文件本身没有问题，可能是 GStreamer 缺少相应的编解码器。在 Ubuntu 上可尝试：\n<tt>{CODEC_HINT}</tt>"
+msgid ""
+"{msg}\n"
+"\n"
+"If the file is fine, GStreamer is probably missing a codec for it. On Ubuntu "
+"try:\n"
+"<tt>{CODEC_HINT}</tt>"
+msgstr ""
+"{msg}\n"
+"\n"
+"如果文件本身没有问题，可能是 GStreamer 缺少相应的编解码器。在 Ubuntu 上可尝"
+"试：\n"
+"<tt>{CODEC_HINT}</tt>"
 
 msgid "Open with Default App"
 msgstr "用默认应用打开"

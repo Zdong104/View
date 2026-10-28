@@ -1258,7 +1258,7 @@ class PdfViewer(Viewer):
             if not self.compact:
                 menu.append(_("Highlight"), "pdf.highlight-selection")
         if hit is not None:
-            menu.append(_("Translate Page…"), "pdf.translate-page")
+            menu.append(_("Translate Document…"), "pdf.translate-page")
         if not self.compact and hit is not None:
             menu.append(_("Add Note Here"), "pdf.note-here")
             if _ocr_module() is not None and not self._page_has_text(self.pages[hit[0]]):
@@ -1379,20 +1379,22 @@ class PdfViewer(Viewer):
             self.toast(_("Copied text"))
 
     # ========================================================= translation ====
-    def _translate_rect(self):
-        """Where a context-menu click was (else the popover's default spot)."""
-        xy = getattr(self, "_ctx_xy", None)
-        self._ctx_xy = None
-        if xy is None:
-            return None
-        from . import translate_ui
-        return translate_ui.rect(*xy)
-
     def _translate_selection(self):
+        """The selected text in a card beside it."""
         ts = self.text_sel
-        if ts and ts["text"].strip():
-            from . import translate_ui
-            translate_ui.show(self.canvas, ts["text"], self._translate_rect())
+        self._ctx_xy = None
+        if not ts or not ts["text"].strip():
+            self.translate_document()
+            return
+        from . import translate_ui
+        xs, ys = [], []
+        for rx, ry, rw, rh in ts["rects"]:
+            for px, py in ((rx, ry), (rx + rw, ry + rh)):
+                wx, wy = self.canvas.doc_to_widget(ts["pos"], px, py)
+                xs.append(wx)
+                ys.append(wy)
+        r = translate_ui.bounds_rect(min(xs), min(ys), max(xs), max(ys)) if xs else None
+        translate_ui.show(self.canvas, ts["text"], r, side_by_side=self.translate_document)
 
     def _translate_page(self):
         """Right-click > Translate Page…: the side-by-side translation, at

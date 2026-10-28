@@ -2319,8 +2319,7 @@ class ImageViewer(Viewer):
         if t.has_selection():
             menu.append(_("Copy"), "img.copy")
             menu.append(_("Translate"), "img.translate")
-        else:
-            menu.append(_("Translate All Text"), "img.translate-doc")
+        menu.append(_("Translate All Text"), "img.translate-doc")
         menu.append(_("Copy All Text"), "img.copy-text")
         pm = Gtk.PopoverMenu.new_from_model(menu)
         pm.set_has_arrow(False)
@@ -2359,7 +2358,16 @@ class ImageViewer(Viewer):
             return
         from . import ocr, translate_ui
         text = t.selected_text() if t.has_selection() else ocr.lines_to_text(t.lines)
-        translate_ui.show(self.canvas, text, translate_ui.rect(*xy) if xy else None)
+        box = t.selection_box()
+        r = None
+        if box is not None:
+            k = self.canvas.text_k
+            x0, y0 = self.canvas.to_widget(box[0] * k, box[1] * k)
+            x1, y1 = self.canvas.to_widget(box[2] * k, box[3] * k)
+            r = translate_ui.bounds_rect(x0, y0, x1, y1)
+        elif xy:
+            r = translate_ui.rect(*xy)
+        translate_ui.show(self.canvas, text, r, side_by_side=self.translate_document)
 
     # ---- adjust colour ------------------------------------------------------------------------
     def _color_open(self):

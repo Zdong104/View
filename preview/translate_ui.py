@@ -1,14 +1,21 @@
-"""The Translate popover, shared by the PDF, image and text viewers.
+"""Translating a selection: a floating card over the viewer.
 
-    show(parent, text, rect=None)
+    show(parent, text, rect=None, side_by_side=None)
 
-``parent`` is the widget the popover points into (a canvas with
-add_popover()/remove_popover() is used through those), ``rect`` a
-Gdk.Rectangle in its coordinates (default: top centre).  The popover shows
-the detected source language -> the target (both can be changed; the target
-is remembered), the translation as it arrives, and Copy.  Detection is
-instant; installing the engine, downloading a language pack and translating
-all run off the main thread.
+``parent`` is the widget the selection is in, ``rect`` the selection's
+bounds in its coordinates (a Gdk.Rectangle: rect() / bounds_rect()), and
+``side_by_side`` what "Open Side by Side" does (the viewer's whole-document
+translation; the button is hidden without it).
+
+The card lives in the window's overlay (MainWindow.card_overlay), not in a
+popover (popovers cannot be moved, and cover what they point at): it goes
+next to the selection without covering it (below, else above, else beside
+it), can be dragged by its header anywhere in the window and resized from
+its corner, and closes with its × or Esc.  It shows the detected source
+language -> the target (both can be changed; the target is remembered), the
+translation as it arrives, and Copy.  Installing the engine, downloading a
+language pack and translating run off the main thread.  Where there is no
+overlay to put it in, a popover is the fallback.
 """
 from __future__ import annotations
 
@@ -18,13 +25,40 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gdk, GLib, Gtk, Pango  # noqa: E402
+gi.require_version("Graphene", "1.0")
+from gi.repository import Adw, Gdk, GLib, Graphene, Gtk, Pango  # noqa: E402
 
 from . import translate  # noqa: E402
 from .i18n import _, ngettext  # noqa: E402
 
 
-WIDTH = 400                     # the popover's width (fixed: see TranslatePopover)
+WIDTH = 400                     # the card's / popover's width
+GAP = 10                        # between the selection and the card
+MIN_BODY = 90
+
+CSS = """
+.view-translate-card { border-radius: 12px; background-color: @popover_bg_color;
+  color: @popover_fg_color;
+  box-shadow: 0 0 0 1px alpha(black, 0.14), 0 4px 18px alpha(black, 0.28); }
+.view-translate-card .grab { min-height: 5px; min-width: 40px; border-radius: 3px;
+  background-color: alpha(currentColor, 0.25); }
+.view-translate-card .resize-grip { min-width: 14px; min-height: 14px;
+  background-image: linear-gradient(135deg, transparent 55%, alpha(currentColor, 0.3) 55%,
+  alpha(currentColor, 0.3) 63%, transparent 63%, transparent 75%,
+  alpha(currentColor, 0.3) 75%, alpha(currentColor, 0.3) 83%, transparent 83%); }
+"""
+_css_done = False
+
+
+def _install_css():
+    global _css_done
+    disp = Gdk.Display.get_default()
+    if _css_done or disp is None:
+        return
+    prov = Gtk.CssProvider()
+    prov.load_from_string(CSS)
+    Gtk.StyleContext.add_provider_for_display(disp, prov, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+    _css_done = True
 
 
 class _Download:
@@ -63,10 +97,11 @@ class _Download:
         return False
 
 
-class TranslatePopover(Gtk.Popover):
-    def __init__(self, text, reopen=None):
-        super().__init__(position=Gtk.PositionType.BOTTOM)
-        self.add_css_class("view-translate")
+class _Body:
+    """The translation UI and its flow, shared by the card and the popover:
+    subclasses call _build() and place the widgets it returns."""
+
+    def _build(self, text, reopen):
         self.text = text or ""
         self.reopen = reopen
         self.gen = 0
@@ -83,10 +118,10 @@ class TranslatePopover(Gtk.Popover):
                                   tooltip_text=_("Translate into"), hexpand=True)
         self.from_dd.set_selected(translate.CODES.index(self.src))
         self.to_dd.set_selected(translate.CODES.index(self.tgt))
-        head = Gtk.Box(spacing=6)
-        head.append(self.from_dd)
-        head.append(Gtk.Image(icon_name="go-next-symbolic", css_classes=["dim-label"]))
-        head.append(self.to_dd)
+        langs = Gtk.Box(spacing=6, hexpand=True)
+        langs.append(self.from_dd)
+        langs.append(Gtk.Image(icon_name="go-next-symbolic", css_classes=["dim-label"]))
+        langs.append(self.to_dd)
         self.caption = Gtk.Label(label=_("Language detected automatically"), xalign=0,
                                  css_classes=["caption", "dim-label"],
                                  ellipsize=Pango.EllipsizeMode.END)
@@ -125,38 +160,21 @@ class TranslatePopover(Gtk.Popover):
         foot.append(self.note)
         foot.append(self.copy_btn)
 
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, margin_top=10,
-                      margin_bottom=10, margin_start=10, margin_end=10)
-        for w in (head, self.caption, self.stack, foot):
-            box.append(w)
-        # A popover that changes size while it is up gets dismissed by the
-        # compositor (GNOME Shell): the first translation, which waits for its
-        # language model to load, went from the spinner to the result and
-        # vanished.  So the size is fixed now, from the text, and does not
-        # follow the content: the result scrolls inside.
-        frame = Gtk.ScrolledWindow(child=box, hscrollbar_policy=Gtk.PolicyType.NEVER,
-                                   propagate_natural_width=False,
-                                   propagate_natural_height=False)
-        frame.set_size_request(WIDTH, self._height_for(self.text))
-        self.set_child(frame)
-
         self.from_dd.connect("notify::selected", self._from_changed)
         self.to_dd.connect("notify::selected", self._to_changed)
-        self.connect("closed", self._on_closed)
         if len(self.text) > translate.MAX_CHARS:
             self.note.set_label(_("Only the first {n} characters are translated.").format(
                 n=f"{translate.MAX_CHARS:,}"))
-        self._run()
+        return langs, foot
 
-    def _height_for(self, text):
+    def _body_height(self, text):
         """Room for about this much text in the result (the translation is
         usually as long), within reason."""
         layout = self.create_pango_layout(text[:4000])
         layout.set_width((WIDTH - 44) * Pango.SCALE)
         layout.set_wrap(Pango.WrapMode.WORD_CHAR)
         _w, h = layout.get_pixel_size()
-        body = max(110, min(340, h + 28))
-        return body + 150           # languages, caption, footer, margins
+        return max(110, min(340, h + 28))
 
     # ---- state ----
     def _info(self, text, button=None, action=None, busy=False, progress=None):
@@ -181,7 +199,7 @@ class TranslatePopover(Gtk.Popover):
 
     def _from_changed(self, dd, _p):
         self.src = translate.CODES[dd.get_selected()]
-        # (a label hidden or shown would resize the popover: see __init__)
+        # (a label hidden or shown would resize a popover: see TranslatePopover)
         self.caption.set_label(_("Language detected automatically")
                                if self.src == self.detected else "")
         self._run()
@@ -246,7 +264,7 @@ class TranslatePopover(Gtk.Popover):
         from . import translate_install
         parent = self.get_parent()
         reopen = self.reopen
-        self.popdown()
+        self.dismiss()
         translate_install.offer(parent, reopen)
 
     def _ask_download(self, gen, need):
@@ -312,6 +330,160 @@ class TranslatePopover(Gtk.Popover):
         GLib.timeout_add(1500, lambda: (self.copy_btn.set_label(_("Copy")), False)[1])
 
 
+
+class TranslatePopover(_Body, Gtk.Popover):
+    """The fallback where there is no overlay for a card."""
+
+    def __init__(self, text, reopen=None):
+        Gtk.Popover.__init__(self, position=Gtk.PositionType.BOTTOM)
+        self.add_css_class("view-translate")
+        langs, foot = self._build(text, reopen)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, margin_top=10,
+                      margin_bottom=10, margin_start=10, margin_end=10)
+        for w in (langs, self.caption, self.stack, foot):
+            box.append(w)
+        # A popover that changes size while it is up gets dismissed by the
+        # compositor (GNOME Shell): its size is fixed, the result scrolls.
+        frame = Gtk.ScrolledWindow(child=box, hscrollbar_policy=Gtk.PolicyType.NEVER,
+                                   propagate_natural_width=False,
+                                   propagate_natural_height=False)
+        frame.set_size_request(WIDTH, self._body_height(self.text) + 150)
+        self.set_child(frame)
+        self.connect("closed", self._on_closed)
+        self._run()
+
+    def dismiss(self):
+        self.popdown()
+
+
+class TranslateCard(_Body, Gtk.Box):
+    """The floating card: see the module doc."""
+
+    def __init__(self, text, reopen=None, side_by_side=None):
+        Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL, spacing=6,
+                         halign=Gtk.Align.START, valign=Gtk.Align.START,
+                         css_classes=["view-translate-card"])
+        _install_css()
+        langs, foot = self._build(text, reopen)
+        self.on_close = None
+
+        # header: a grab handle and the title (drag here), Side by Side, close
+        grab = Gtk.Box(css_classes=["grab"], halign=Gtk.Align.CENTER, margin_top=6)
+        title = Gtk.Label(label=_("Translation"), xalign=0, hexpand=True,
+                          css_classes=["heading"])
+        self.sbs_btn = Gtk.Button(icon_name="view-dual-symbolic", css_classes=["flat"],
+                                  tooltip_text=_("Open Side by Side"), visible=bool(side_by_side))
+        self.sbs_btn.connect("clicked", lambda *_: (self.dismiss(), side_by_side()))
+        close = Gtk.Button(icon_name="window-close-symbolic", css_classes=["flat", "circular"],
+                           tooltip_text=_("Close (Esc)"))
+        close.connect("clicked", lambda *_: self.dismiss())
+        top = Gtk.Box(spacing=4, margin_start=12, margin_end=6)
+        top.append(title)
+        top.append(self.sbs_btn)
+        top.append(close)
+        handle = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        handle.append(grab)
+        handle.append(top)
+        handle.set_cursor_from_name("grab")
+        drag = Gtk.GestureDrag()
+        drag.connect("drag-begin", self._drag_begin)
+        drag.connect("drag-update", self._drag_update)
+        drag.connect("drag-end", lambda *_: handle.set_cursor_from_name("grab"))
+        handle.add_controller(drag)
+        self._handle = handle
+
+        inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, margin_start=12,
+                        margin_end=12)
+        for w in (langs, self.caption, self.stack):
+            inner.append(w)
+        grip = Gtk.Box(css_classes=["resize-grip"], valign=Gtk.Align.END,
+                       tooltip_text=_("Drag to resize"))
+        grip.set_cursor_from_name("se-resize")
+        rs = Gtk.GestureDrag()
+        rs.connect("drag-begin", self._resize_begin)
+        rs.connect("drag-update", self._resize_update)
+        grip.add_controller(rs)
+        foot.append(grip)
+        foot.set_margin_start(12)
+        foot.set_margin_end(4)
+        foot.set_margin_bottom(4)
+        self.append(handle)
+        self.append(inner)
+        self.append(foot)
+        self.stack.set_size_request(-1, self._body_height(self.text))
+        self.set_size_request(WIDTH, -1)
+        self._run()
+
+    # ---- moving / sizing (its margins in the overlay) -------------------------------
+    def _bounds(self):
+        ov = self.get_parent()
+        return (ov.get_width(), ov.get_height()) if ov is not None else (0, 0)
+
+    def move_to(self, x, y):
+        ow, oh = self._bounds()
+        w, h = self.get_width() or WIDTH, self.get_height() or 300
+        self.set_margin_start(max(0, min(int(x), ow - w)))
+        self.set_margin_top(max(0, min(int(y), oh - h)))
+
+    def _drag_begin(self, _g, _x, _y):
+        self._origin = (self.get_margin_start(), self.get_margin_top())
+        self._handle.set_cursor_from_name("grabbing")
+
+    def _drag_update(self, _g, dx, dy):
+        self.move_to(self._origin[0] + dx, self._origin[1] + dy)
+
+    def _resize_begin(self, _g, _x, _y):
+        self._size0 = (self.get_width(), self.stack.get_height())
+
+    def _resize_update(self, _g, dx, dy):
+        ow, oh = self._bounds()
+        w0, h0 = self._size0
+        extra = self.get_height() - self.stack.get_height()
+        w = max(300, min(int(w0 + dx), ow - self.get_margin_start()))
+        h = max(MIN_BODY, min(int(h0 + dy), oh - self.get_margin_top() - extra))
+        self.set_size_request(w, -1)
+        self.stack.set_size_request(-1, h)
+
+    def place(self, sel, ow, oh):
+        """Next to ``sel`` (x, y, w, h in the overlay) without covering it:
+        below, else above (the result area shrinks to fit, within reason),
+        else to its right or left; else in the corner farthest from it."""
+        x, y, w, h = sel
+        _m, nat_h, _b, _c = self.measure(Gtk.Orientation.VERTICAL, WIDTH)
+        body = self.stack.get_size_request()[1]
+        extra = nat_h - body
+        below = oh - (y + h + GAP)
+        above = y - GAP
+        cx = x if w < WIDTH else x + 24
+        for room, at in ((below, lambda H: y + h + GAP), (above, lambda H: y - GAP - H)):
+            if room >= extra + MIN_BODY:
+                b = min(body, room - extra)
+                self.stack.set_size_request(-1, b)
+                return self._put(cx, at(extra + b), ow, oh, extra + b)
+        H = min(nat_h, oh)
+        if ow - (x + w + GAP) >= WIDTH:
+            return self._put(x + w + GAP, y, ow, oh, H)
+        if x - GAP >= WIDTH:
+            return self._put(x - GAP - WIDTH, y, ow, oh, H)
+        fx = 0 if x + w / 2 > ow / 2 else ow - WIDTH       # no free side: the far corner
+        fy = 0 if y + h / 2 > oh / 2 else oh - H
+        return self._put(fx, fy, ow, oh, H)
+
+    def _put(self, x, y, ow, oh, H):
+        x = max(0, min(int(x), ow - WIDTH))
+        y = max(0, min(int(y), oh - H))
+        self.set_margin_start(x)
+        self.set_margin_top(y)
+        return x, y
+
+    def dismiss(self):
+        if self.closed:
+            return
+        self._on_closed()
+        if self.on_close:
+            self.on_close(self)
+
+
 def _menu_open(widget) -> bool:
     """Is a popover (the context menu, a header menu) still open in the
     window of ``widget``?"""
@@ -330,37 +502,98 @@ def _menu_open(widget) -> bool:
     return False
 
 
-def show(parent, text, rect=None):
-    """Pop up a translation of ``text`` from ``parent`` (see the module doc).
-
-    The menus that offer Translate call this while they are still open; a
-    popover shown then is a second grabbing popup next to the closing menu,
-    and the compositor dismisses it at once (it flashed and was gone).  So it
-    waits for the menu to close (a main loop turn), and pops up then."""
-    if parent is None or not (text or "").strip():
-        return None
-    tries = [0]
-
-    def attempt():
-        if parent.get_root() is None or not parent.get_mapped():
-            return False
-        if _menu_open(parent) and tries[0] < 40:
-            tries[0] += 1
-            return True                     # poll again (25 ms)
-        _show_now(parent, text, rect)
-        return False
-    GLib.idle_add(lambda: (attempt() and GLib.timeout_add(25, attempt), False)[1],
-                  priority=GLib.PRIORITY_LOW)
+def _overlay_for(widget):
+    """Where a card goes: the window's card overlay, else the nearest
+    Gtk.Overlay around ``widget``."""
+    root = widget.get_root()
+    ov = getattr(root, "card_overlay", None)
+    if isinstance(ov, Gtk.Overlay):
+        return ov
+    w = widget.get_parent()
+    while w is not None:
+        if isinstance(w, Gtk.Overlay):
+            return w
+        w = w.get_parent()
     return None
 
 
-def _show_now(parent, text, rect=None):
+_cards = {}                     # overlay -> card
+
+
+def close_card(widget=None):
+    """Close the card in ``widget``'s window (every card without one)."""
+    ov = _overlay_for(widget) if widget is not None else None
+    for o, card in list(_cards.items()):
+        if ov is None or o is ov:
+            card.dismiss()
+
+
+def current_card(widget):
+    return _cards.get(_overlay_for(widget))
+
+
+def show(parent, text, rect=None, side_by_side=None):
+    """Translate ``text`` in a card beside ``rect`` (see the module doc).
+    Returns the card (or the fallback popover)."""
+    if parent is None or not (text or "").strip() or parent.get_root() is None:
+        return None
+    ov = _overlay_for(parent)
+    if ov is None:
+        return _popover(parent, text, rect)
+    close_card(parent)
+
+    def reopen():
+        GLib.idle_add(lambda: (show(parent, text, rect, side_by_side), False)[1])
+    card = TranslateCard(text, reopen, side_by_side)
+    ov.add_overlay(card)
+    root = ov.get_root()
+    keys = Gtk.EventControllerKey(propagation_phase=Gtk.PropagationPhase.CAPTURE)
+
+    def key(_c, keyval, _code, _state):
+        if keyval == Gdk.KEY_Escape and not card.closed:
+            card.dismiss()
+            return True
+        return False
+    keys.connect("key-pressed", key)
+    root.add_controller(keys)
+    _cards[ov] = card
+
+    def closed(c):
+        if _cards.get(ov) is c:
+            del _cards[ov]
+        try:
+            root.remove_controller(keys)
+        except Exception:  # noqa: BLE001
+            pass
+        if c.get_parent() is ov:
+            ov.remove_overlay(c)
+    card.on_close = closed
+
+    # the visible part of the selection, in the overlay's coordinates
+    pw, ph = parent.get_width(), parent.get_height()
+    if rect is None:
+        x0, y0, x1, y1 = pw / 2 - 1, 0, pw / 2 + 1, 2
+    else:
+        x0, y0 = max(0, rect.x), max(0, rect.y)
+        x1, y1 = min(pw, rect.x + rect.width), min(ph, rect.y + rect.height)
+        x1, y1 = max(x1, x0 + 1), max(y1, y0 + 1)
+    ok, p0 = parent.compute_point(ov, Graphene.Point().init(x0, y0))
+    ok2, p1 = parent.compute_point(ov, Graphene.Point().init(x1, y1))
+    sel = (p0.x, p0.y, p1.x - p0.x, p1.y - p0.y) if ok and ok2 else (0, 0, 1, 1)
+    card.place(sel, ov.get_width(), ov.get_height())
+    return card
+
+
+def _popover(parent, text, rect=None):
     if rect is None:
         rect = Gdk.Rectangle()
         rect.x, rect.y, rect.width, rect.height = max(0, parent.get_width() // 2), 8, 1, 1
-    else:     # e.g. a selection that starts above the visible part
-        rect.x = max(0, min(rect.x, parent.get_width() - 1))
-        rect.y = max(0, min(rect.y, parent.get_height() - 1))
+    else:     # under the selection (which may start above the visible part)
+        r = Gdk.Rectangle()
+        r.x = max(0, min(rect.x, parent.get_width() - 1))
+        r.y = max(0, min(rect.y + rect.height, parent.get_height() - 1))
+        r.width, r.height = max(1, min(rect.width, 200)), 1
+        rect = r
 
     def reopen():
         GLib.idle_add(lambda: (show(parent, text, rect), False)[1])
@@ -382,7 +615,21 @@ def _show_now(parent, text, rect=None):
         GLib.idle_add(drop)
     pop.connect("closed", closed)
     pop.set_pointing_to(rect)
-    pop.popup()
+
+    # (popped up once the menu that offered Translate has closed: a popup
+    # shown next to a closing one is dismissed by the compositor)
+    tries = [0]
+
+    def attempt():
+        if pop.get_root() is None or not parent.get_mapped():
+            return False
+        if _menu_open(parent) and tries[0] < 40:
+            tries[0] += 1
+            return True
+        pop.popup()
+        return False
+    GLib.idle_add(lambda: (attempt() and GLib.timeout_add(25, attempt), False)[1],
+                  priority=GLib.PRIORITY_LOW)
     return pop
 
 
@@ -390,3 +637,19 @@ def rect(x, y, w=1, h=1):
     r = Gdk.Rectangle()
     r.x, r.y, r.width, r.height = int(x), int(y), max(1, int(w)), max(1, int(h))
     return r
+
+
+def textview_rect(view, start, end):
+    """The bounds of a Gtk.TextView selection (widget coordinates); several
+    lines take the view's width."""
+    a, b = view.get_iter_location(start), view.get_iter_location(end)
+    x0, y0 = view.buffer_to_window_coords(Gtk.TextWindowType.WIDGET, a.x, a.y)
+    x1, y1 = view.buffer_to_window_coords(Gtk.TextWindowType.WIDGET, b.x, b.y + b.height)
+    if a.y != b.y:
+        x0, x1 = 0, view.get_width()
+    return bounds_rect(x0, y0, x1, y1)
+
+
+def bounds_rect(x0, y0, x1, y1):
+    """A Gdk.Rectangle from two corners."""
+    return rect(min(x0, x1), min(y0, y1), abs(x1 - x0), abs(y1 - y0))

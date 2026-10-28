@@ -461,14 +461,20 @@ class MarkdownPreview(Gtk.ScrolledWindow):
                         self.on_translate_document())
         group.add_action(act_doc)
         self.view.insert_action_group("mdp", group)
-        extra = Gio.Menu()
-        extra.append(_("Translate"), "mdp.translate")
-        extra.append(_("Translate Document…"), "mdp.translate-doc")
-        self.view.set_extra_menu(extra)
+        self._menu_sel = Gio.Menu()
+        self._menu_sel.append(_("Translate"), "mdp.translate")
+        self._menu_sel.append(_("Translate Document…"), "mdp.translate-doc")
+        self._menu_nosel = Gio.Menu()
+        self._menu_nosel.append(_("Translate Document…"), "mdp.translate-doc")
+        self.translate_menu = True          # (off for a translation's own preview)
+        self.view.set_extra_menu(self._menu_nosel)
 
     def _sel_changed(self, buf):
         if buf is self.view.get_buffer():
-            self._act_tr.set_enabled(buf.get_has_selection())
+            has = buf.get_has_selection()
+            self._act_tr.set_enabled(has)
+            if self.translate_menu:
+                self.view.set_extra_menu(self._menu_sel if has else self._menu_nosel)
 
     def _translate_selection(self):
         from . import translate_ui
@@ -477,12 +483,10 @@ class MarkdownPreview(Gtk.ScrolledWindow):
         if not sel:
             return
         start, end = sel
-        loc = self.view.get_iter_location(start)
-        x, y = self.view.buffer_to_window_coords(Gtk.TextWindowType.WIDGET, loc.x,
-                                                 loc.y + loc.height)
         # (the table and image placeholders are U+FFFC: not text)
         text = buf.get_text(start, end, False).replace("\ufffc", "").replace("\u200b", "")
-        translate_ui.show(self.view, text, translate_ui.rect(x, y))
+        translate_ui.show(self.view, text, translate_ui.textview_rect(self.view, start, end),
+                          side_by_side=self.on_translate_document)
 
     def block_marks(self):
         return self.blocks

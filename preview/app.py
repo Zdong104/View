@@ -239,6 +239,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.highlight = Gtk.Box(css_classes=["drop-highlight"], visible=False,
                                  can_target=False)
         content = Gtk.Overlay(child=self.toast_overlay)
+        self.card_overlay = content     # floating cards (translate_ui) go here
         content.add_overlay(self.highlight)
 
         self.header = Adw.HeaderBar()

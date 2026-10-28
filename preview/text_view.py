@@ -251,6 +251,11 @@ class LineGutter(Gtk.Widget):
 # ---------------------------------------------------------------------------
 # Viewer
 # ---------------------------------------------------------------------------
+# lexers of prose (markup around text): translated paragraph by paragraph
+PROSE_LEXERS = {"reStructuredText", "TeX", "Org Mode", "Groff", "BBCode", "Creole",
+                "MoinMoin/Trac Wiki markup", "Markdown", "Text only"}
+
+
 class TextViewer(Viewer):
     def __init__(self, window):
         super().__init__(window)
@@ -442,9 +447,16 @@ class TextViewer(Viewer):
         s.append(_("Go to Line…"), "text.goto")
         s.append(_("Translate Document…"), "text.translate-doc")
         m.append_section(None, s)
-        extra = Gio.Menu()
-        extra.append(_("Translate"), "text.translate")
-        self.view.set_extra_menu(extra)        # in the text's right-click menu
+        # in the text's right-click menu: Translate (the selection, in a card)
+        # when there is one, Translate Document… (side by side) always
+        self._menu_sel = Gio.Menu()
+        self._menu_sel.append(_("Translate"), "text.translate")
+        self._menu_sel.append(_("Translate Document…"), "text.translate-doc")
+        self._menu_nosel = Gio.Menu()
+        self._menu_nosel.append(_("Translate Document…"), "text.translate-doc")
+        self.view.set_extra_menu(self._menu_nosel)
+        self.buf.connect("notify::has-selection", lambda b, _p: self.view.set_extra_menu(
+            self._menu_sel if b.get_has_selection() else self._menu_nosel))
         s = Gio.Menu()
         s.append(_("Larger Text"), "text.zoom-in")
         s.append(_("Smaller Text"), "text.zoom-out")
@@ -483,7 +495,12 @@ class TextViewer(Viewer):
         from . import translate_view
         if self._loading:
             return
-        kind = "markdown" if self._md is not None else "text"
+        if self._md is not None:
+            kind = "markdown"
+        elif self.lexer is not None and self.lexer.name not in PROSE_LEXERS:
+            kind = "code"                       # comments and strings only
+        else:
+            kind = "text"
         if kind == "markdown" and self._md_mode == "split":
             self._set_md_mode("preview", save=False)      # original | translation
         main, put = translate_view.box_slot(
@@ -491,19 +508,17 @@ class TextViewer(Viewer):
         translate_view.open_for(self, kind, main, put)
 
     def _translate(self, selection=True):
-        """Translate the selection (else the whole text), pointing at it."""
+        """Translate the selection in a card beside it (nothing selected: the
+        whole document, side by side)."""
         from . import translate_ui
-        b = self.buf
-        sel = b.get_selection_bounds() if selection else ()
-        start, end = sel if sel else b.get_bounds()
-        text = b.get_text(start, end, False)
-        rect = None
-        if sel:
-            loc = self.view.get_iter_location(start)
-            x, y = self.view.buffer_to_window_coords(Gtk.TextWindowType.WIDGET,
-                                                     loc.x, loc.y + loc.height)
-            rect = translate_ui.rect(x, y)
-        translate_ui.show(self.view, text, rect)
+        sel = self.buf.get_selection_bounds() if selection else ()
+        if not sel:
+            self.translate_document()
+            return
+        start, end = sel
+        translate_ui.show(self.view, self.buf.get_text(start, end, False),
+                          translate_ui.textview_rect(self.view, start, end),
+                          side_by_side=self.translate_document)
 
     def _set_action(self, name, on):
         a = self._actions.lookup_action(name)

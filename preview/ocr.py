@@ -628,6 +628,17 @@ class TextOverlay:
         a, b = self._anchor, self._focus
         return (a, b) if a <= b else (b, a)
 
+    def selection_box(self):
+        """(x0, y0, x1, y1) around the selected lines (OCR image px), or None."""
+        r = self._range()
+        if r is None:
+            return None
+        pts = [p for i in range(r[0][0], r[1][0] + 1) for p in self._items[i].line.box]
+        if not pts:
+            return None
+        return (min(p[0] for p in pts), min(p[1] for p in pts),
+                max(p[0] for p in pts), max(p[1] for p in pts))
+
     def selected_text(self) -> str:
         r = self._range()
         if r is None:

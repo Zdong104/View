@@ -13,7 +13,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 
 from . import runtime
 from .i18n import _, N_, ngettext
-from .viewer_base import (IMAGE_EXTS, MEDIA_EXTS, MODEL_EXTS, PDF_EXTS, TABLE_EXTS, TEXT_EXTS,
+from .viewer_base import (CAD_EXTS, IMAGE_EXTS, MEDIA_EXTS, MODEL_EXTS, PDF_EXTS, TABLE_EXTS, TEXT_EXTS,
                           TEXT_NAMES, VIDEO_EXTS, AUDIO_EXTS, kind_of)
 
 APP_ID = runtime.APP_ID
@@ -92,7 +92,7 @@ def _make_filters():
     text_names = sorted({v for n in TEXT_NAMES if "." not in n
                          for v in (n, n.capitalize(), n.upper())})
     allf = mk(_("All Supported Files"),
-              PDF_EXTS | IMAGE_EXTS | MODEL_EXTS | TABLE_EXTS | MEDIA_EXTS | TEXT_EXTS,
+              PDF_EXTS | IMAGE_EXTS | MODEL_EXTS | CAD_EXTS | TABLE_EXTS | MEDIA_EXTS | TEXT_EXTS,
               text_names)
     store.append(allf)
     store.append(mk(_("PDF Documents"), PDF_EXTS))
@@ -100,6 +100,7 @@ def _make_filters():
     store.append(mk(_("Video and Audio"), VIDEO_EXTS | AUDIO_EXTS))
     store.append(mk(_("Text and Source Code"), TEXT_EXTS, text_names))
     store.append(mk(_("3D Models"), MODEL_EXTS))
+    store.append(mk(_("CAD Drawings (DXF)"), CAD_EXTS))
     store.append(mk(_("Spreadsheets (CSV/TSV)"), TABLE_EXTS))
     anyf = Gtk.FileFilter(name=_("All Files"))
     anyf.add_pattern("*")
@@ -414,6 +415,8 @@ class MainWindow(Adw.ApplicationWindow):
             from .pdf_view import PdfViewer as cls
         elif kind == "model":
             from .stl_view import ModelViewer as cls
+        elif kind == "cad":
+            from .dxf_view import DxfViewer as cls
         elif kind == "table":
             from .table_view import TableViewer as cls
         elif kind == "video":
@@ -797,11 +800,11 @@ class PreviewApp(Adw.Application):
     def route_files(self, files, target=None):
         """Open files: all images in one window, each PDF/model in its own.
         An empty `target` (or empty active window) is reused for the first group."""
-        images, pdfs, models, tables, videos, texts, unknown = [], [], [], [], [], [], []
+        images, pdfs, models, cads, tables, videos, texts, unknown = [], [], [], [], [], [], [], []
         files, empty = self._expand_folders(files)
         for f in files:
             k = kind_of(f, sniff=True)
-            {"image": images, "pdf": pdfs, "model": models, "table": tables,
+            {"image": images, "pdf": pdfs, "model": models, "cad": cads, "table": tables,
              "video": videos, "text": texts}.get(k, unknown).append(f)
         spare = target if (target is not None and target.is_empty()) else None
         if spare is None and target is None:
@@ -828,6 +831,7 @@ class PreviewApp(Adw.Application):
         else:
             groups += [("pdf", [f]) for f in pdfs]
         groups += [("model", [f]) for f in models]
+        groups += [("cad", [f]) for f in cads]
         groups += [("table", [f]) for f in tables]
         groups += [("video", [f]) for f in videos]
         groups += [("text", [f]) for f in texts]

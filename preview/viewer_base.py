@@ -16,6 +16,7 @@ IMAGE_EXTS = {
 }
 PDF_EXTS = {".pdf"}
 MODEL_EXTS = {".stl", ".obj", ".ply"}
+CAD_EXTS = {".dxf"}
 TABLE_EXTS = {".csv", ".tsv", ".tab"}
 VIDEO_EXTS = {".mp4", ".mov", ".m4v", ".webm", ".mkv", ".avi", ".ogv", ".3gp"}
 AUDIO_EXTS = {".mp3", ".m4a", ".wav", ".flac", ".ogg", ".opus"}
@@ -78,7 +79,7 @@ def sniff_text(gfile: Gio.File) -> bool:
 
 
 def kind_of(gfile: Gio.File, sniff: bool = False) -> str:
-    """Return 'pdf', 'image', 'model', 'table', 'video', 'text' or 'unknown'.
+    """Return 'pdf', 'image', 'model', 'cad', 'table', 'video', 'text' or 'unknown'.
 
     With sniff=True an unknown file is looked at (content type, first 8 KB) and
     reported as 'text' if it is text; leave it off for bulk scans (siblings)."""
@@ -90,6 +91,8 @@ def kind_of(gfile: Gio.File, sniff: bool = False) -> str:
         return "image"
     if ext in MODEL_EXTS:
         return "model"
+    if ext in CAD_EXTS:
+        return "cad"
     if ext in TABLE_EXTS:
         return "table"
     if ext in MEDIA_EXTS:

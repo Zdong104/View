@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: View\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-27 22:30-0400\n"
+"POT-Creation-Date: 2026-10-27 22:58-0400\n"
 "PO-Revision-Date: 2026-10-26 15:40-0400\n"
 "Last-Translator: View contributors\n"
 "Language-Team: Simplified Chinese\n"
@@ -2718,6 +2718,9 @@ msgstr[0] "{n} 行"
 #, python-brace-format
 msgid "the first {n} columns"
 msgstr "前 {n} 列"
+
+msgid "Original"
+msgstr "原文"
 
 #, python-brace-format
 msgid "Translation — {name}"

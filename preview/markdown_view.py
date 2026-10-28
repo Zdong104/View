@@ -423,6 +423,7 @@ class MarkdownPreview(Gtk.ScrolledWindow):
         self.marks = {}
         self.blocks = []                # a mark where each top-level block starts
         self.on_translate_document = None     # callback for the context menu
+        self.on_rendered = None               # callback after each render
         self._gen = 0
         self._timer = 0
         self._text = None
@@ -687,6 +688,9 @@ class MarkdownPreview(Gtk.ScrolledWindow):
         self._sel_changed(buf)
         for anchor, rows, aligns in tables:
             self.view.add_child_at_anchor(self._table_widget(rows, aligns), anchor)
+        if self.on_rendered is not None:
+            GLib.idle_add(lambda: (self.on_rendered and self.on_rendered(), False)[1],
+                          priority=GLib.PRIORITY_LOW)
         if old > 0:
             def restore():
                 vadj.set_value(min(old, vadj.get_upper() - vadj.get_page_size()))

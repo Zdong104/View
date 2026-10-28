@@ -326,8 +326,9 @@ class Side:
         it = self.start(i)
         if it is None:
             return 0
-        y, _h = self.view.get_line_yrange(it)
-        return y
+        # (where the text starts: a line's range also holds the space added
+        # above it to line it up with the other side)
+        return self.view.get_iter_location(it).y
 
     def locate(self, y):
         n = self.count()
@@ -383,7 +384,9 @@ class ScrollSync:
         i = min(i, other.count() - 1)
         a, b = other.y_of(i), other.y_of(i + 1)
         adj = other.vadj
-        y = min(a + f * (b - a), adj.get_upper() - adj.get_page_size())
+        # (top margins are outside buffer coordinates, and may differ)
+        y = a + f * (b - a) + other.view.get_top_margin() - side.view.get_top_margin()
+        y = min(y, adj.get_upper() - adj.get_page_size())
         self._busy = True
         try:
             adj.set_value(max(0.0, y))
@@ -451,7 +454,9 @@ class TranslationPane(Gtk.Box):
         self.close_btn.connect("clicked", lambda *_: self.on_close())
         for b in (self.copy_btn, self.save_btn, self.pop_btn, self.close_btn):
             bar.append(b)
-        self.append(bar)
+        self.header = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.header.append(bar)
+        self.append(self.header)
         row2 = Gtk.Box(spacing=8, margin_start=10, margin_end=8, margin_bottom=6)
         self.spinner = Adw.Spinner(visible=False, width_request=16, height_request=16)
         row2.append(self.spinner)
@@ -460,8 +465,9 @@ class TranslationPane(Gtk.Box):
         row2.append(self.status)
         for w in adapter.header_widgets():
             row2.append(w)
-        self.append(row2)
+        self.header.append(row2)
         self.append(Gtk.Separator())
+        self.on_detected = None         # (the original side's header shows it)
 
         # info page: engine install, pack download, errors
         self.info_title = Gtk.Label(wrap=True, justify=Gtk.Justification.CENTER,
@@ -519,6 +525,8 @@ class TranslationPane(Gtk.Box):
         if self.src_choice is None and self.detected:
             parts.append(_("{lang} detected").format(lang=translate.language_name(self.detected)))
         self.status.set_label(" · ".join(parts))
+        if self.on_detected:
+            self.on_detected(self.src_choice or self.detected)
 
     # ---- running -------------------------------------------------------------------------
     def refresh(self):
@@ -725,6 +733,7 @@ class TranslationPane(Gtk.Box):
 class _Adapter:
     pane: TranslationPane = None
     ext = ".txt"
+    aligned = False         # its content lines up with the original's (a header above both)
 
     def __init__(self, viewer):
         self.viewer = viewer
@@ -789,6 +798,7 @@ class _ParagraphView:
         self.units = []
         self.align = None
         self._pads = []                     # (tag, pixels) per unit
+        self._top0 = None
         self._align_timer = 0
         self._tags()
         ref = weakref.ref(self)
@@ -890,10 +900,20 @@ class _ParagraphView:
             natural.append(tops[k] - before)
             if k < n:
                 before += pads[k]
+        # the text's top inside its line (fonts differ: Chinese sits lower)
+        inner = [v.get_iter_location(self.start(k)).y - tops[k] - pads[k] for k in range(n)]
         pos = natural[0]
+        first = self.align(0)
+        lift = 0
+        if first is not None:            # the first text a little lower than the original's:
+            if self._top0 is None:      # take it off the top margin (buffer y excludes it)
+                self._top0 = self.view.get_top_margin()
+            lift = max(-self._top0, min(0, int(round(first - pos - inner[0]))))
+            if self.view.get_top_margin() != self._top0 + lift:
+                self.view.set_top_margin(self._top0 + lift)
         for k in range(n):
             target = self.align(k)
-            pad = 0 if target is None else max(0, int(round(target - pos)))
+            pad = 0 if target is None else max(0, int(round(target - pos - inner[k] - lift)))
             pos += pad + (natural[k + 1] - natural[k])
             tag, old = self._pads[k]
             if old != pad:
@@ -1103,6 +1123,8 @@ class ImageAdapter(_Adapter):
 
 # ---- plain text / code ------------------------------------------------------------------
 class TextAdapter(_Adapter):
+    aligned = True
+
     def __init__(self, viewer):
         super().__init__(viewer)
         self.pv = _ParagraphView((viewer._cls, "md-preview"),
@@ -1120,7 +1142,7 @@ class TextAdapter(_Adapter):
             return None
         v = self.viewer
         ok, it = v.buf.get_iter_at_line(self.units[k][0])
-        return v.view.get_line_yrange(it)[0] if ok else None
+        return v.view.get_iter_location(it).y if ok else None
 
     def widget(self):
         return self.pv.scroll
@@ -1189,6 +1211,7 @@ class TextAdapter(_Adapter):
 # ---- Markdown -----------------------------------------------------------------------------
 class MarkdownAdapter(_Adapter):
     ext = ".md"
+    aligned = True
 
     def __init__(self, viewer):
         super().__init__(viewer)
@@ -1207,6 +1230,9 @@ class MarkdownAdapter(_Adapter):
                                  ("source", _("Source"), _("Translated Markdown source"))):
             self.toggle.add(Adw.Toggle(name=name, label=label, tooltip=tip))
         self.preview.translate_menu = False      # (no "translate the translation")
+        self.preview.on_rendered = self._schedule_level
+        if viewer._md is not None:
+            viewer._md.on_rendered = self._schedule_level
         self.preview.view.set_extra_menu(None)
         self.toggle.set_active_name("preview")
         self.toggle.connect("notify::active-name",
@@ -1301,7 +1327,90 @@ class MarkdownAdapter(_Adapter):
     def text(self):
         return self.result
 
+    # ---- blocks level with the original's (Preview beside Preview) ----------------------
+    # A translated paragraph is taller or shorter than its original: before
+    # each block, the side that is ahead gets the difference as space above.
+    def _schedule_level(self):
+        if getattr(self, "_level_timer", 0):
+            return
+
+        def fire():
+            self._level_timer = 0
+            if self.pane is not None and self.pane.alive:
+                self._level()
+            return False
+        self._level_timer = GLib.timeout_add(60, fire)
+
+    def _pad_tag(self, preview, k):
+        table = preview.view.get_buffer().get_tag_table()
+        name = f"tr-level:{k}"
+        tag = table.lookup(name)
+        if tag is None:
+            tag = Gtk.TextTag(name=name)
+            table.add(tag)
+            tag.set_priority(table.get_size() - 1)
+        return tag
+
+    def _unlevel(self, preview):
+        if preview is None:
+            return
+        table = preview.view.get_buffer().get_tag_table()
+        names = []
+        table.foreach(lambda t: names.append(t.get_property("name") or ""))
+        for name in names:
+            if name.startswith("tr-level:"):
+                table.remove(table.lookup(name))
+
+    def _level(self):
+        left, right = self.viewer._md, self.preview
+        if left is None or self.viewer._md_mode != "preview":
+            self._unlevel(left)
+            self._unlevel(right)
+            return
+        n = len(left.block_marks())
+        if n == 0 or n != len(right.block_marks()):
+            return
+        sides = []
+        for pv in (left, right):
+            buf = pv.view.get_buffer()
+            tops, pads = [], []
+            for k in range(n):
+                it = pv.block_iter(k)
+                tag = self._pad_tag(pv, k)
+                pads.append(tag.get_property("pixels-above-lines") if it.has_tag(tag) else 0)
+                tops.append(pv.view.get_iter_location(it).y)
+            end = buf.get_end_iter()
+            y, h = pv.view.get_line_yrange(end)
+            tops.append(y + h + sum(pads))
+            natural, before = [], 0     # text tops without the space added
+            for k in range(n + 1):
+                if k < n:
+                    before += pads[k]
+                natural.append(tops[k] - before)
+            sides.append(natural)
+        (nl, nr) = sides
+        posl, posr = nl[0], nr[0]
+        for k in range(n):
+            if k:                       # (positions include the space added above)
+                posl += nl[k] - nl[k - 1]
+                posr += nr[k] - nr[k - 1]
+            pl, pr = max(0, posr - posl), max(0, posl - posr)
+            for pv, pad in ((left, pl), (right, pr)):
+                tag = self._pad_tag(pv, k)
+                it = pv.block_iter(k)
+                if tag.get_property("pixels-above-lines") != pad:
+                    tag.set_property("pixels-above-lines", pad)
+                if not it.has_tag(tag):
+                    e = it.copy()
+                    if not e.ends_line():
+                        e.forward_to_line_end()
+                    if e.equal(it):
+                        e.forward_char()
+                    pv.view.get_buffer().apply_tag(tag, it, e)
+            posl, posr = posl + pl, posr + pr
+
     def sync_sides(self):
+        self._schedule_level()          # (the original side may have changed)
         v = self.viewer
         md = v._md
         right = Side(self.preview.view, lambda: len(self.preview.block_marks()),
@@ -1326,10 +1435,17 @@ class MarkdownAdapter(_Adapter):
         return left, right
 
     def release(self):
-        for t in (self._render_timer, self._edit_timer):
+        for t in (self._render_timer, self._edit_timer, getattr(self, "_level_timer", 0)):
             if t:
                 GLib.source_remove(t)
-        self._render_timer = self._edit_timer = 0
+        self._render_timer = self._edit_timer = self._level_timer = 0
+        md = self.viewer._md
+        if md is not None:
+            md.on_rendered = None
+            try:
+                self._unlevel(md)       # (the original's spacing back as it was)
+            except Exception:  # noqa: BLE001
+                pass
         self.preview.release()
         try:
             self.viewer.buf.disconnect(self._hid)
@@ -1341,6 +1457,7 @@ class MarkdownAdapter(_Adapter):
 class CodeAdapter(_Adapter):
     """Source code: the file as it is, with its comments, docstrings and
     messages translated (code_translate), line for line beside the original."""
+    aligned = True
 
     def __init__(self, viewer):
         super().__init__(viewer)
@@ -1610,6 +1727,7 @@ class TableAdapter(_Adapter):
     """CSV/TSV: the same rows and columns, text cells translated (numbers,
     dates, IDs, codes stay); cells are translated as they scroll into view."""
     MAX_COLS = 60
+    aligned = True
 
     def __init__(self, viewer):
         super().__init__(viewer)
@@ -1854,7 +1972,33 @@ class SideBySide:
                                resize_start_child=True, resize_end_child=True,
                                shrink_start_child=False, shrink_end_child=False)
         self._put(self.paned)
-        self.paned.set_start_child(content)
+        self._content = content
+        if self.adapter.aligned:
+            # The translation's toolbar would push its text down by its own
+            # height: a header just as tall over the original keeps line N
+            # on both sides at the same height.
+            label = Gtk.Label(label=_("Original"), xalign=0, hexpand=True,
+                              ellipsize=Pango.EllipsizeMode.END,
+                              css_classes=["heading", "dim-label"], margin_start=12)
+            head = Gtk.Box(css_classes=["toolbar"], valign=Gtk.Align.FILL)
+            head.append(label)
+            group = Gtk.SizeGroup(mode=Gtk.SizeGroupMode.VERTICAL)
+            group.add_widget(head)
+            group.add_widget(self.pane.header)
+            self._group = group
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, hexpand=True, vexpand=True)
+            box.append(head)
+            box.append(Gtk.Separator())
+            box.append(content)
+            self.paned.set_start_child(box)
+
+            def detected(code):
+                label.set_label(_("Original") + (" · " + translate.language_name(code)
+                                                 if code else ""))
+            self.pane.on_detected = detected
+            detected(self.pane.src_choice or self.pane.detected)
+        else:
+            self.paned.set_start_child(content)
         self.paned.set_end_child(self.pane)
 
         def halve():
@@ -1872,9 +2016,17 @@ class SideBySide:
     def _undock(self):
         if self.paned is None:
             return
-        content = self.paned.get_start_child()
+        start = self.paned.get_start_child()
         self.paned.set_start_child(None)
         self.paned.set_end_child(None)
+        content = self._content
+        if start is not content:        # (inside the box with the "Original" header)
+            start.remove(content)
+            group = getattr(self, "_group", None)
+            if group is not None:
+                group.remove_widget(self.pane.header)
+                self._group = None
+        self.pane.on_detected = None
         self._put(content)
         self.paned = None
 

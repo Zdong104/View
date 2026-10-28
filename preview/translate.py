@@ -44,6 +44,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import zipfile
@@ -393,20 +394,60 @@ def missing(src: str, tgt: str) -> list[tuple[str, str]]:
     return [p for p in plan(src, tgt) if p not in have]
 
 
+_pair_locks: dict = {}
+_pair_locks_lock = threading.Lock()
+
+
+def _incoming_dir() -> str:
+    """Where packs download and unpack, under unique names (two windows, or
+    two View processes, may fetch the same pack at once); a finished pack is
+    renamed into place.  Leftovers of an interrupted download are cleared."""
+    d = os.path.join(packs_dir(), ".incoming")       # (no "_": never taken for a pack)
+    os.makedirs(d, exist_ok=True)
+    for name in os.listdir(d):
+        p = os.path.join(d, name)
+        try:
+            if time.time() - os.path.getmtime(p) > 86400:
+                shutil.rmtree(p) if os.path.isdir(p) else os.remove(p)
+        except OSError:
+            pass
+    return d
+
+
 def download(pairs, on_progress=None, cancelled=None):
     """Download and unpack packs.  on_progress(fraction, text) from this thread;
-    cancelled() -> True stops it.  Blocking."""
+    cancelled() -> True stops it.  Blocking.  A pack another window is already
+    downloading is waited for, not fetched twice."""
     idx = _index()
-    os.makedirs(packs_dir(), exist_ok=True)
+    incoming = _incoming_dir()
     for k, pair in enumerate(pairs):
-        urls = idx.get(tuple(pair))
+        pair = tuple(pair)
+        urls = idx.get(pair)
         if not urls:
             raise Unsupported(_("No language pack for {pair}.").format(pair=f"{pair[0]}→{pair[1]}"))
         label = _("Downloading {src} → {tgt}…").format(src=language_name(pair[0]),
                                                        tgt=language_name(pair[1]))
-        part = _pack_dir(pair) + ".part"
+        with _pair_locks_lock:
+            lock = _pair_locks.setdefault(pair, threading.Lock())
+        while not lock.acquire(timeout=0.2):
+            if cancelled and cancelled():
+                raise RuntimeError("Cancelled")
         try:
-            with _urlopen(urls[0], timeout=60) as r, open(part, "wb") as f:
+            if pair not in installed():
+                _download_pack(pair, urls[0], incoming, label, (k, len(pairs)),
+                               on_progress, cancelled)
+        finally:
+            lock.release()
+    if on_progress:
+        on_progress(1.0, _("Done"))
+
+
+def _download_pack(pair, url, incoming, label, step, on_progress, cancelled):
+    k, n = step
+    fd, part = tempfile.mkstemp(prefix=f"{pair[0]}-{pair[1]}.", suffix=".part", dir=incoming)
+    try:
+        try:
+            with os.fdopen(fd, "wb") as f, _urlopen(url, timeout=60) as r:
                 total = int(r.headers.get("Content-Length") or 0)
                 got = 0
                 while True:
@@ -419,46 +460,53 @@ def download(pairs, on_progress=None, cancelled=None):
                     got += len(chunk)
                     if on_progress:
                         frac = got / total if total else 0.0
-                        on_progress((k + frac * 0.95) / len(pairs),
+                        on_progress((k + frac * 0.95) / n,
                                     f"{label}  {got / 1e6:.0f} / {total / 1e6:.0f} MB"
                                     if total else label)
             if on_progress:
-                on_progress((k + 0.97) / len(pairs), _("Unpacking…"))
-            _unpack(part, _pack_dir(pair))
+                on_progress((k + 0.97) / n, _("Unpacking…"))
+            _unpack(part, _pack_dir(pair), incoming)
         except OSError as e:
             raise RuntimeError(_("Could not download the language pack. Check your "
                                  "internet connection and try again.") + f"\n({e})") from e
-        finally:
-            try:
-                os.remove(part)
-            except OSError:
-                pass
-    if on_progress:
-        on_progress(1.0, _("Done"))
+    finally:
+        try:
+            os.remove(part)
+        except OSError:
+            pass
 
 
-def _unpack(archive, dest):
+def _unpack(archive, dest, incoming):
     """An .argosmodel (a zip with one top folder) -> dest/{model/, tokenizer,
-    metadata.json}.  Skips the stanza sentence splitter (not used) and any
-    member that would land outside dest."""
-    tmp = dest + ".tmp"
-    shutil.rmtree(tmp, ignore_errors=True)
-    os.makedirs(tmp)
-    with zipfile.ZipFile(archive) as z:
-        for info in z.infolist():
-            parts = info.filename.replace("\\", "/").split("/")[1:]
-            if not parts or not parts[-1] or parts[0] in ("stanza", "README.md") \
-                    or any(p in ("", ".", "..") for p in parts) or ":" in info.filename:
-                continue
-            target = os.path.join(tmp, *parts)
-            os.makedirs(os.path.dirname(target), exist_ok=True)
-            with z.open(info) as src, open(target, "wb") as out:
-                shutil.copyfileobj(src, out, 1 << 20)
-    if not os.path.isfile(os.path.join(tmp, "model", "model.bin")):
+    metadata.json}, unpacked in `incoming` and then renamed into place (a
+    complete pack already at dest, from another download, is kept).  Skips
+    the stanza sentence splitter (not used) and any member that would land
+    outside dest."""
+    tmp = tempfile.mkdtemp(prefix=os.path.basename(dest).replace("_", "-") + ".",
+                           suffix=".tmp", dir=incoming)
+    try:
+        with zipfile.ZipFile(archive) as z:
+            for info in z.infolist():
+                parts = info.filename.replace("\\", "/").split("/")[1:]
+                if not parts or not parts[-1] or parts[0] in ("stanza", "README.md") \
+                        or any(p in ("", ".", "..") for p in parts) or ":" in info.filename:
+                    continue
+                target = os.path.join(tmp, *parts)
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                with z.open(info) as src, open(target, "wb") as out:
+                    shutil.copyfileobj(src, out, 1 << 20)
+        if not os.path.isfile(os.path.join(tmp, "model", "model.bin")):
+            raise RuntimeError("not a translation package: model/model.bin is missing")
+        done = os.path.join(dest, "model", "model.bin")
+        if not os.path.isfile(done):
+            shutil.rmtree(dest, ignore_errors=True)         # an incomplete one
+            try:
+                os.replace(tmp, dest)
+            except OSError:
+                if not os.path.isfile(done):                # (not just lost a race)
+                    raise
+    finally:
         shutil.rmtree(tmp, ignore_errors=True)
-        raise RuntimeError("not a translation package: model/model.bin is missing")
-    shutil.rmtree(dest, ignore_errors=True)
-    os.replace(tmp, dest)
 
 
 # ---------------------------------------------------------------------------

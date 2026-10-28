@@ -761,6 +761,70 @@ def _translate_engine():
     raise RuntimeError("not installed; " + ("offered as an optional download" if ok else why))
 
 
+def _translate_download(d):
+    """Two windows downloading the same language pack: one download, the
+    other waits for it; two processes (no shared lock): separate temporary
+    files, and the pack that lands first is kept."""
+    import io
+    import threading
+    import zipfile
+    from . import translate as tr
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("pack/model/model.bin", b"x" * 4096)
+        z.writestr("pack/metadata.json", "{}")
+    blob = buf.getvalue()
+    calls, parts = [], set()
+    incoming = os.path.join(d, "packs", ".incoming")
+
+    class Response(io.BytesIO):
+        headers = {"Content-Length": str(len(blob))}
+
+        def read(self, n=-1):
+            time.sleep(0.02)
+            parts.update(os.listdir(incoming))
+            return super().read(min(n, 512) if n and n > 0 else 512)
+
+    def urlopen(url, timeout=None):
+        calls.append(url)
+        return Response(blob)
+
+    saved = tr.packs_dir, tr._index, tr._urlopen
+    tr.packs_dir = lambda: os.path.join(d, "packs")
+    tr._index = lambda: {("xx", "yy"): ["https://example.invalid/xx_yy"]}
+    tr._urlopen = urlopen
+    errors = []
+
+    def run(fn, *args):
+        try:
+            fn(*args)
+        except Exception as e:  # noqa: BLE001
+            errors.append(e)
+    try:
+        def both(fn, *args):
+            threads = [threading.Thread(target=run, args=(fn, *args)) for _i in range(2)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join(30)
+        both(tr.download, [("xx", "yy")])
+        if errors or len(calls) != 1 or tr.installed() != [("xx", "yy")]:
+            raise RuntimeError(f"in one process: {len(calls)} downloads, {errors or tr.installed()}")
+        tr.remove_all()
+        calls.clear()
+        parts.clear()
+        both(tr._download_pack, ("xx", "yy"), "https://example.invalid/xx_yy",
+             tr._incoming_dir(), "", (0, 1), None, None)
+        part_files = {p for p in parts if p.endswith(".part")}
+        if errors or len(calls) != 2 or len(part_files) != 2 or tr.installed() != [("xx", "yy")]:
+            raise RuntimeError(f"two processes: {errors} {sorted(parts)} {tr.installed()}")
+        if os.listdir(incoming):
+            raise RuntimeError(f"left behind: {os.listdir(incoming)}")
+    finally:
+        tr.packs_dir, tr._index, tr._urlopen = saved
+    return "one download for two windows; separate .part files, complete pack kept"
+
+
 # ------------------------------------------------------------- UI checks ---
 
 def _ui(paths, res, shots=None):
@@ -1074,6 +1138,7 @@ def main(argv=()):
         res.check("translation (Markdown structure, side-by-side)", _translate_markdown)
         res.check("translation (mixed languages, code, tables)", _translate_mixed)
         res.check("translation engine", _translate_engine, required=runtime.OCR_BUNDLED)
+        res.check("language pack downloads (concurrent)", lambda: _translate_download(d))
         if not no_ui:
             _ui(paths, res, shots)
     if res.failed:

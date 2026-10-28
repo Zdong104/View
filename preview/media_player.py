@@ -466,10 +466,12 @@ class MediaPlayer(Adw.Bin):
         self.show_controls()
         return False
 
-    def _trace(self, what):
-        """--startup-trace: when the video got to `what` (once per player)."""
-        if runtime.startup_trace and what not in self._traced:
-            self._traced.add(what)
+    def _trace(self, what, key=None):
+        """--startup-trace: when the video got to `what` (once per `key`,
+        default `what`, per player)."""
+        key = key or what
+        if runtime.startup_trace and key not in self._traced:
+            self._traced.add(key)
             age = runtime.process_age()
             print(f"{age if age is not None else 0:7.2f} s  video: {what}", flush=True)
 
@@ -713,7 +715,7 @@ class MediaPlayer(Adw.Bin):
             if ok and p >= 0:
                 self.position = p
                 if p >= 2 * Gst.SECOND:
-                    self._trace(f"played 2 s ({self.qos_dropped} frames dropped)")
+                    self._trace(f"played 2 s ({self.qos_dropped} frames dropped)", "played")
         if self.duration <= 0:
             self._query_duration()
         self._update_position_ui()

@@ -357,7 +357,9 @@ def _lock_owner() -> int | None:
     if not running():
         return None
     try:
-        with open(_lock_path(), "rb") as f:
+        # unbuffered: a buffered read asks Windows for 8 KiB, which reaches the
+        # byte the watcher has locked (_LOCK_AT) and fails as a whole
+        with open(_lock_path(), "rb", buffering=0) as f:
             return int(f.read(32).split()[0])
     except (OSError, ValueError, IndexError):
         return None

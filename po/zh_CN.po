@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: View\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-27 21:55-0400\n"
+"POT-Creation-Date: 2026-10-27 22:30-0400\n"
 "PO-Revision-Date: 2026-10-26 15:40-0400\n"
 "Last-Translator: View contributors\n"
 "Language-Team: Simplified Chinese\n"
@@ -1215,9 +1215,6 @@ msgstr "部分文档只能通过“另存为”保存"
 #, python-brace-format
 msgid "of {total}"
 msgstr "共 {total} 页"
-
-msgid "Translate Page…"
-msgstr "翻译页面…"
 
 msgid "Add Note Here"
 msgstr "在此添加注释"
@@ -2624,6 +2621,15 @@ msgstr "无法翻译：{error}"
 msgid "Try Again"
 msgstr "重试"
 
+msgid "Open Side by Side"
+msgstr "并排打开"
+
+msgid "Close (Esc)"
+msgstr "关闭 (Esc)"
+
+msgid "Drag to resize"
+msgstr "拖动以调整大小"
+
 msgid "Detect Language"
 msgstr "检测语言"
 
@@ -2695,6 +2701,23 @@ msgstr "翻译后的 Markdown 源码"
 #, python-brace-format
 msgid "{done} of {total} parts"
 msgstr "第 {done} 部分，共 {total} 部分"
+
+msgid "Reading the code…"
+msgstr "正在读取代码…"
+
+#, python-brace-format
+msgid "{n} comment or text to translate"
+msgid_plural "{n} comments and texts to translate"
+msgstr[0] "{n} 处注释或文字待翻译"
+
+#, python-brace-format
+msgid "{n} row"
+msgid_plural "{n} rows"
+msgstr[0] "{n} 行"
+
+#, python-brace-format
+msgid "the first {n} columns"
+msgstr "前 {n} 列"
 
 #, python-brace-format
 msgid "Translation — {name}"
@@ -2821,3 +2844,6 @@ msgstr "将当前帧保存为 PNG"
 
 msgid "Could not save the frame"
 msgstr "无法保存当前帧"
+
+#~ msgid "Translate Page…"
+#~ msgstr "翻译页面…"

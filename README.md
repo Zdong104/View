@@ -97,22 +97,22 @@
 
 ### Ubuntu / Debian (.deb)
 
-Download [`view_0.2.1_all.deb`](https://github.com/Zdong104/View/releases/download/v0.2.1/view_0.2.1_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
+Download [`view_0.2.2_all.deb`](https://github.com/Zdong104/View/releases/download/v0.2.2/view_0.2.2_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
 
 ```bash
-sudo apt install ./view_0.2.1_all.deb
+sudo apt install ./view_0.2.2_all.deb
 ```
 
 Or in one go:
 
 ```bash
-wget https://github.com/Zdong104/View/releases/download/v0.2.1/view_0.2.1_all.deb && sudo apt install ./view_0.2.1_all.deb
+wget https://github.com/Zdong104/View/releases/download/v0.2.2/view_0.2.2_all.deb && sudo apt install ./view_0.2.2_all.deb
 ```
 
 `apt` is recommended because it also installs the dependencies. If you prefer `dpkg`:
 
 ```bash
-sudo dpkg -i view_0.2.1_all.deb && sudo apt -f install
+sudo dpkg -i view_0.2.2_all.deb && sudo apt -f install
 ```
 
 ### Snap (edge channel)
@@ -133,9 +133,9 @@ The .deb installs that menu item for you when `python3-nautilus` is present (`ap
 
 ### Windows (**experimental**)
 
-Download [`View-Setup-0.2.1.exe`](https://github.com/Zdong104/View/releases/download/v0.2.1/View-Setup-0.2.1.exe) (installer) or [`View-0.2.1-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.2.1/View-0.2.1-windows-portable.zip) (no install). It is tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: press **Space** (or **Start**) and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
+Download [`View-Setup-0.2.2.exe`](https://github.com/Zdong104/View/releases/download/v0.2.2/View-Setup-0.2.2.exe) (installer) or [`View-0.2.2-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.2.2/View-0.2.2-windows-portable.zip) (no install). It is tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: press **Space** (or **Start**) and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
 
-**Updating from 0.1.6–0.1.9:** in those versions the background screenshot watcher kept View's files open, so Setup could stop without a message. The 0.2.0 installer stops the watcher itself, also when an older View starts the update. If an update still doesn't go through, end the background **View** process in Task Manager (or run `taskkill /F /IM View.exe`), then run `View-Setup-0.2.1.exe` again.
+**Updating from 0.1.6–0.1.9:** in those versions the background screenshot watcher kept View's files open, so Setup could stop without a message. The 0.2.0 installer stops the watcher itself, also when an older View starts the update. If an update still doesn't go through, end the background **View** process in Task Manager (or run `taskkill /F /IM View.exe`), then run `View-Setup-0.2.2.exe` again.
 
 The **first start after installing** can take 20 seconds or more while Windows checks each new file (the build isn't code-signed yet, see below). Later starts take about a second.
 
@@ -147,7 +147,7 @@ Text recognition (OCR) and translation each run in a small helper program, `ocr\
 
 View is also supported in Chrome as an extension.
 
-1. Download [`view-chrome-0.2.1.zip`](https://github.com/Zdong104/View/releases/download/v0.2.1/view-chrome-0.2.1.zip) and unzip it.
+1. Download [`view-chrome-0.2.2.zip`](https://github.com/Zdong104/View/releases/download/v0.2.2/view-chrome-0.2.2.zip) and unzip it.
 2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and choose the unzipped folder.
 3. To open local files, click **Details** on View and turn on **Allow access to file URLs**.
 

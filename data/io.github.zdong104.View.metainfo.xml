@@ -79,6 +79,14 @@
     <keyword>STL</keyword>
   </keywords>
   <releases>
+    <release version="0.2.2" date="2026-10-28">
+      <description>
+        <p>A fix for translated Chinese, Japanese and Korean text on Windows.</p>
+        <ul>
+          <li>Windows: translated Chinese, Japanese and Korean text is shown in one font, so the characters line up instead of mixing styles and heights.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.1" date="2026-10-28">
       <description>
         <p>Fixes for translation, Markdown and the Windows uninstaller.</p>

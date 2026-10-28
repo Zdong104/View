@@ -53,7 +53,15 @@ def _style(dark: bool):
 def style_for(ttype, dark: bool) -> dict | None:
     """{'color': 'rrggbb'|None, 'bold': bool, 'italic': bool} or None if the
     token type has no visible styling."""
-    st = _style(dark).style_for_token(ttype)
+    style = _style(dark)
+    while True:
+        try:
+            st = style.style_for_token(ttype)
+            break
+        except KeyError:        # a lexer's own token subtype (YAML's Literal.Scalar.Plain)
+            if ttype.parent is None:
+                return None
+            ttype = ttype.parent
     if st.get("color") or st.get("bold") or st.get("italic"):
         return st
     return None

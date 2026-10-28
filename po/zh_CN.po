@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: View\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-27 20:00-0400\n"
+"POT-Creation-Date: 2026-10-27 20:42-0400\n"
 "PO-Revision-Date: 2026-10-26 15:40-0400\n"
 "Last-Translator: View contributors\n"
 "Language-Team: Simplified Chinese\n"
@@ -32,6 +32,9 @@ msgstr "文本和源代码"
 
 msgid "3D Models"
 msgstr "3D 模型"
+
+msgid "CAD Drawings (DXF)"
+msgstr "CAD 图纸 (DXF)"
 
 msgid "Spreadsheets (CSV/TSV)"
 msgstr "电子表格（CSV/TSV）"
@@ -341,20 +344,106 @@ msgstr "PDF 导出失败：{error}"
 msgid "Saved {name}"
 msgstr "已保存 {name}"
 
-msgid "Untitled"
-msgstr "未命名"
+msgid "Format"
+msgstr "格式"
+
+msgid "Units"
+msgstr "单位"
+
+msgid "Unitless"
+msgstr "无单位"
+
+msgid "Size"
+msgstr "尺寸"
+
+msgid "Extents"
+msgstr "范围"
+
+msgid "Layers"
+msgstr "图层"
+
+msgid "{n:,} ({on:,} shown)"
+msgstr "{n:,}（显示 {on:,} 个）"
+
+msgid "Blocks"
+msgstr "块"
+
+msgid "Entities"
+msgstr "对象"
+
+msgid "Most common"
+msgstr "最常见"
+
+msgid "This drawing has nothing to show"
+msgstr "此图纸没有可显示的内容"
 
 msgid "Zoom Out (−)"
 msgstr "缩小（−）"
 
-msgid "Toggle Fit / Actual Size"
-msgstr "切换适应窗口 / 实际大小"
+msgid "Fit to Window (0)"
+msgstr "适应窗口（0）"
 
 msgid "Zoom In (+)"
 msgstr "放大（+）"
 
-msgid "Fit to Window (0)"
-msgstr "适应窗口（0）"
+msgid "Show Lineweights"
+msgstr "显示线宽"
+
+msgid "Drawing Options"
+msgstr "图纸选项"
+
+msgid "Drawing"
+msgstr "图纸"
+
+msgid "Loading…"
+msgstr "正在加载…"
+
+msgid "Empty drawing"
+msgstr "空图纸"
+
+#, python-brace-format
+msgid "{n} layer"
+msgid_plural "{n} layers"
+msgstr[0] "{n} 个图层"
+
+msgid "Could not open this drawing"
+msgstr "无法打开此图纸"
+
+msgid "Show All"
+msgstr "全部显示"
+
+msgid "Hide All"
+msgstr "全部隐藏"
+
+msgid "{n:,} object"
+msgid_plural "{n:,} objects"
+msgstr[0] "{n:,} 个对象"
+
+msgid "Export Drawing"
+msgstr "导出图纸"
+
+msgid "PDF Document"
+msgstr "PDF 文档"
+
+msgid "SVG Image"
+msgstr "SVG 图片"
+
+msgid "PNG Image"
+msgstr "PNG 图片"
+
+#, python-brace-format
+msgid "Exported “{name}”"
+msgstr "已导出“{name}”"
+
+#, python-brace-format
+msgid "Could not export: {error}"
+msgstr "无法导出：{error}"
+
+msgid "Untitled"
+msgstr "未命名"
+
+msgid "Toggle Fit / Actual Size"
+msgstr "切换适应窗口 / 实际大小"
 
 msgid "Tolerance"
 msgstr "容差"
@@ -631,9 +720,6 @@ msgstr "（仅保存第一帧；该格式不支持动画）"
 msgid "Save As"
 msgstr "另存为"
 
-msgid "Format"
-msgstr "格式"
-
 msgid "Quality"
 msgstr "质量"
 
@@ -771,6 +857,10 @@ msgstr "打开文档以查看其详细信息。"
 
 msgid "Copied"
 msgstr "已复制"
+
+#, python-brace-format
+msgid "Could not render this Markdown: {error}"
+msgstr "无法渲染此 Markdown：{error}"
 
 msgid "Select"
 msgstr "选择"
@@ -1884,9 +1974,6 @@ msgstr "无法渲染快照：{exc}"
 msgid "Export Snapshot"
 msgstr "导出快照"
 
-msgid "PNG Image"
-msgstr "PNG 图片"
-
 msgid "Can only save snapshots to local files"
 msgstr "快照只能保存到本地文件"
 
@@ -2034,9 +2121,6 @@ msgstr "行和列"
 
 msgid "Table"
 msgstr "表格"
-
-msgid "Loading…"
-msgstr "正在加载…"
 
 #, python-brace-format
 msgid "{rows} × {columns}"
@@ -2314,6 +2398,24 @@ msgstr "已保存“{v}”"
 msgid "Untitled.txt"
 msgstr "未命名.txt"
 
+msgid "Source"
+msgstr "源码"
+
+msgid "Markdown source"
+msgstr "Markdown 源码"
+
+msgid "Split"
+msgstr "分栏"
+
+msgid "Source and preview side by side"
+msgstr "源码与预览并排显示"
+
+msgid "Preview"
+msgstr "预览"
+
+msgid "Rendered Markdown"
+msgstr "渲染后的 Markdown"
+
 msgid "English"
 msgstr "英语"
 
@@ -2436,7 +2538,8 @@ msgstr "未安装翻译引擎。"
 msgid ""
 "Translation is not included in this build ({path} is missing). Reinstall "
 "{APP_NAME} to get it back."
-msgstr "此版本未包含翻译功能（缺少 {path}）。请重新安装 {APP_NAME} 以恢复该功能。"
+msgstr ""
+"此版本未包含翻译功能（缺少 {path}）。请重新安装 {APP_NAME} 以恢复该功能。"
 
 msgid "Translation should be bundled with this build."
 msgstr "此版本应已内置翻译功能。"
@@ -2453,7 +2556,10 @@ msgid ""
 "CTranslate2 engine ({DOWNLOAD_SIZE} download from PyPI). It is installed for "
 "your user only, in {where}, and can be removed by deleting that folder. Each "
 "language pair then downloads its language pack once."
-msgstr "在本机翻译文字（不发送到任何地方）需要 CTranslate2 引擎（从 PyPI 下载，{DOWNLOAD_SIZE}）。它仅为当前用户安装在 {where} 中，删除该文件夹即可移除。之后每个语言对只需下载一次语言包。"
+msgstr ""
+"在本机翻译文字（不发送到任何地方）需要 CTranslate2 引擎（从 PyPI 下载，"
+"{DOWNLOAD_SIZE}）。它仅为当前用户安装在 {where} 中，删除该文件夹即可移除。之"
+"后每个语言对只需下载一次语言包。"
 
 msgid "Downloading the translation engine…"
 msgstr "正在下载翻译引擎…"

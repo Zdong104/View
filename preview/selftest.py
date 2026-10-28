@@ -2,13 +2,14 @@
 
 Headless checks (no display needed): library versions, every module imports,
 render a PDF page with Poppler, decode a PNG with Pillow and GdkPixbuf, parse
-an STL, parse a CSV, highlight code, combine images into a PDF, GStreamer
-elements, PyOpenGL import, OCR availability, translation (language
-detection and text handling always; the engine when it is installed).
+an STL, parse a CSV, highlight code, parse and draw a DXF drawing, render
+Markdown, combine images into a PDF, GStreamer elements, PyOpenGL import, OCR
+availability, translation (language detection and text handling always; the
+engine when it is installed).
 
 UI checks (only when a display is available, skipped with --no-ui): open a
-PDF, an image, a CSV, a text file and an STL in real windows and make sure
-each viewer comes up.  ``--screenshots DIR`` also saves a PNG of each window.
+PDF, an image, a CSV, a text file, a Markdown file, an STL and a DXF in real
+windows and make sure each viewer comes up.  ``--screenshots DIR`` also saves a PNG of each window.
 
 Exit status 0 when every required check passes, 1 otherwise.
 """
@@ -108,6 +109,13 @@ def _make_fixtures(d):
     with open(p, "w") as f:
         f.write("def hello(name):\n    return f'Hello, {name}!'\n")
     paths["text"] = p
+    # Markdown
+    p = os.path.join(d, "sample.md")
+    with open(p, "w") as f:
+        f.write("# Title\n\nSome **bold** text and a [link](https://example.com).\n\n"
+                "- one\n- two\n\n```python\nprint('hi')\n```\n\n"
+                "| a | b |\n|---|--:|\n| 1 | 2 |\n")
+    paths["md"] = p
     return paths
 
 
@@ -131,7 +139,8 @@ def _versions():
 
 MODULES = ["app", "viewer_base", "image_view", "image_ops", "pdf_view", "pdf_ops",
            "pdf_render", "pdf_canvas", "markup", "signature", "stl_view", "mesh_io",
-           "table_view", "table_data", "text_view", "syntax", "video_view", "media_player",
+           "table_view", "table_data", "text_view", "syntax", "markdown_view", "dxf_view",
+           "video_view", "media_player",
            "inspector", "convert", "ocr", "ocr_install", "preferences", "touchpad",
            "integration", "screenshot", "translate", "translate_install", "translate_ui",
            "translate_helper"]
@@ -216,6 +225,64 @@ def _code(paths):
         raise RuntimeError("no highlighting runs")
     import pygments
     return f"Pygments {pygments.__version__}, {len(r[1])} runs"
+
+
+def _dxf(paths, d):
+    """Write a small drawing with ezdxf, then parse, rasterize and export it."""
+    import ezdxf
+    from . import dxf_view
+    p = os.path.join(d, "sample.dxf")
+    doc = ezdxf.new("R2010", setup=True)
+    doc.layers.add("PARTS", color=1)
+    doc.layers.add("OFF", color=3).off()
+    msp = doc.modelspace()
+    msp.add_lwpolyline([(0, 0), (100, 0), (100, 60), (0, 60)], close=True)
+    msp.add_circle((50, 30), 20, dxfattribs={"layer": "PARTS"})
+    msp.add_line((0, 0), (100, 60), dxfattribs={"layer": "OFF"})
+    hatch = msp.add_hatch(color=5)
+    hatch.paths.add_polyline_path([(5, 5), (25, 5), (25, 20), (5, 20)], is_closed=True)
+    msp.add_text("View", height=6).set_placement((60, 45))
+    doc.saveas(p)
+    paths["dxf"] = p
+    scene = dxf_view.build_scene(p)
+    layers = {key: vis for key, _n, _c, vis, _cnt in scene.layers}
+    if scene.is_empty() or layers.get("off") is not False or layers.get("parts") is not True:
+        raise RuntimeError(f"groups={len(scene.groups)} layers={layers}")
+    x0, y0, x1, y1 = scene.extents
+    if not (abs(x1 - x0 - 100) < 1 and abs(y1 - y0 - 60) < 1):
+        raise RuntimeError(f"extents {scene.extents}")
+    import cairo
+    surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, 200, 120)
+    cr = cairo.Context(surf)
+    bx0, by0, bx1, by1 = scene.bbox
+    dxf_view.paint(scene, cr, 200 / (bx1 - bx0), bx0, by0, 200, 120)
+    surf.flush()
+    data = surf.get_data()
+    off = 95 * surf.get_stride() + 30 * 4             # inside the blue hatch (BGRA)
+    if not (data[off] > 150 and data[off + 2] < 80 and data[off + 3] > 200):
+        raise RuntimeError(f"unexpected pixel {data[off + 2]},{data[off + 1]},{data[off]}")
+    svg = os.path.join(d, "sample.svg")
+    dxf_view.export(scene, svg, "svg")
+    if os.path.getsize(svg) < 500:
+        raise RuntimeError("empty SVG export")
+    return (f"ezdxf {ezdxf.__version__}, {len(scene.groups)} styles, "
+            f"{sum(len(g.chunks) for g in scene.groups)} path chunks")
+
+
+def _markdown(paths):
+    from . import markdown_view
+    import markdown_it
+    with open(paths["md"]) as f:
+        ops = markdown_view.build_ops(f.read(), False, os.path.dirname(paths["md"]))
+    kinds = [op[0] for op in ops.ops]
+    tags = {t for op in ops.ops if op[0] == "t" for t in op[2]}
+    missing = [what for what, ok in (("heading", "h1" in tags), ("bold", "b" in tags),
+                                     ("link", ops.links == ["https://example.com"]),
+                                     ("table", "table" in kinds), ("code", bool(ops.styles)))
+               if not ok]
+    if missing:
+        raise RuntimeError("missing " + ", ".join(missing))
+    return f"markdown-it-py {markdown_it.__version__}, {len(ops.ops)} insert operations"
 
 
 def _combine(paths, d):
@@ -389,7 +456,10 @@ def _ui(paths, res, shots=None):
     app.set_flags(Gio.ApplicationFlags.NON_UNIQUE)
     app.add_recent = lambda *_a: None          # keep the user's Recent list clean
     cases = [("pdf", [paths["pdf"]]), ("image", [paths["png"], paths["jpg"]]),
-             ("table", [paths["csv"]]), ("text", [paths["text"]]), ("model", [paths["stl"]])]
+             ("table", [paths["csv"]]), ("text", [paths["text"]]), ("text", [paths["md"]]),
+             ("model", [paths["stl"]])]
+    if "dxf" in paths:
+        cases.append(("cad", [paths["dxf"]]))
 
     def pump(seconds):
         end = time.monotonic() + seconds
@@ -402,15 +472,21 @@ def _ui(paths, res, shots=None):
         app.hold()
         try:
             for kind, files in cases:
-                name = f"ui: {kind} viewer"
+                label = "markdown" if files[0].endswith(".md") else kind
+                name = f"ui: {label} viewer"
                 win = MainWindow(app)
                 win.set_default_size(900, 640)
                 win.present()
                 try:
                     win.load_files(kind, [Gio.File.new_for_path(p) for p in files])
-                    pump(2.5 if kind in ("pdf", "model") else 1.5)
+                    pump(2.5 if kind in ("pdf", "model", "cad") else 1.5)
                     if win.viewer is None:
                         raise RuntimeError("viewer failed to load (error page shown)")
+                    if label == "markdown" and (win.viewer._md is None or win.viewer._md.view
+                                                .get_buffer().get_char_count() == 0):
+                        raise RuntimeError("Markdown preview is empty")
+                    if kind == "cad" and win.viewer.canvas.raster is None:
+                        raise RuntimeError("drawing not rendered")
                     title = win.viewer.get_title()
                     gl_err = getattr(win.viewer, "_gl_failed", None)
                     if gl_err:
@@ -420,7 +496,7 @@ def _ui(paths, res, shots=None):
                             raise RuntimeError(f"no 3D rendering: {gl_err}")
                         res.warn(name + " (OpenGL)", gl_err)
                     if shots:
-                        _try_snapshot(res, win, os.path.join(shots, f"selftest-{kind}.png"))
+                        _try_snapshot(res, win, os.path.join(shots, f"selftest-{label}.png"))
                     res.ok(name, title or "")
                 except Exception as e:  # noqa: BLE001
                     if os.environ.get("PREVIEW_SELFTEST_TRACE"):
@@ -545,6 +621,8 @@ def main(argv=()):
         res.check("3D model parse (STL)", lambda: _stl(paths))
         res.check("CSV parse", lambda: _csv(paths))
         res.check("syntax highlighting", lambda: _code(paths))
+        res.check("Markdown render (markdown-it-py)", lambda: _markdown(paths))
+        res.check("DXF drawing (ezdxf)", lambda: _dxf(paths, d))
         res.check("combine images into PDF (img2pdf)", lambda: _combine(paths, d))
         res.check("screenshot editing", lambda: _screenshots(paths, d))
         res.check("video (GStreamer)", _gst)

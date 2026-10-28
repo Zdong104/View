@@ -284,6 +284,10 @@ class TextViewer(Viewer):
         self._status_pending = False
         self._title_pending = False
         self._alive = True
+        self._md = None                       # MarkdownPreview for .md files
+        self._md_mode = "source"
+        self._md_stale = False
+        self.md_switch = None
         self.font_pt = DEFAULT_PT
         self._cls = f"txv{next(_counter)}"
         self._css = Gtk.CssProvider()
@@ -394,7 +398,8 @@ class TextViewer(Viewer):
         self._css.load_from_string(
             f".{self._cls}.tx-view, .{self._cls}.tx-gutter "
             f"{{ font-size: {self.font_pt:.2f}pt; }}\n"
-            f".{self._cls}.tx-gutter {{ font-family: monospace; }}")
+            f".{self._cls}.tx-gutter {{ font-family: monospace; }}\n"
+            f".{self._cls}.md-preview {{ font-size: {self.font_pt * 1.05:.2f}pt; }}")
 
     def _style_search_tags(self):
         self.tag_match.set_property("background", "rgba(255, 200, 0, 0.35)")
@@ -506,6 +511,7 @@ class TextViewer(Viewer):
         box.append(self.btn_redo)
         header.pack_start(box)
         header.pack_start(self.btn_save)
+        self._build_md_switch(header)
         self.search_btn = Gtk.ToggleButton(icon_name="system-search-symbolic",
                                            tooltip_text=_("Find (Ctrl+F)"))
         self.search_btn.bind_property("active", self.search_bar, "search-mode-enabled",
@@ -569,6 +575,8 @@ class TextViewer(Viewer):
         self._alive = False
         self._load_gen += 1
         self._hl_gen += 1
+        if self._md is not None:
+            self._md.release()
         for attr in ("_hl_timer", "_search_timer", "_osd_timer"):
             src = getattr(self, attr)
             if src:
@@ -613,6 +621,8 @@ class TextViewer(Viewer):
         self.act_wrap.set_state(GLib.Variant("b", ext in PROSE_EXTS))
         self.view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR if ext in PROSE_EXTS
                                 else Gtk.WrapMode.NONE)
+        if ext in (".md", ".markdown") and not self.compact:
+            self._setup_markdown()
         self.language = "Plain Text"
         self._loading = True
         self.view.set_editable(False)
@@ -688,6 +698,8 @@ class TextViewer(Viewer):
         if self.readonly:
             self._ro_text = text
         self.view.set_editable(not self.readonly)
+        if self._md is not None:
+            self._md_source(text)
         # fill the buffer in chunks
         self.buf.set_enable_undo(False)
         self._load_text = text
@@ -736,7 +748,9 @@ class TextViewer(Viewer):
         self._update_status()
         self.refresh_title()
         if not self.compact:
-            GLib.idle_add(lambda: (self.view.grab_focus(), False)[1])
+            focus = self._md.view if self._md is not None and self._md_mode == "preview" \
+                else self.view
+            GLib.idle_add(lambda: (focus.grab_focus(), False)[1])
         self._schedule_highlight(0)
         if self.search_bar.get_search_mode() and self.search_entry.get_text():
             self._run_search()
@@ -859,6 +873,8 @@ class TextViewer(Viewer):
         if self.search_bar.get_search_mode() and self.search_entry.get_text():
             self._schedule_search()
         self._update_sensitivity()
+        if self._md is not None:
+            self._md_edited()
 
     def _on_modified_changed(self):
         self._update_sensitivity()
@@ -966,6 +982,8 @@ class TextViewer(Viewer):
     # Find
     # ===================================================================
     def show_search(self):
+        if self._md is not None and self._md_mode == "preview":
+            self._set_md_mode("split", save=False)      # find works in the source
         self.search_bar.set_search_mode(True)
         self.search_entry.grab_focus()
         sel = self.buf.get_selection_bounds()
@@ -1185,3 +1203,81 @@ class TextViewer(Viewer):
             if on_done:
                 on_done(True)
         dlg.save(self.get_root(), None, done)
+
+    # ===================================================================
+    # Markdown: Source / Split / Preview
+    # ===================================================================
+    def _build_md_switch(self, header):
+        """Hidden until load() finds a Markdown file."""
+        self.md_switch = Adw.ToggleGroup(visible=False, valign=Gtk.Align.CENTER,
+                                         css_classes=["round"])
+        for name, label, tip in (("source", _("Source"), _("Markdown source")),
+                                 ("split", _("Split"), _("Source and preview side by side")),
+                                 ("preview", _("Preview"), _("Rendered Markdown"))):
+            self.md_switch.add(Adw.Toggle(name=name, label=label, tooltip=tip))
+        self.md_switch.connect("notify::active-name", lambda g, _p: self._set_md_mode(
+            g.get_active_name(), save=True) if g.get_active_name() != self._md_mode else None)
+        header.pack_start(self.md_switch)
+
+    def _setup_markdown(self):
+        from . import markdown_view
+        if self._md is None:
+            self._md = markdown_view.MarkdownPreview(self._cls)
+            self._md.on_open_file = lambda gf: self.window.open_files([gf])
+            scroll = Gtk.EventControllerScroll(flags=Gtk.EventControllerScrollFlags.VERTICAL)
+            scroll.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+            scroll.connect("scroll", self._on_scroll)
+            self._md.add_controller(scroll)
+            self.remove(self.overlay)
+            self.md_paned = Gtk.Paned(start_child=self.overlay, end_child=self._md,
+                                      wide_handle=True, hexpand=True, vexpand=True,
+                                      resize_start_child=True, resize_end_child=True,
+                                      shrink_start_child=False, shrink_end_child=False)
+            self.insert_child_after(self.md_paned, self.progress)
+        parent = self.gfile.get_parent() if self.gfile is not None else None
+        self._md.base_dir = parent.get_path() if parent is not None else None
+        if self.md_switch is not None:
+            self.md_switch.set_visible(True)
+        self._set_md_mode(markdown_view.saved_mode(), save=False)
+
+    def _set_md_mode(self, mode, save=True):
+        if self._md is None:
+            return
+        self._md_mode = mode
+        if self.md_switch is not None and self.md_switch.get_active_name() != mode:
+            self.md_switch.set_active_name(mode)
+        self.overlay.set_visible(mode != "preview")
+        self._md.set_visible(mode != "source")
+        self.status_bar.set_visible(not self.compact and mode != "preview")
+        if mode == "split":
+            def halve():
+                w = self.md_paned.get_width()
+                if w > 0:
+                    self.md_paned.set_position(w // 2)
+                return w <= 0 and self._alive         # not allocated yet: try again
+            if halve():
+                GLib.timeout_add(50, halve)
+        if mode != "source" and self._md_stale and not self._loading:
+            self._md_stale = False
+            self._md.set_source(self._current_text())
+        if save:
+            from . import markdown_view
+            markdown_view.save_mode(mode)
+            (self._md.view if mode == "preview" else self.view).grab_focus()
+
+    def _md_source(self, text):
+        from .markdown_view import PREVIEW_CAP
+        if len(text) > PREVIEW_CAP:              # too big to render: source only
+            self._set_md_mode("source", save=False)
+            if self.md_switch is not None:
+                self.md_switch.set_visible(False)
+            self._md.release()
+            self._md = None
+            return
+        self._md.set_source(text)
+
+    def _md_edited(self):
+        if self._md_mode == "source":
+            self._md_stale = True           # rendered when the preview is shown again
+        else:
+            self._md.set_source(self._current_text(), delay_ms=350)

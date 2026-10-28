@@ -11,9 +11,9 @@ Terminal=false
 StartupNotify=true
 StartupWMClass=io.github.zdong104.View
 Categories=Graphics;Viewer;Office;
-Keywords=pdf;image;photo;video;text;code;stl;3d;signature;sign;convert;
-Keywords[zh_CN]=pdf;图片;照片;视频;文本;代码;stl;3d;签名;转换;
-MimeType=application/pdf;image/png;image/jpeg;image/webp;image/gif;image/bmp;image/tiff;image/heic;image/heif;image/avif;image/jxl;image/svg+xml;model/stl;model/x.stl-binary;model/x.stl-ascii;application/sla;model/obj;model/ply;text/csv;text/tab-separated-values;video/mp4;video/quicktime;video/webm;video/x-matroska;video/x-msvideo;text/plain;text/x-python;text/x-csrc;text/x-chdr;text/x-c++src;text/javascript;application/json;text/markdown;
+Keywords=pdf;image;photo;video;text;code;markdown;stl;3d;dxf;cad;signature;sign;convert;
+Keywords[zh_CN]=pdf;图片;照片;视频;文本;代码;markdown;stl;3d;dxf;cad;图纸;签名;转换;
+MimeType=application/pdf;image/png;image/jpeg;image/webp;image/gif;image/bmp;image/tiff;image/heic;image/heif;image/avif;image/jxl;image/svg+xml;model/stl;model/x.stl-binary;model/x.stl-ascii;application/sla;model/obj;model/ply;text/csv;text/tab-separated-values;video/mp4;video/quicktime;video/webm;video/x-matroska;video/x-msvideo;text/plain;text/x-python;text/x-csrc;text/x-chdr;text/x-c++src;text/javascript;application/json;text/markdown;image/vnd.dxf;image/x-dxf;application/dxf;
 Actions=new-signature;
 
 [Desktop Action new-signature]

@@ -109,7 +109,7 @@ DEPENDS="python3 (>= 3.12), python3-gi (>= 3.48), python3-gi-cairo, python3-cair
  gir1.2-gstreamer-1.0, gir1.2-gst-plugins-base-1.0,
  gstreamer1.0-plugins-base, gstreamer1.0-plugins-good, gstreamer1.0-gtk4,
  python3-numpy, python3-pil, python3-pypdf, python3-opengl, python3-img2pdf,
- python3-pygments, python3-openpyxl, libegl1, libgl1"
+ python3-pygments, python3-openpyxl, python3-ezdxf, python3-markdown-it, libegl1, libgl1"
 RECOMMENDS="gstreamer1.0-libav, gstreamer1.0-plugins-bad, gstreamer1.0-plugins-ugly,
  ghostscript, python3-nautilus, python3-venv, librsvg2-common, webp-pixbuf-loader, heif-gdk-pixbuf,
  7zip | p7zip-full"

@@ -73,9 +73,14 @@ Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; Valu
 Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; ValueType: string; ValueName: ".mp4"; ValueData: ""
 Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; ValueType: string; ValueName: ".mkv"; ValueData: ""
 Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; ValueType: string; ValueName: ".webm"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; ValueType: string; ValueName: ".md"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; ValueType: string; ValueName: ".markdown"; ValueData: ""
+Root: HKA; Subkey: "Software\Classes\Applications\View.exe\SupportedTypes"; ValueType: string; ValueName: ".dxf"; ValueData: ""
 Root: HKA; Subkey: "Software\Classes\.pdf\OpenWithList\View.exe"; ValueType: none; Flags: uninsdeletekey
 Root: HKA; Subkey: "Software\Classes\.png\OpenWithList\View.exe"; ValueType: none; Flags: uninsdeletekey
 Root: HKA; Subkey: "Software\Classes\.jpg\OpenWithList\View.exe"; ValueType: none; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\.dxf\OpenWithList\View.exe"; ValueType: none; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\.md\OpenWithList\View.exe"; ValueType: none; Flags: uninsdeletekey
 ; Screenshot quick edit: the watcher adds this login entry itself (on by default,
 ; View > Preferences turns it off); only removed here, on uninstall.
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: none; ValueName: "View Screenshot Editor"; Flags: dontcreatekey uninsdeletevalue

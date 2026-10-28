@@ -22,6 +22,7 @@ IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".jpe", ".webp", ".gif", ".bmp", ".tif", 
               ".heic", ".heif", ".avif", ".jxl", ".svg", ".svgz", ".ico", ".tga", ".qoi",
               ".xpm", ".pnm", ".ppm", ".pgm", ".pbm"}
 MODEL_EXTS = {".stl", ".obj", ".ply"}
+CAD_EXTS = {".dxf"}
 OFFICE_EXTS = {".docx", ".xlsx", ".pptx", ".odt", ".ods", ".odp", ".doc", ".xls", ".ppt",
                ".rtf", ".odg", ".docm", ".xlsm", ".pptm", ".pps", ".ppsx"}
 FONT_EXTS = {".ttf", ".otf", ".ttc", ".otc", ".woff", ".woff2", ".pfb"}
@@ -886,6 +887,23 @@ class ModelRenderer(EmbeddingRenderer):
                            f"{ext[0]:.4g} × {ext[1]:.4g} × {ext[2]:.4g}")
         self.run_bg(work, done, "ql-mesh")
         return stack
+
+
+class CadRenderer(EmbeddingRenderer):
+    """DXF drawings: View's own viewer (no fallback but the generic page)."""
+    kind = "cad"
+    module, clsname = "dxf_view", "DxfViewer"
+
+    def on_viewer_title(self):
+        try:
+            sub = self.viewer.get_subtitle() if self.viewer is not None else ""
+        except Exception:  # noqa: BLE001
+            sub = ""
+        if sub:
+            self.set_extra(sub)
+
+    def build_fallback(self):
+        return GenericRenderer(self.win, self.gfile, self.info, self.local).build()
 
 
 def _render_mesh(mesh, dark, size=1400, max_tris=90000):
@@ -1802,6 +1820,8 @@ def create_renderer(win, gfile):
         return PdfRenderer(*args)
     if ext in MODEL_EXTS:
         return ModelRenderer(*args)
+    if ext in CAD_EXTS or ct in ("image/vnd.dxf", "image/x-dxf", "application/dxf"):
+        return CadRenderer(*args)
     if ext in IMAGE_EXTS or (ct.startswith("image/") and ct != "image/vnd.djvu"):
         fmt, w, h = _image_header(path)
         if fmt is not None:

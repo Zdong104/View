@@ -21,7 +21,8 @@
       <li>Signatures drawn on the touchpad, or with a mouse, pen or finger</li>
       <li>Live Text: select and copy text in images and scanned PDFs (optional OCR engine)</li>
       <li>Video and audio playback with hardware decoding</li>
-      <li>CSV/TSV editor, syntax-highlighted text and code, STL/OBJ/PLY model viewer</li>
+      <li>CSV/TSV editor, syntax-highlighted text and code, Markdown with a rendered preview, STL/OBJ/PLY model viewer</li>
+      <li>DXF (2D CAD) drawings with layers, zoom and export to PDF, SVG or PNG</li>
       <li>Optional Space-bar Quick Look for GNOME Files</li>
     </ul>
   </description>

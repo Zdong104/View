@@ -97,22 +97,22 @@
 
 ### Ubuntu / Debian（.deb）
 
-下载 [`view_0.2.0_all.deb`](https://github.com/Zdong104/View/releases/download/v0.2.0/view_0.2.0_all.deb)（也可以从 [Releases 页面](https://github.com/Zdong104/View/releases)获取），然后执行：
+下载 [`view_0.2.1_all.deb`](https://github.com/Zdong104/View/releases/download/v0.2.1/view_0.2.1_all.deb)（也可以从 [Releases 页面](https://github.com/Zdong104/View/releases)获取），然后执行：
 
 ```bash
-sudo apt install ./view_0.2.0_all.deb
+sudo apt install ./view_0.2.1_all.deb
 ```
 
 或者一条命令完成：
 
 ```bash
-wget https://github.com/Zdong104/View/releases/download/v0.2.0/view_0.2.0_all.deb && sudo apt install ./view_0.2.0_all.deb
+wget https://github.com/Zdong104/View/releases/download/v0.2.1/view_0.2.1_all.deb && sudo apt install ./view_0.2.1_all.deb
 ```
 
 推荐使用 `apt`，因为它会一并安装依赖。如果你更习惯用 `dpkg`：
 
 ```bash
-sudo dpkg -i view_0.2.0_all.deb && sudo apt -f install
+sudo dpkg -i view_0.2.1_all.deb && sudo apt -f install
 ```
 
 ### Snap（edge 通道）
@@ -133,9 +133,9 @@ sudo apt install python3-nautilus && mkdir -p ~/.local/share/nautilus-python/ext
 
 ### Windows（**实验性**）
 
-下载 [`View-Setup-0.2.0.exe`](https://github.com/Zdong104/View/releases/download/v0.2.0/View-Setup-0.2.0.exe)（安装程序）或 [`View-0.2.0-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.2.0/View-0.2.0-windows-portable.zip)（免安装）。目前已在真实的 Windows 11 笔记本上测试过，但仍非常欢迎你的反馈。触控板签名的用法和 Linux 上一样：按 **Space**（或 **Start**），然后用一根手指签名，无需点击。它需要精确式触控板（Precision Touchpad，2016 年以来的大多数笔记本都有）；否则请用鼠标或手写笔书写。
+下载 [`View-Setup-0.2.1.exe`](https://github.com/Zdong104/View/releases/download/v0.2.1/View-Setup-0.2.1.exe)（安装程序）或 [`View-0.2.1-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.2.1/View-0.2.1-windows-portable.zip)（免安装）。目前已在真实的 Windows 11 笔记本上测试过，但仍非常欢迎你的反馈。触控板签名的用法和 Linux 上一样：按 **Space**（或 **Start**），然后用一根手指签名，无需点击。它需要精确式触控板（Precision Touchpad，2016 年以来的大多数笔记本都有）；否则请用鼠标或手写笔书写。
 
-**从 0.1.6–0.1.9 升级：** 这些版本的后台截图监视进程会占用 View 的文件，导致安装程序可能在没有任何提示的情况下中止。0.2.0 的安装程序会自行结束该进程，即使升级是由旧版 View 发起的也同样有效。如果升级仍未成功，请在任务管理器中结束后台的 **View** 进程（或运行 `taskkill /F /IM View.exe`），然后重新运行 `View-Setup-0.2.0.exe`。
+**从 0.1.6–0.1.9 升级：** 这些版本的后台截图监视进程会占用 View 的文件，导致安装程序可能在没有任何提示的情况下中止。0.2.0 的安装程序会自行结束该进程，即使升级是由旧版 View 发起的也同样有效。如果升级仍未成功，请在任务管理器中结束后台的 **View** 进程（或运行 `taskkill /F /IM View.exe`），然后重新运行 `View-Setup-0.2.1.exe`。
 
 **安装后的首次启动**可能需要 20 秒甚至更久，因为 Windows 会逐个检查新文件（该版本尚未进行代码签名，见下文）。之后的启动大约只需一秒。
 
@@ -147,7 +147,7 @@ sudo apt install python3-nautilus && mkdir -p ~/.local/share/nautilus-python/ext
 
 View 也以扩展的形式支持 Chrome。
 
-1. 下载 [`view-chrome-0.2.0.zip`](https://github.com/Zdong104/View/releases/download/v0.2.0/view-chrome-0.2.0.zip) 并解压。
+1. 下载 [`view-chrome-0.2.1.zip`](https://github.com/Zdong104/View/releases/download/v0.2.1/view-chrome-0.2.1.zip) 并解压。
 2. 打开 `chrome://extensions`，开启 **开发者模式**，点击 **加载已解压的扩展程序**，然后选择解压出的文件夹。
 3. 如需打开本地文件，请点击 View 的 **详细信息**，并开启 **允许访问文件网址**。
 

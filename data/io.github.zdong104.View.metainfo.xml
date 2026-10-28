@@ -79,6 +79,18 @@
     <keyword>STL</keyword>
   </keywords>
   <releases>
+    <release version="0.2.1" date="2026-10-28">
+      <description>
+        <p>Fixes for translation, Markdown and the Windows uninstaller.</p>
+        <ul>
+          <li>Translated Chinese, Japanese and Korean text uses the right fonts, so the characters line up instead of mixing styles and heights.</li>
+          <li>Markdown tables get their natural column widths; Chinese cells no longer wrap after every character. Code blocks with blank lines stay in one box, and task lists show only the check box.</li>
+          <li>The ⋮ menu of text and Markdown files works again (Translate Document, Wrap Lines, Save As), as does Save Frame in the video player.</li>
+          <li>Two windows downloading the same language pack no longer break each other's download.</li>
+          <li>Windows: uninstalling while View is open now closes it first, so no files are left behind.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.0" date="2026-10-27">
       <description>
         <p>Offline translation, a DXF viewer, Markdown preview, faster startup, and a fixed Windows installer.</p>

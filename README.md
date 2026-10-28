@@ -1,61 +1,118 @@
 # View
 
-**A macOS-Preview-style viewer for Linux (GNOME) and Windows, also available as a Chrome extension.** View, annotate and sign PDFs, images, 3D models, tables and video in one fast GTK4 + libadwaita app, including signing with your laptop touchpad.
+**A macOS-Preview-style viewer for Linux (GNOME) and Windows, also available as a Chrome extension.** View, annotate and sign PDFs, images, CAD drawings, 3D models, Markdown, tables and video in one fast GTK4 + libadwaita app, sign with your laptop touchpad, and translate documents offline.
 
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Zdong104/View?include_prereleases)](https://github.com/Zdong104/View/releases)
 [![Downloads](https://img.shields.io/github/downloads/Zdong104/View/total)](https://github.com/Zdong104/View/releases)
 [![中文](https://img.shields.io/badge/%E4%B8%AD%E6%96%87-red)](README.zh-CN.md)
 
-![Signing a PDF in View](docs/screenshots/pdf-sign.png)
+![A PDF translated side by side into Chinese, offline](docs/screenshots/translate-pdf.png)
 
-<details>
-<summary>More screenshots</summary>
+## What's new in 0.2.0
 
-![Markup on an image](docs/screenshots/image-markup.png)
-![3D model viewer](docs/screenshots/model-3d.png)
-![CSV viewer](docs/screenshots/table.png)
+- **Offline translation.** Translate a selection in a floating card, or a whole document side by side: PDFs, Markdown, text, code and CSV files. Runs on your computer; nothing is sent anywhere.
+- **DXF drawings (2D CAD)** with a layers panel, zoom and pan, dark mode and export to PDF, SVG or PNG.
+- **Markdown preview** with a Source / Split / Preview switch, updated live while you edit.
+- **Faster start**: images open without loading the heavy libraries, and the update check waits until the window is shown.
+- **Windows: updating from 0.1.6–0.1.9 is fixed.** Setup could stop silently because the background screenshot watcher kept View's files open; see [Windows](#windows-experimental) if an update still doesn't go through.
+- Smaller fixes, for example YAML files are highlighted again instead of failing on some token types, and turning off Screenshots in Preferences now really stops the background watcher on Windows.
 
-</details>
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/translate-card.png" alt="Translating a selected paragraph in a floating card"><br><sub>Translate a selection in a card you can move and resize</sub></td>
+    <td width="50%"><img src="docs/screenshots/translate-markdown.png" alt="A Markdown file translated into Spanish, structure kept"><br><sub>Markdown translated with its structure kept</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/translate-code.png" alt="A Python file with its comments and docstrings translated"><br><sub>Code: only comments, docstrings and strings are translated</sub></td>
+    <td><img src="docs/screenshots/markdown-split.png" alt="Markdown source and rendered preview side by side"><br><sub>Markdown in Split view</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/dxf.png" alt="A mechanical drawing in the DXF viewer"><br><sub>DXF drawings</sub></td>
+    <td><img src="docs/screenshots/dxf-dark.png" alt="The DXF viewer in dark mode with the Layers panel open"><br><sub>Dark mode and the Layers panel</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/pdf-sign.png" alt="Signing a PDF in View"><br><sub>Signing a PDF</sub></td>
+    <td><img src="docs/screenshots/image-markup.png" alt="Markup on an image"><br><sub>Markup on an image</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/model-3d.png" alt="3D model viewer"><br><sub>3D models</sub></td>
+    <td><img src="docs/screenshots/table.png" alt="CSV viewer"><br><sub>CSV / TSV tables</sub></td>
+  </tr>
+</table>
 
 ## Features
+
+### Documents
 
 - **PDF**: fast on huge files (1,000-page and 600 MB scanned PDFs tested), thumbnails, search, text selection, form filling, print, Get Info.
 - **Page editing**: select thumbnails and press Delete, reorder, rotate, insert, merge several PDFs, drag pages out. Ctrl+S with pages selected saves just those pages as a new PDF.
 - **Export and protect**: export pages to images, password-encrypt, reduce file size.
 - **Sign with the touchpad**: your touchpad becomes a 1:1 drawing surface, like macOS Preview. Signatures are stored as vectors. Mouse and pen work too.
 - **Markup** on PDFs and images: sketch, shapes, arrows, text boxes, notes, highlight / underline / strikethrough.
+
+### Images
+
 - **Images**: zoom, pan, pinch, rotate, flip, crop, adjust colour, instant alpha, resize, EXIF/GPS info. Animated GIF / WebP / APNG keep their animation when edited.
 - **Screenshots**: Print Screen (Linux) or Snipping Tool / Win+Print Screen (Windows) opens the capture in View for quick markup; Done saves it back to Screenshots and copies it to the clipboard.
 - **Batch tools**: convert selected images, combine images into a PDF (also from the GNOME Files right-click menu).
-- **Live Text (OCR)**: select and copy text in images and scanned PDFs, export searchable PDFs (RapidOCR, CPU, English + Chinese).
-- **Translate**: translate selected text, a PDF page or a whole text file, including Live Text from images and scans; the language is detected automatically. Runs offline on your computer (Argos Translate language packs on CTranslate2, 30 languages including English, Spanish and Chinese); each language pack downloads the first time it is used.
+
+### CAD and 3D
+
+- **DXF drawings (2D CAD)**: lines, arcs, splines, text, dimensions, hatches and blocks with their layer colours, linetypes and lineweights. A Layers panel shows and hides layers (off and frozen layers start hidden); touchpad pan and pinch, mouse-wheel zoom at the pointer; colours adapt to dark mode. Get Info shows units, size, extents and layer / block / entity counts; Export As writes PDF, SVG or PNG. Also opens loosely written DXF files, such as CATIA or script exports without subclass markers or handles, that strict parsers refuse.
 - **3D models**: STL / OBJ / PLY, orbit with the touchpad, dimensions / volume / area (10M triangles tested).
-- **Tables and text**: CSV / TSV viewer and editor (1M rows), text and code viewer with syntax highlighting.
+
+### Text, code and tables
+
+- **Markdown**: rendered preview with a Source / Split / Preview switch (Preview by default, your choice is remembered), updated while you edit. Headings, tables, task lists, block quotes, highlighted code blocks, local images and clickable links (web, relative files, `#heading` anchors). No web engine needed, so it works the same on Windows.
+- **Text and code** viewer and editor with syntax highlighting.
+- **Tables**: CSV / TSV viewer and editor (1M rows).
+
+### Translation and Live Text
+
+- **Translate, offline**: select text and choose **Translate** to see the translation in a card next to the selection (move it, resize it, copy it), or choose **Translate Document…** to see the whole document side by side, original on the left, translation on the right, scrolling together. The translation pane can also move to a window of its own.
+  - **PDF**: follows the page you are looking at and translates the next one ahead. Formulas and figures are left as they are. **Save** writes the whole document's translation.
+  - **Markdown**: the structure is kept; only the prose is translated, code, links and markup stay untouched, and the result can be saved as `.md`.
+  - **Code**: only comments, docstrings and strings are translated; the lines stay where they were.
+  - **CSV / TSV**: same rows and columns; numbers, dates, IDs and codes are skipped. Save writes the translated table.
+  - **Images and scanned pages** go through Live Text first (needs the OCR engine).
+  - The source language is detected automatically; parts of the text already in the target language are kept as written.
+  - 30 languages, including English, Spanish, French, German, Japanese and Chinese, using Argos Translate language packs on CTranslate2. Each language pair is downloaded the first time you use it. Pick the default target language, and remove downloaded packs, in **Preferences → Translation**.
+  - Nothing leaves your computer. The engine is built into the snap and the Windows build; with the .deb or a source install, View offers to download it (about 45 MB) the first time you translate.
+- **Live Text (OCR)**: select and copy text in images and scanned PDFs, export searchable PDFs (RapidOCR, CPU, English + Chinese).
+
+### Media
+
 - **Video and audio**, with hardware (VA-API) decoding on Linux.
-- **Languages**: English and 简体中文 (Preferences → Language, or follow the system). Translations welcome, see [CONTRIBUTING.md](CONTRIBUTING.md#translations).
+
+### System integration
+
 - **Quick Look for GNOME Files**: press Space to preview a file (replaces Sushi; opt-in).
+- **Interface languages**: English and 简体中文 (Preferences → Language, or follow the system). Translations welcome, see [CONTRIBUTING.md](CONTRIBUTING.md#translations).
+- **Updates**: View tells you about new releases and can install them for you (see [Updating](#updating)).
 
 ## Install
 
 ### Ubuntu / Debian (.deb)
 
-Download [`view_0.1.9_all.deb`](https://github.com/Zdong104/View/releases/download/v0.1.9/view_0.1.9_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
+Download [`view_0.2.0_all.deb`](https://github.com/Zdong104/View/releases/download/v0.2.0/view_0.2.0_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
 
 ```bash
-sudo apt install ./view_0.1.9_all.deb
+sudo apt install ./view_0.2.0_all.deb
 ```
 
 Or in one go:
 
 ```bash
-wget https://github.com/Zdong104/View/releases/download/v0.1.9/view_0.1.9_all.deb && sudo apt install ./view_0.1.9_all.deb
+wget https://github.com/Zdong104/View/releases/download/v0.2.0/view_0.2.0_all.deb && sudo apt install ./view_0.2.0_all.deb
 ```
 
 `apt` is recommended because it also installs the dependencies. If you prefer `dpkg`:
 
 ```bash
-sudo dpkg -i view_0.1.9_all.deb && sudo apt -f install
+sudo dpkg -i view_0.2.0_all.deb && sudo apt -f install
 ```
 
 ### Snap (edge channel)
@@ -76,22 +133,21 @@ The .deb installs that menu item for you when `python3-nautilus` is present (`ap
 
 ### Windows (**experimental**)
 
-Download [`View-Setup-0.1.9.exe`](https://github.com/Zdong104/View/releases/download/v0.1.9/View-Setup-0.1.9.exe) (installer) or [`View-0.1.9-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.1.9/View-0.1.9-windows-portable.zip) (no install). It is now tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: press **Space** (or **Start**) and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
+Download [`View-Setup-0.2.0.exe`](https://github.com/Zdong104/View/releases/download/v0.2.0/View-Setup-0.2.0.exe) (installer) or [`View-0.2.0-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.2.0/View-0.2.0-windows-portable.zip) (no install). It is tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: press **Space** (or **Start**) and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
 
-**New in 0.1.9:**
+**Updating from 0.1.6–0.1.9:** in those versions the background screenshot watcher kept View's files open, so Setup could stop without a message. The 0.2.0 installer stops the watcher itself, also when an older View starts the update. If an update still doesn't go through, end the background **View** process in Task Manager (or run `taskkill /F /IM View.exe`), then run `View-Setup-0.2.0.exe` again.
 
-- **Interface translation: Simplified Chinese**, with a **Language** choice in Preferences (System default, English, 简体中文; it applies the next time View starts). By default View follows the system language. Thanks to [@azkuang](https://github.com/azkuang) for the translation work.
-- The **first start after installing** can take 20 seconds or more while Windows checks each new file (the build isn't code-signed yet, see below). Later starts take about a second.
+The **first start after installing** can take 20 seconds or more while Windows checks each new file (the build isn't code-signed yet, see below). Later starts take about a second.
 
 **Known problem:** the Windows build isn't code-signed yet, so on PCs with **Smart App Control** turned on (or a work PC with an App Control policy) it stops at startup with *"DLL load failed … An Application Control policy has blocked this file"* ([#3](https://github.com/Zdong104/View/issues/3)). Signed builds fix this; until then it only runs where Smart App Control is off (Windows Security → App & browser control → Smart App Control settings). Without Smart App Control, Windows may show a SmartScreen warning instead: click **More info → Run anyway**.
 
-Text recognition (OCR) is included from 0.1.1 on. It runs in a small helper program, `ocr\view-ocr.exe`, which View starts in the background.
+Text recognition (OCR) and translation each run in a small helper program, `ocr\view-ocr.exe` and `translate\view-translate.exe`, which View starts in the background. Translation language packs are downloaded the first time a language pair is used.
 
 ### Chrome extension
 
 View is also supported in Chrome as an extension.
 
-1. Download [`view-chrome-0.1.9.zip`](https://github.com/Zdong104/View/releases/download/v0.1.9/view-chrome-0.1.9.zip) and unzip it.
+1. Download [`view-chrome-0.2.0.zip`](https://github.com/Zdong104/View/releases/download/v0.2.0/view-chrome-0.2.0.zip) and unzip it.
 2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and choose the unzipped folder.
 3. To open local files, click **Details** on View and turn on **Allow access to file URLs**.
 
@@ -103,7 +159,7 @@ cd View
 make run
 ```
 
-`make install` adds this checkout to your app grid as **View (Dev)**, next to any snap or .deb copy; `make uninstall` removes it again (`make purge` also deletes its Python venv).
+`make install` adds this checkout to your app grid as **View (Dev)**, next to any snap or .deb copy; `make uninstall` removes it again (`make purge` also deletes its Python venv). `make ocr` and `make translate` add the optional OCR and translation engines to the venv.
 
 ### Updating
 

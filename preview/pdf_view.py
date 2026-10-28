@@ -168,6 +168,7 @@ class PdfViewer(Viewer):
         self.sizes: list[tuple] = []
         self._base = {}                 # (src, index) -> (w, h) Poppler size
         self._pdocs = {}                # main-thread Poppler docs per source
+        self._translation = None        # translate_view.SideBySide, when open
         self._readers = {}              # pypdf readers (main thread, lazy)
         self.current = 0
         self._gen = 0
@@ -200,6 +201,9 @@ class PdfViewer(Viewer):
         self._build_actions()
 
     def _shutdown(self):
+        if self._translation is not None:
+            from . import translate_view
+            translate_view.shutdown_for(self)
         self.worker.stop()
         self.tworker.stop()
 
@@ -208,6 +212,9 @@ class PdfViewer(Viewer):
         stop the render threads, drop textures and Poppler documents."""
         self._released = True
         self._gen += 1
+        if self._translation is not None:
+            from . import translate_view
+            translate_view.shutdown_for(self)
         if self.mk.pad is not None:
             self.mk.pad.stop()
         self._search_reset()
@@ -442,7 +449,7 @@ class PdfViewer(Viewer):
         view.append(_("Two Pages"), "pdf.view-mode::two")
         menu.append_submenu(_("View"), view)
         sec(None, (_("Find…"), "pdf.find"), (_("Go to Page…"), "pdf.goto"),
-            (_("Translate Page…"), "pdf.translate-page"),
+            (_("Translate Document…"), "pdf.translate-doc"),
             (_("Undo"), "pdf.undo"), (_("Redo"), "pdf.redo"))
         return menu
 
@@ -500,6 +507,7 @@ class PdfViewer(Viewer):
         add("copy", self.copy, "<Control>c")
         add("translate", self._translate_selection)
         add("translate-page", self._translate_page)
+        add("translate-doc", lambda: self.translate_document())
         add("cut", lambda: self.mk.cut_selected(), "<Control>x")
         add("paste", lambda: self.mk.paste(self.current), "<Control>v")
         add("select-all-text", self._select_all_text, "<Control>a")
@@ -1025,6 +1033,8 @@ class PdfViewer(Viewer):
         self._queue_renders()
 
     def _current_changed(self):
+        if self._translation is not None:
+            self._translation.adapter.page_changed()
         self._sync_page_entry()
         self.refresh_title()
         for box in self._boxes:
@@ -1384,33 +1394,23 @@ class PdfViewer(Viewer):
             from . import translate_ui
             translate_ui.show(self.canvas, ts["text"], self._translate_rect())
 
-    def _translate_page(self, pos=None, rect=None):
-        """The page's text (its OCR text on a scan, recognized first if needed)."""
+    def _translate_page(self):
+        """Right-click > Translate Page…: the side-by-side translation, at
+        the page that was clicked."""
+        hit = getattr(self, "_ctx_point", None)
+        self._ctx_xy = None
+        if hit is not None and hit[0] != self.current:
+            self.goto_page(hit[0])
+        self.translate_document()
+
+    def translate_document(self):
+        """The page in view translated beside it, following the pages
+        (scans are recognized first)."""
         if not self.pages:
             return
-        hit = getattr(self, "_ctx_point", None)
-        rect = rect or self._translate_rect()
-        if pos is None:
-            pos = hit[0] if hit is not None and rect is not None else self.current
-        ref = self.pages[pos]
-        k = (ref.src, ref.index)
-        if self._page_has_text(ref):
-            text = self._ppage(ref).get_text() or ""
-        elif k in self.ocr_lines:
-            from . import ocr          # (pure Python; the engine is not needed here)
-            text = ocr.lines_to_text([ocr.OcrLine(list(poly), t, 1.0)
-                                      for poly, t in self.ocr_lines[k]])
-        elif _ocr_module() is not None or _ocr_offerable():
-            self.recognize_text([pos], announce=True,
-                                done=lambda: self._translate_page(pos, rect))
-            return
-        else:
-            text = ""
-        if not text.strip():
-            self.toast(_("No text found"))
-            return
-        from . import translate_ui
-        translate_ui.show(self.canvas, text, rect)
+        from . import translate_view
+        main, put = translate_view.content_slot(self.split)
+        translate_view.open_for(self, "pdf", main, put)
 
     def _markup_selection(self, kind):
         ts = self.text_sel

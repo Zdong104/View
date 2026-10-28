@@ -560,7 +560,9 @@ def _run_windows_installer(path):
                      ("ProgramFiles", "ProgramW6432", "ProgramFiles(x86)") if os.environ.get(v)]
     scope = "/ALLUSERS" if any(app_dir.startswith(p + os.sep) for p in program_files) \
         else "/CURRENTUSER"
-    args = f"/SILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /RELAUNCH {scope}"
+    # a silent Setup that gives up says why only in its log (next to the download)
+    log = os.path.join(os.path.dirname(path), "setup.log")
+    args = f'/SILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /RELAUNCH {scope} /LOG="{log}"'
     os.startfile(path, "open", args)  # ShellExecute: the installer may need elevation
 
 

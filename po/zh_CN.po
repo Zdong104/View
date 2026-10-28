@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: View\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-26 15:31-0400\n"
+"POT-Creation-Date: 2026-10-27 20:00-0400\n"
 "PO-Revision-Date: 2026-10-26 15:40-0400\n"
 "Last-Translator: View contributors\n"
 "Language-Team: Simplified Chinese\n"
@@ -455,6 +455,9 @@ msgstr "显示识别的文字"
 msgid "Copy All Text"
 msgstr "复制所有文字"
 
+msgid "Translate Text…"
+msgstr "翻译文字…"
+
 msgid "Set as Wallpaper…"
 msgstr "设为壁纸…"
 
@@ -576,6 +579,12 @@ msgstr "没有识别的文字"
 
 msgid "All text copied"
 msgstr "已复制所有文字"
+
+msgid "Translate"
+msgstr "翻译"
+
+msgid "Translate All Text"
+msgstr "翻译全部文字"
 
 msgid "Text copied"
 msgstr "已复制文字"
@@ -952,11 +961,11 @@ msgstr "暂不安装"
 msgid "Install ({DOWNLOAD_SIZE})"
 msgstr "安装（{DOWNLOAD_SIZE}）"
 
-msgid "Starting…"
-msgstr "正在启动…"
-
 msgid "Installing Text Recognition"
 msgstr "正在安装文字识别"
+
+msgid "Starting…"
+msgstr "正在启动…"
 
 msgid "Text recognition installed"
 msgstr "文字识别已安装"
@@ -1059,6 +1068,9 @@ msgstr "查找…"
 
 msgid "Go to Page…"
 msgstr "跳转到页面…"
+
+msgid "Translate Page…"
+msgstr "翻译页面…"
 
 msgid "Could not open the document"
 msgstr "无法打开文档"
@@ -1417,6 +1429,12 @@ msgstr "空格键预览和“将图片合并为 PDF”"
 msgid "Text Recognition"
 msgstr "文字识别"
 
+msgid "Translation"
+msgstr "翻译"
+
+msgid "Translation runs on this computer: text is never sent to a server."
+msgstr "翻译在本机进行：文字绝不会发送到服务器。"
+
 msgid "Applies to your user only. Turning these off restores the defaults."
 msgstr "仅对当前用户生效。关闭后将恢复默认设置。"
 
@@ -1502,6 +1520,30 @@ msgstr "RapidOCR 引擎"
 #, python-brace-format
 msgid "Not installed ({size} download)"
 msgstr "未安装（需下载 {size}）"
+
+msgid "Translate into"
+msgstr "翻译为"
+
+msgid "CTranslate2 engine"
+msgstr "CTranslate2 引擎"
+
+msgid "None yet: each language pair is downloaded the first time it is used"
+msgstr "暂无：每个语言对在首次使用时下载"
+
+msgid "Language packs"
+msgstr "语言包"
+
+msgid "Remove All…"
+msgstr "全部移除…"
+
+msgid "Remove Language Packs?"
+msgstr "移除语言包？"
+
+msgid "They are downloaded again when needed."
+msgstr "需要时会重新下载。"
+
+msgid "Remove"
+msgstr "移除"
 
 msgid "Quick Look"
 msgstr "快速查看"
@@ -2175,6 +2217,9 @@ msgstr "在文件中查找"
 msgid "Wrap Lines"
 msgstr "自动换行"
 
+msgid "Translate Document…"
+msgstr "翻译文档…"
+
 msgid "Text Options"
 msgstr "文本选项"
 
@@ -2269,6 +2314,205 @@ msgstr "已保存“{v}”"
 msgid "Untitled.txt"
 msgstr "未命名.txt"
 
+msgid "English"
+msgstr "英语"
+
+msgid "Spanish"
+msgstr "西班牙语"
+
+msgid "Chinese (Simplified)"
+msgstr "中文（简体）"
+
+msgid "Chinese (Traditional)"
+msgstr "中文（繁体）"
+
+msgid "French"
+msgstr "法语"
+
+msgid "German"
+msgstr "德语"
+
+msgid "Italian"
+msgstr "意大利语"
+
+msgid "Portuguese"
+msgstr "葡萄牙语"
+
+msgid "Russian"
+msgstr "俄语"
+
+msgid "Japanese"
+msgstr "日语"
+
+msgid "Korean"
+msgstr "韩语"
+
+msgid "Arabic"
+msgstr "阿拉伯语"
+
+msgid "Hindi"
+msgstr "印地语"
+
+msgid "Dutch"
+msgstr "荷兰语"
+
+msgid "Polish"
+msgstr "波兰语"
+
+msgid "Turkish"
+msgstr "土耳其语"
+
+msgid "Ukrainian"
+msgstr "乌克兰语"
+
+msgid "Vietnamese"
+msgstr "越南语"
+
+msgid "Indonesian"
+msgstr "印度尼西亚语"
+
+msgid "Thai"
+msgstr "泰语"
+
+msgid "Swedish"
+msgstr "瑞典语"
+
+msgid "Czech"
+msgstr "捷克语"
+
+msgid "Greek"
+msgstr "希腊语"
+
+msgid "Hebrew"
+msgstr "希伯来语"
+
+msgid "Persian"
+msgstr "波斯语"
+
+msgid "Romanian"
+msgstr "罗马尼亚语"
+
+msgid "Hungarian"
+msgstr "匈牙利语"
+
+msgid "Finnish"
+msgstr "芬兰语"
+
+msgid "Danish"
+msgstr "丹麦语"
+
+msgid "Norwegian"
+msgstr "挪威语"
+
+msgid ""
+"Could not reach the language pack index. Check your internet connection and "
+"try again."
+msgstr "无法连接语言包索引。请检查网络连接后重试。"
+
+#, python-brace-format
+msgid "No language pack translates {src} into {tgt}."
+msgstr "没有可将{src}翻译为{tgt}的语言包。"
+
+#, python-brace-format
+msgid "No language pack for {pair}."
+msgstr "没有 {pair} 的语言包。"
+
+#, python-brace-format
+msgid "Downloading {src} → {tgt}…"
+msgstr "正在下载 {src} → {tgt}…"
+
+msgid "Unpacking…"
+msgstr "正在解压…"
+
+msgid ""
+"Could not download the language pack. Check your internet connection and try "
+"again."
+msgstr "无法下载语言包。请检查网络连接后重试。"
+
+msgid "The translation engine is not installed."
+msgstr "未安装翻译引擎。"
+
+#, python-brace-format
+msgid ""
+"Translation is not included in this build ({path} is missing). Reinstall "
+"{APP_NAME} to get it back."
+msgstr "此版本未包含翻译功能（缺少 {path}）。请重新安装 {APP_NAME} 以恢复该功能。"
+
+msgid "Translation should be bundled with this build."
+msgstr "此版本应已内置翻译功能。"
+
+msgid "Translation Unavailable"
+msgstr "翻译不可用"
+
+msgid "Install Translation?"
+msgstr "安装翻译功能？"
+
+#, python-brace-format
+msgid ""
+"Translating text on this computer, without sending it anywhere, needs the "
+"CTranslate2 engine ({DOWNLOAD_SIZE} download from PyPI). It is installed for "
+"your user only, in {where}, and can be removed by deleting that folder. Each "
+"language pair then downloads its language pack once."
+msgstr "在本机翻译文字（不发送到任何地方）需要 CTranslate2 引擎（从 PyPI 下载，{DOWNLOAD_SIZE}）。它仅为当前用户安装在 {where} 中，删除该文件夹即可移除。之后每个语言对只需下载一次语言包。"
+
+msgid "Downloading the translation engine…"
+msgstr "正在下载翻译引擎…"
+
+msgid "Installing Translation"
+msgstr "正在安装翻译功能"
+
+msgid "Translation installed"
+msgstr "翻译功能已安装"
+
+msgid "Could Not Install Translation"
+msgstr "无法安装翻译功能"
+
+msgid "Translate from"
+msgstr "源语言"
+
+msgid "Language detected automatically"
+msgstr "已自动检测语言"
+
+#, python-brace-format
+msgid "Only the first {n} characters are translated."
+msgstr "仅翻译前 {n} 个字符。"
+
+msgid "There is no text to translate."
+msgstr "没有可翻译的文字。"
+
+#, python-brace-format
+msgid ""
+"The text is already in {lang}. Choose another language to translate into."
+msgstr "文字已经是{lang}。请选择要翻译成的其他语言。"
+
+#, python-brace-format
+msgid ""
+"Translation runs on this computer and needs a one-time download of the "
+"translation engine ({size})."
+msgstr "翻译在本机进行，需要一次性下载翻译引擎（{size}）。"
+
+msgid "Translating…"
+msgstr "正在翻译…"
+
+#, python-brace-format
+msgid "This needs a language pack, downloaded once (70–300 MB): {names}."
+msgid_plural ""
+"This needs {n} language packs, downloaded once (70–300 MB each): {names}."
+msgstr[0] "需要下载 {n} 个语言包（仅需一次，每个 70–300 MB）：{names}。"
+
+msgid "Download"
+msgstr "下载"
+
+msgid "Download cancelled."
+msgstr "下载已取消。"
+
+#, python-brace-format
+msgid "Could not translate: {error}"
+msgstr "无法翻译：{error}"
+
+msgid "Try Again"
+msgstr "重试"
+
 #, python-brace-format
 msgid "{APP_NAME} {version} is available"
 msgstr "{APP_NAME} {version} 已发布"
@@ -2308,9 +2552,6 @@ msgstr "跳过此版本"
 
 msgid "Install and Restart"
 msgstr "安装并重启"
-
-msgid "Download"
-msgstr "下载"
 
 #, python-brace-format
 msgid "Downloading {APP_NAME} {version}"

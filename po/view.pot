@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: View\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-26 15:31-0400\n"
+"POT-Creation-Date: 2026-10-27 20:00-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -460,6 +460,9 @@ msgstr ""
 msgid "Copy All Text"
 msgstr ""
 
+msgid "Translate Text…"
+msgstr ""
+
 msgid "Set as Wallpaper…"
 msgstr ""
 
@@ -582,6 +585,12 @@ msgid "No recognized text"
 msgstr ""
 
 msgid "All text copied"
+msgstr ""
+
+msgid "Translate"
+msgstr ""
+
+msgid "Translate All Text"
 msgstr ""
 
 msgid "Text copied"
@@ -959,10 +968,10 @@ msgstr ""
 msgid "Install ({DOWNLOAD_SIZE})"
 msgstr ""
 
-msgid "Starting…"
+msgid "Installing Text Recognition"
 msgstr ""
 
-msgid "Installing Text Recognition"
+msgid "Starting…"
 msgstr ""
 
 msgid "Text recognition installed"
@@ -1065,6 +1074,9 @@ msgid "Find…"
 msgstr ""
 
 msgid "Go to Page…"
+msgstr ""
+
+msgid "Translate Page…"
 msgstr ""
 
 msgid "Could not open the document"
@@ -1428,6 +1440,12 @@ msgstr ""
 msgid "Text Recognition"
 msgstr ""
 
+msgid "Translation"
+msgstr ""
+
+msgid "Translation runs on this computer: text is never sent to a server."
+msgstr ""
+
 msgid "Applies to your user only. Turning these off restores the defaults."
 msgstr ""
 
@@ -1510,6 +1528,30 @@ msgstr ""
 
 #, python-brace-format
 msgid "Not installed ({size} download)"
+msgstr ""
+
+msgid "Translate into"
+msgstr ""
+
+msgid "CTranslate2 engine"
+msgstr ""
+
+msgid "None yet: each language pair is downloaded the first time it is used"
+msgstr ""
+
+msgid "Language packs"
+msgstr ""
+
+msgid "Remove All…"
+msgstr ""
+
+msgid "Remove Language Packs?"
+msgstr ""
+
+msgid "They are downloaded again when needed."
+msgstr ""
+
+msgid "Remove"
 msgstr ""
 
 msgid "Quick Look"
@@ -2177,6 +2219,9 @@ msgstr ""
 msgid "Wrap Lines"
 msgstr ""
 
+msgid "Translate Document…"
+msgstr ""
+
 msgid "Text Options"
 msgstr ""
 
@@ -2272,6 +2317,206 @@ msgstr ""
 msgid "Untitled.txt"
 msgstr ""
 
+msgid "English"
+msgstr ""
+
+msgid "Spanish"
+msgstr ""
+
+msgid "Chinese (Simplified)"
+msgstr ""
+
+msgid "Chinese (Traditional)"
+msgstr ""
+
+msgid "French"
+msgstr ""
+
+msgid "German"
+msgstr ""
+
+msgid "Italian"
+msgstr ""
+
+msgid "Portuguese"
+msgstr ""
+
+msgid "Russian"
+msgstr ""
+
+msgid "Japanese"
+msgstr ""
+
+msgid "Korean"
+msgstr ""
+
+msgid "Arabic"
+msgstr ""
+
+msgid "Hindi"
+msgstr ""
+
+msgid "Dutch"
+msgstr ""
+
+msgid "Polish"
+msgstr ""
+
+msgid "Turkish"
+msgstr ""
+
+msgid "Ukrainian"
+msgstr ""
+
+msgid "Vietnamese"
+msgstr ""
+
+msgid "Indonesian"
+msgstr ""
+
+msgid "Thai"
+msgstr ""
+
+msgid "Swedish"
+msgstr ""
+
+msgid "Czech"
+msgstr ""
+
+msgid "Greek"
+msgstr ""
+
+msgid "Hebrew"
+msgstr ""
+
+msgid "Persian"
+msgstr ""
+
+msgid "Romanian"
+msgstr ""
+
+msgid "Hungarian"
+msgstr ""
+
+msgid "Finnish"
+msgstr ""
+
+msgid "Danish"
+msgstr ""
+
+msgid "Norwegian"
+msgstr ""
+
+msgid ""
+"Could not reach the language pack index. Check your internet connection and "
+"try again."
+msgstr ""
+
+#, python-brace-format
+msgid "No language pack translates {src} into {tgt}."
+msgstr ""
+
+#, python-brace-format
+msgid "No language pack for {pair}."
+msgstr ""
+
+#, python-brace-format
+msgid "Downloading {src} → {tgt}…"
+msgstr ""
+
+msgid "Unpacking…"
+msgstr ""
+
+msgid ""
+"Could not download the language pack. Check your internet connection and try "
+"again."
+msgstr ""
+
+msgid "The translation engine is not installed."
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"Translation is not included in this build ({path} is missing). Reinstall "
+"{APP_NAME} to get it back."
+msgstr ""
+
+msgid "Translation should be bundled with this build."
+msgstr ""
+
+msgid "Translation Unavailable"
+msgstr ""
+
+msgid "Install Translation?"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"Translating text on this computer, without sending it anywhere, needs the "
+"CTranslate2 engine ({DOWNLOAD_SIZE} download from PyPI). It is installed for "
+"your user only, in {where}, and can be removed by deleting that folder. Each "
+"language pair then downloads its language pack once."
+msgstr ""
+
+msgid "Downloading the translation engine…"
+msgstr ""
+
+msgid "Installing Translation"
+msgstr ""
+
+msgid "Translation installed"
+msgstr ""
+
+msgid "Could Not Install Translation"
+msgstr ""
+
+msgid "Translate from"
+msgstr ""
+
+msgid "Language detected automatically"
+msgstr ""
+
+#, python-brace-format
+msgid "Only the first {n} characters are translated."
+msgstr ""
+
+msgid "There is no text to translate."
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"The text is already in {lang}. Choose another language to translate into."
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"Translation runs on this computer and needs a one-time download of the "
+"translation engine ({size})."
+msgstr ""
+
+msgid "Translating…"
+msgstr ""
+
+#, python-brace-format
+msgid "This needs a language pack, downloaded once (70–300 MB): {names}."
+msgid_plural ""
+"This needs {n} language packs, downloaded once (70–300 MB each): {names}."
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Download"
+msgstr ""
+
+msgid "Download cancelled."
+msgstr ""
+
+#, python-brace-format
+msgid "Could not translate: {error}"
+msgstr ""
+
+msgid "Try Again"
+msgstr ""
+
 #, python-brace-format
 msgid "{APP_NAME} {version} is available"
 msgstr ""
@@ -2310,9 +2555,6 @@ msgid "Skip This Version"
 msgstr ""
 
 msgid "Install and Restart"
-msgstr ""
-
-msgid "Download"
 msgstr ""
 
 #, python-brace-format

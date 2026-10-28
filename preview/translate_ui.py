@@ -18,10 +18,13 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gdk, GLib, Gtk  # noqa: E402
+from gi.repository import Adw, Gdk, GLib, Gtk, Pango  # noqa: E402
 
 from . import translate  # noqa: E402
 from .i18n import _, ngettext  # noqa: E402
+
+
+WIDTH = 400                     # the popover's width (fixed: see TranslatePopover)
 
 
 class _Download:
@@ -85,34 +88,36 @@ class TranslatePopover(Gtk.Popover):
         head.append(Gtk.Image(icon_name="go-next-symbolic", css_classes=["dim-label"]))
         head.append(self.to_dd)
         self.caption = Gtk.Label(label=_("Language detected automatically"), xalign=0,
-                                 css_classes=["caption", "dim-label"])
+                                 css_classes=["caption", "dim-label"],
+                                 ellipsize=Pango.EllipsizeMode.END)
 
         # result
         self.buf = Gtk.TextBuffer()
         view = Gtk.TextView(buffer=self.buf, editable=False, cursor_visible=False,
                             wrap_mode=Gtk.WrapMode.WORD_CHAR, top_margin=6, bottom_margin=6,
                             left_margin=6, right_margin=6)
-        self.scroll = Gtk.ScrolledWindow(child=view, propagate_natural_height=True,
-                                         max_content_height=360, min_content_height=48,
+        self.scroll = Gtk.ScrolledWindow(child=view, vexpand=True,
                                          hscrollbar_policy=Gtk.PolicyType.NEVER,
                                          css_classes=["card"])
         # busy / message / download
         self.spinner = Adw.Spinner(halign=Gtk.Align.CENTER)
-        self.msg = Gtk.Label(wrap=True, xalign=0, selectable=True, max_width_chars=48)
+        self.msg = Gtk.Label(wrap=True, xalign=0, selectable=True, max_width_chars=40,
+                             wrap_mode=Pango.WrapMode.WORD_CHAR)
         self.bar = Gtk.ProgressBar(visible=False)
         self.action_btn = Gtk.Button(halign=Gtk.Align.END, visible=False,
                                      css_classes=["suggested-action"])
         self.action_btn.connect("clicked", lambda *_: self._action and self._action())
         self._action = None
         info = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10,
-                       margin_top=6, margin_bottom=6)
+                       margin_top=6, margin_bottom=6, valign=Gtk.Align.CENTER)
         for w in (self.spinner, self.msg, self.bar, self.action_btn):
             info.append(w)
-        self.stack = Gtk.Stack(vhomogeneous=False, interpolate_size=True)
-        self.stack.add_named(info, "info")
+        self.stack = Gtk.Stack(vhomogeneous=True, hhomogeneous=True, vexpand=True)
+        self.stack.add_named(Gtk.ScrolledWindow(child=info, hscrollbar_policy=Gtk.PolicyType.NEVER),
+                             "info")
         self.stack.add_named(self.scroll, "result")
 
-        self.copy_btn = Gtk.Button(label=_("Copy"), sensitive=False)
+        self.copy_btn = Gtk.Button(label=_("Copy"), sensitive=False, width_request=96)
         self.copy_btn.connect("clicked", lambda *_: self._copy())
         self.note = Gtk.Label(xalign=0, hexpand=True, wrap=True,
                               css_classes=["caption", "dim-label"])
@@ -121,10 +126,19 @@ class TranslatePopover(Gtk.Popover):
         foot.append(self.copy_btn)
 
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, margin_top=10,
-                      margin_bottom=10, margin_start=10, margin_end=10, width_request=380)
+                      margin_bottom=10, margin_start=10, margin_end=10)
         for w in (head, self.caption, self.stack, foot):
             box.append(w)
-        self.set_child(box)
+        # A popover that changes size while it is up gets dismissed by the
+        # compositor (GNOME Shell): the first translation, which waits for its
+        # language model to load, went from the spinner to the result and
+        # vanished.  So the size is fixed now, from the text, and does not
+        # follow the content: the result scrolls inside.
+        frame = Gtk.ScrolledWindow(child=box, hscrollbar_policy=Gtk.PolicyType.NEVER,
+                                   propagate_natural_width=False,
+                                   propagate_natural_height=False)
+        frame.set_size_request(WIDTH, self._height_for(self.text))
+        self.set_child(frame)
 
         self.from_dd.connect("notify::selected", self._from_changed)
         self.to_dd.connect("notify::selected", self._to_changed)
@@ -133,6 +147,16 @@ class TranslatePopover(Gtk.Popover):
             self.note.set_label(_("Only the first {n} characters are translated.").format(
                 n=f"{translate.MAX_CHARS:,}"))
         self._run()
+
+    def _height_for(self, text):
+        """Room for about this much text in the result (the translation is
+        usually as long), within reason."""
+        layout = self.create_pango_layout(text[:4000])
+        layout.set_width((WIDTH - 44) * Pango.SCALE)
+        layout.set_wrap(Pango.WrapMode.WORD_CHAR)
+        _w, h = layout.get_pixel_size()
+        body = max(110, min(340, h + 28))
+        return body + 150           # languages, caption, footer, margins
 
     # ---- state ----
     def _info(self, text, button=None, action=None, busy=False, progress=None):
@@ -157,7 +181,9 @@ class TranslatePopover(Gtk.Popover):
 
     def _from_changed(self, dd, _p):
         self.src = translate.CODES[dd.get_selected()]
-        self.caption.set_visible(self.src == self.detected)
+        # (a label hidden or shown would resize the popover: see __init__)
+        self.caption.set_label(_("Language detected automatically")
+                               if self.src == self.detected else "")
         self._run()
 
     def _to_changed(self, dd, _p):
@@ -286,10 +312,49 @@ class TranslatePopover(Gtk.Popover):
         GLib.timeout_add(1500, lambda: (self.copy_btn.set_label(_("Copy")), False)[1])
 
 
+def _menu_open(widget) -> bool:
+    """Is a popover (the context menu, a header menu) still open in the
+    window of ``widget``?"""
+    root = widget.get_root()
+    if root is None:
+        return False
+    stack = [root]
+    while stack:
+        w = stack.pop()
+        if isinstance(w, Gtk.Popover) and w.get_mapped():
+            return True
+        c = w.get_first_child()
+        while c is not None:
+            stack.append(c)
+            c = c.get_next_sibling()
+    return False
+
+
 def show(parent, text, rect=None):
-    """Pop up a translation of ``text`` from ``parent`` (see the module doc)."""
+    """Pop up a translation of ``text`` from ``parent`` (see the module doc).
+
+    The menus that offer Translate call this while they are still open; a
+    popover shown then is a second grabbing popup next to the closing menu,
+    and the compositor dismisses it at once (it flashed and was gone).  So it
+    waits for the menu to close (a main loop turn), and pops up then."""
     if parent is None or not (text or "").strip():
         return None
+    tries = [0]
+
+    def attempt():
+        if parent.get_root() is None or not parent.get_mapped():
+            return False
+        if _menu_open(parent) and tries[0] < 40:
+            tries[0] += 1
+            return True                     # poll again (25 ms)
+        _show_now(parent, text, rect)
+        return False
+    GLib.idle_add(lambda: (attempt() and GLib.timeout_add(25, attempt), False)[1],
+                  priority=GLib.PRIORITY_LOW)
+    return None
+
+
+def _show_now(parent, text, rect=None):
     if rect is None:
         rect = Gdk.Rectangle()
         rect.x, rect.y, rect.width, rect.height = max(0, parent.get_width() // 2), 8, 1, 1

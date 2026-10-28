@@ -97,8 +97,9 @@ def group_lines(lines) -> list[tuple[str, bool]]:
 
     def flush():
         h = max(ln[4] - ln[2] for ln in cur)
-        heading = h > med * 1.18 and sum(len(ln[0]) for ln in cur) < 200
-        paras.append(("\n".join(ln[0] for ln in cur), heading))
+        text = "\n".join(ln[0] for ln in cur)
+        heading = h > med * 1.18 and len(text) < 200 and worth_translating(text)
+        paras.append((text, heading))
 
     for ln in lines[1:]:
         prev = cur[-1]
@@ -159,6 +160,16 @@ def text_units(text: str, max_lines=30, max_chars=1500):
 # ---------------------------------------------------------------------------
 # The engine runner
 # ---------------------------------------------------------------------------
+def worth_translating(text: str) -> bool:
+    """Not formulas, numbers, symbols (a PDF's equations, table figures):
+    the models make things up for those."""
+    chars = [c for c in text if not c.isspace()]
+    if not chars:
+        return False
+    letters = sum(1 for c in chars if c.isalpha())
+    return letters >= 0.5 * len(chars) and re.search(r"[^\W\d_]{3,}", text) is not None
+
+
 class _Job:
     def __init__(self, texts, src, tgt, on_item, on_done, background, prefetch=False):
         self.texts = texts
@@ -185,7 +196,7 @@ class _Runner:
         self.thread = None
 
     def get(self, text, src, tgt):
-        if src == tgt or not text.strip():
+        if src == tgt or not worth_translating(text):
             return text
         with self.lock:
             return self.cache.get((text, src, tgt))
@@ -254,7 +265,8 @@ class _Runner:
         todo = []
         with self.lock:
             for t in dict.fromkeys(job.texts):
-                if t.strip() and job.src != job.tgt and (t, job.src, job.tgt) not in self.cache:
+                if (worth_translating(t) and job.src != job.tgt and
+                        (t, job.src, job.tgt) not in self.cache):
                     todo.append(t)
 
         def item(i, res):

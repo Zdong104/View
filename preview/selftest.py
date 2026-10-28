@@ -506,6 +506,10 @@ def _translate_markdown():
     if paras != [("A Title", True), ("First line of a paragraph that\nwraps here.", False),
                  ("Second paragraph starts\nand ends.", False)]:
         raise RuntimeError(f"PDF paragraphs {paras!r}")
+    if tv.worth_translating("aj wj = cj dj , dj = wj ‖wj‖ , (1)") or \
+            not tv.worth_translating("We evaluate this inversion.") or \
+            not tv.worth_translating("今天天气很好"):
+        raise RuntimeError("formula / text tell-apart")
     return "structure kept (3 stand-in translators); paragraphs, line numbers"
 
 

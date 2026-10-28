@@ -140,8 +140,8 @@ Description: macOS Preview-style viewer for PDFs, images, video, text and 3D
  .
  With python3-nautilus, GNOME Files gets a "Combine Images into PDF" item in
  the right-click menu of selected images. Optional per-user extras, enabled
- from Preferences: Space-bar Quick Look for GNOME Files and a downloadable
- text-recognition (OCR) engine.
+ from Preferences: Space-bar Quick Look for GNOME Files and downloadable
+ text-recognition (OCR) and offline translation engines.
  .
  Licensed under the PolyForm Noncommercial License 1.0.0.
 EOF

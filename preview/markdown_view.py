@@ -277,14 +277,19 @@ def build_ops(text: str, dark: bool, base_dir: str | None) -> Ops:
             lst[1] += 1
             item_start = True
             marker = f"{lst[1]}." if lst[0] else BULLETS[(len(lists) - 1) % len(BULLETS)]
-            ops.text(marker + "\t", (btag(), "marker"))
-            # a GitHub task list item: "[ ] " / "[x] " → a check box
+            # a GitHub task list item: "[ ] " / "[x] " → a check box (in place
+            # of the bullet; after the number in a numbered list)
             inline = tokens[i + 2] if i + 2 < len(tokens) else None
             if inline is not None and inline.type == "inline" and inline.children:
                 first = inline.children[0]
                 m = re.match(r"\[([ xX])\] ", first.content) if first.type == "text" else None
                 if m:
-                    first.content = ("☑ " if m.group(1) != " " else "☐ ") + first.content[4:]
+                    box = "☑" if m.group(1) != " " else "☐"
+                    if lst[0]:
+                        first.content = box + " " + first.content[4:]
+                    else:
+                        marker, first.content = box, first.content[4:]
+            ops.text(marker + "\t", (btag(), "marker"))
         elif t == "list_item_close":
             if item_start:                  # empty item
                 end_par((btag(),))
@@ -337,6 +342,18 @@ def _code_block(ops, code, lang, dark, quote, depth, syntax):
     pad = f"blk:pad:{quote}:{depth}"
     blk = f"blk:code:{quote}:{depth}"
     ops.text("\u200b\n", (pad,))
+    line_start = True
+
+    def emit(s, tags):
+        # an empty line has no paragraph background: give it a zero-width space
+        nonlocal line_start
+        if not s:
+            return
+        s = re.sub(r"\n(?=\n)", "\n\u200b", s)
+        if line_start and s.startswith("\n"):
+            s = "\u200b" + s
+        line_start = s.endswith("\n")
+        ops.text(s, tags)
     lexer = _lexer_for_lang(lang)
     runs = []
     if lexer is not None and len(code) < 200_000:
@@ -350,12 +367,12 @@ def _code_block(ops, code, lang, dark, quote, depth, syntax):
         if st is None:
             continue
         if a > pos:
-            ops.text(code[pos:a], (blk, "mono"))
+            emit(code[pos:a], (blk, "mono"))
         key = "hl:" + str(ttype)
         ops.styles[key] = st
-        ops.text(code[a:b], (blk, "mono", key))
+        emit(code[a:b], (blk, "mono", key))
         pos = b
-    ops.text(code[pos:] + "\n", (blk, "mono"))
+    emit(code[pos:] + "\n", (blk, "mono"))
     ops.text("\u200b\n", (pad,))
     ops.text("\u200b\n", (f"blk:gap:{quote}:{depth}",))
 

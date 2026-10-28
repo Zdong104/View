@@ -437,6 +437,7 @@ def _dxf_loose(paths, d):
 
 def _markdown(paths):
     from . import markdown_view
+    from .markdown_view import BULLETS
     import markdown_it
     with open(paths["md"]) as f:
         ops = markdown_view.build_ops(f.read(), False, os.path.dirname(paths["md"]))
@@ -448,6 +449,18 @@ def _markdown(paths):
                if not ok]
     if missing:
         raise RuntimeError("missing " + ", ".join(missing))
+    # a blank line inside a code block keeps the grey box (no empty paragraph);
+    # a task list item shows its check box instead of the bullet
+    small = markdown_view.build_ops("```\na\n\n\nb\n```\n\n- [ ] todo\n- [x] done\n- plain\n",
+                                    False, None)
+    code = "".join(op[1] for op in small.ops if op[0] == "t" and
+                   any(t.startswith("blk:code") for t in op[2]))
+    if code.count("\n") != 4 or any(not line for line in code.split("\n")[:-1]):
+        raise RuntimeError(f"code block with an empty line: {code!r}")
+    markers = [op[1] for op in small.ops if op[0] == "t" and "marker" in op[2]]
+    if markers != ["☐\t", "☑\t", BULLETS[0] + "\t"] or "☐" in "".join(
+            op[1] for op in small.ops if op[0] == "t" and "marker" not in op[2]):
+        raise RuntimeError(f"task list markers {markers}")
     return f"markdown-it-py {markdown_it.__version__}, {len(ops.ops)} insert operations"
 
 

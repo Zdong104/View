@@ -16,6 +16,12 @@ hiddenimports = collect_submodules("preview") + [
 hiddenimports += collect_submodules("pygments.lexers") + collect_submodules("pygments.styles")
 hiddenimports += collect_submodules("OpenGL.platform") + collect_submodules("OpenGL.arrays")
 hiddenimports += ["OpenGL.GL", "openpyxl", "img2pdf", "pypdf", "certifi"]
+# DXF (ezdxf, imported lazily) without its GUI/plotting add-ons; Markdown preview
+hiddenimports += collect_submodules(
+    "ezdxf", filter=lambda m: not m.startswith("ezdxf.addons.") or m.startswith(
+        "ezdxf.addons.drawing") and m.rsplit(".", 1)[-1] not in (
+        "pyqt", "qtviewer", "matplotlib", "pymupdf"))
+hiddenimports += collect_submodules("markdown_it") + ["mdurl"]
 
 datas = [
     (os.path.join(ROOT, "data", APP_ID + ".svg"), "share/icons/hicolor/scalable/apps"),

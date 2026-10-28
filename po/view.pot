@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: View\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-26 15:31-0400\n"
+"POT-Creation-Date: 2026-10-27 20:11-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -34,6 +34,9 @@ msgid "Text and Source Code"
 msgstr ""
 
 msgid "3D Models"
+msgstr ""
+
+msgid "CAD Drawings (DXF)"
 msgstr ""
 
 msgid "Spreadsheets (CSV/TSV)"
@@ -346,19 +349,107 @@ msgstr ""
 msgid "Saved {name}"
 msgstr ""
 
-msgid "Untitled"
+msgid "Format"
+msgstr ""
+
+msgid "Units"
+msgstr ""
+
+msgid "Unitless"
+msgstr ""
+
+msgid "Size"
+msgstr ""
+
+msgid "Extents"
+msgstr ""
+
+msgid "Layers"
+msgstr ""
+
+msgid "{n:,} ({on:,} shown)"
+msgstr ""
+
+msgid "Blocks"
+msgstr ""
+
+msgid "Entities"
+msgstr ""
+
+msgid "Most common"
+msgstr ""
+
+msgid "This drawing has nothing to show"
 msgstr ""
 
 msgid "Zoom Out (−)"
 msgstr ""
 
-msgid "Toggle Fit / Actual Size"
+msgid "Fit to Window (0)"
 msgstr ""
 
 msgid "Zoom In (+)"
 msgstr ""
 
-msgid "Fit to Window (0)"
+msgid "Show Lineweights"
+msgstr ""
+
+msgid "Drawing Options"
+msgstr ""
+
+msgid "Drawing"
+msgstr ""
+
+msgid "Loading…"
+msgstr ""
+
+msgid "Empty drawing"
+msgstr ""
+
+#, python-brace-format
+msgid "{n} layer"
+msgid_plural "{n} layers"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Could not open this drawing"
+msgstr ""
+
+msgid "Show All"
+msgstr ""
+
+msgid "Hide All"
+msgstr ""
+
+msgid "{n:,} object"
+msgid_plural "{n:,} objects"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Export Drawing"
+msgstr ""
+
+msgid "PDF Document"
+msgstr ""
+
+msgid "SVG Image"
+msgstr ""
+
+msgid "PNG Image"
+msgstr ""
+
+#, python-brace-format
+msgid "Exported “{name}”"
+msgstr ""
+
+#, python-brace-format
+msgid "Could not export: {error}"
+msgstr ""
+
+msgid "Untitled"
+msgstr ""
+
+msgid "Toggle Fit / Actual Size"
 msgstr ""
 
 msgid "Tolerance"
@@ -629,9 +720,6 @@ msgstr ""
 msgid "Save As"
 msgstr ""
 
-msgid "Format"
-msgstr ""
-
 msgid "Quality"
 msgstr ""
 
@@ -771,6 +859,10 @@ msgid "Open a document to see its details."
 msgstr ""
 
 msgid "Copied"
+msgstr ""
+
+#, python-brace-format
+msgid "Could not render this Markdown: {error}"
 msgstr ""
 
 msgid "Select"
@@ -1844,9 +1936,6 @@ msgstr ""
 msgid "Export Snapshot"
 msgstr ""
 
-msgid "PNG Image"
-msgstr ""
-
 msgid "Can only save snapshots to local files"
 msgstr ""
 
@@ -1993,9 +2082,6 @@ msgid "Rows and Columns"
 msgstr ""
 
 msgid "Table"
-msgstr ""
-
-msgid "Loading…"
 msgstr ""
 
 #, python-brace-format
@@ -2270,6 +2356,24 @@ msgid "Saved “{v}”"
 msgstr ""
 
 msgid "Untitled.txt"
+msgstr ""
+
+msgid "Source"
+msgstr ""
+
+msgid "Markdown source"
+msgstr ""
+
+msgid "Split"
+msgstr ""
+
+msgid "Source and preview side by side"
+msgstr ""
+
+msgid "Preview"
+msgstr ""
+
+msgid "Rendered Markdown"
 msgstr ""
 
 #, python-brace-format

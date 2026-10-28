@@ -39,6 +39,8 @@ All code lives in `preview/`:
 | `stl_view.py`, `mesh_io.py` | 3D viewer (GLArea) and mesh loading/statistics |
 | `table_view.py`, `table_data.py` | CSV / TSV viewer and editor, and its document model |
 | `text_view.py`, `syntax.py` | Text and code viewer, Pygments helpers |
+| `markdown_view.py` | Rendered Markdown (Source / Split / Preview) for the text viewer |
+| `dxf_view.py` | DXF (2D CAD) viewer: ezdxf scene cache, banded rasterizer, layers, export |
 | `video_view.py`, `media_player.py` | Video / audio viewer and player widget |
 | `inspector.py` | Get Info window |
 | `i18n.py` | UI translation (gettext); catalogs live in `po/` |

@@ -7,3 +7,5 @@ PyOpenGL
 img2pdf
 openpyxl
 Pygments
+ezdxf>=1.1
+markdown-it-py>=3.0

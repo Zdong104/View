@@ -77,6 +77,10 @@ jobs:
             python-pyopengl:p
             python-pygments:p
             python-openpyxl:p
+            python-markdown-it-py:p
+            python-fonttools:p
+            python-pyparsing:p
+            python-typing_extensions:p
             python-pikepdf:p
             python-certifi:p
             pyinstaller:p
@@ -86,7 +90,9 @@ jobs:
         run: |
           # MSYS2's Python is "externally managed" (PEP 668); this is a throwaway CI image.
           python -m pip install --break-system-packages --no-deps pypdf img2pdf
-          python -c "import pypdf, img2pdf; print('pypdf', pypdf.__version__)"
+          # ezdxf: the pure-Python wheel (its C speed-ups are optional)
+          python -m pip install --break-system-packages --no-deps --only-binary=:all: "ezdxf>=1.1"
+          python -c "import pypdf, img2pdf, ezdxf; print('pypdf', pypdf.__version__, 'ezdxf', ezdxf.__version__)"
 
       - name: Selftest from source (headless)
         env:

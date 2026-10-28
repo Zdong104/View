@@ -3,7 +3,8 @@
 Headless checks (no display needed): library versions, every module imports,
 render a PDF page with Poppler, decode a PNG with Pillow and GdkPixbuf, parse
 an STL, parse a CSV, highlight code, combine images into a PDF, GStreamer
-elements, PyOpenGL import, OCR availability.
+elements, PyOpenGL import, OCR availability, translation (language
+detection and text handling always; the engine when it is installed).
 
 UI checks (only when a display is available, skipped with --no-ui): open a
 PDF, an image, a CSV, a text file and an STL in real windows and make sure
@@ -132,7 +133,8 @@ MODULES = ["app", "viewer_base", "image_view", "image_ops", "pdf_view", "pdf_ops
            "pdf_render", "pdf_canvas", "markup", "signature", "stl_view", "mesh_io",
            "table_view", "table_data", "text_view", "syntax", "video_view", "media_player",
            "inspector", "convert", "ocr", "ocr_install", "preferences", "touchpad",
-           "integration", "screenshot"]
+           "integration", "screenshot", "translate", "translate_install", "translate_ui",
+           "translate_helper"]
 LINUX_MODULES = ["quicklook", "quicklook_renderers"]
 
 
@@ -319,6 +321,57 @@ def _ocr_run(paths, d):
     return repr(text)
 
 
+def _translate_text():
+    """What works without the engine: detection, sentence handling, the BPE
+    tokenizer, and a clean "not installed" error."""
+    import io
+    from . import translate as tr
+    samples = {"en": "The weather is nice today and we are going to the park.",
+               "es": "¿Dónde está la estación? El tren sale a las ocho de la mañana.",
+               "zh": "今天天气很好，我们去公园散步吧。", "zt": "這個問題很簡單，我們會說明。",
+               "fr": "Le chat est sur la table et il ne veut pas descendre.",
+               "ja": "今日はいい天気ですね。", "ru": "Сегодня хорошая погода."}
+    for code, text in samples.items():
+        got = tr.detect(text)
+        if got != code:
+            raise RuntimeError(f"detected {got!r} for {code} text")
+    units = tr._segment("A line that wraps in the\nmiddle of a sentence. Dr. Smith is here.\n\n"
+                        "第一句。第二句！")
+    sents = [s for k, s in units if k == "s"]
+    if sents != ["A line that wraps in the middle of a sentence.", "Dr. Smith is here.",
+                 "第一句。", "第二句！"]:
+        raise RuntimeError(f"sentences {sents!r}")
+    bpe = tr._BPE(io.StringIO("#version: 0.2\nh e\nl l\nhe ll\no</w> x\nl o</w>\n"))
+    if bpe.segment(["hello"]) != ["hell@@", "o"]:
+        raise RuntimeError(f"BPE {bpe.segment(['hello'])!r}")
+    toks = tr._moses_tokenize('He said "it\'s fine", then left.', "en")
+    back = tr._moses_detokenize(toks, "en")
+    if back != 'He said "it\'s fine", then left.':
+        raise RuntimeError(f"Moses round trip {toks!r} -> {back!r}")
+    if not tr.is_available():
+        try:
+            tr.translate("Hello", "en", "es")
+        except tr.NotInstalled:
+            return "detection ok; engine not installed (handled)"
+        raise RuntimeError("translate() without an engine did not raise NotInstalled")
+    return f"detection ok; {len(tr.installed())} language pack(s)"
+
+
+def _translate_engine():
+    from . import translate as tr
+    helper = tr.helper_path()
+    if helper:
+        tr._helper(helper)._start()         # starts the helper and waits for "ready"
+        return f"helper process {helper}"
+    if tr.is_available():
+        import ctranslate2  # noqa: F401  (find_spec alone misses broken installs)
+        import sentencepiece  # noqa: F401
+        return f"ctranslate2 {ctranslate2.__version__} importable"
+    from . import translate_install
+    ok, why = translate_install.can_install()
+    raise RuntimeError("not installed; " + ("offered as an optional download" if ok else why))
+
+
 # ------------------------------------------------------------- UI checks ---
 
 def _ui(paths, res, shots=None):
@@ -502,6 +555,8 @@ def main(argv=()):
         ocr_ok = res.check("text recognition (OCR)", _ocr, required=runtime.OCR_BUNDLED)
         if ocr_ok and run_ocr:
             res.check("OCR recognize", lambda: _ocr_run(paths, d))
+        res.check("translation (detection, sentences)", _translate_text)
+        res.check("translation engine", _translate_engine, required=runtime.OCR_BUNDLED)
         if not no_ui:
             _ui(paths, res, shots)
     if res.failed:

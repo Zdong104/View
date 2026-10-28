@@ -204,6 +204,18 @@ jobs:
           python packaging/windows/test-files.py build/t
           gst-launch-1.0 -q videotestsrc num-buffers=90 ! video/x-raw,width=640,height=360 \
             ! vp8enc deadline=1 ! webmmux ! filesink location=build/t/sample.webm || true
+          # realistic videos: a minute of 1080p H.264 + AAC (~60 MB) and 4K
+          gst-launch-1.0 -q videotestsrc num-buffers=1800 pattern=ball \
+            ! video/x-raw,width=1920,height=1080,framerate=30/1 \
+            ! x264enc speed-preset=ultrafast bitrate=8000 key-int-max=60 ! h264parse \
+            ! mp4mux name=m ! filesink location=build/t/sample.mp4 \
+            audiotestsrc num-buffers=2584 ! audioconvert ! avenc_aac ! aacparse ! m. || true
+          gst-launch-1.0 -q videotestsrc num-buffers=300 pattern=ball \
+            ! video/x-raw,width=3840,height=2160,framerate=30/1 \
+            ! x264enc speed-preset=ultrafast bitrate=30000 key-int-max=60 ! h264parse \
+            ! mp4mux name=m ! filesink location=build/t/sample-4k.mp4 \
+            audiotestsrc num-buffers=431 ! audioconvert ! avenc_aac ! aacparse ! m. || true
+          ls -la build/t
           local_app=$(cygpath -u "$LOCALAPPDATA")
           fresh() {
             rm -rf "$local_app/fontconfig" "$local_app/View" "$local_app/gstreamer-1.0" \
@@ -213,15 +225,15 @@ jobs:
             local title=$1; shift
             echo "== $title"
             # a user's PATH: Windows only, no MSYS2
-            VIEW_STARTUP_TRACE_WAIT=6 timeout 180 env PATH=/c/Windows/system32:/c/Windows \
+            VIEW_STARTUP_TRACE_WAIT=10 timeout 180 env PATH=/c/Windows/system32:/c/Windows \
               ./dist/View/view-app.exe --startup-trace "$@" 2>&1 | tee build/trace.txt
             echo "::notice title=Startup: $title::$(sed -z 's/\r//g; s/\n/%0A/g' build/trace.txt)"
           }
-          for f in "" sample.pdf sample.stl sample.webm sample.jpg; do
+          for f in "" sample.pdf sample.stl sample.webm sample.mp4 sample-4k.mp4 sample.jpg; do
             fresh
             trace "fresh profile ${f:-(empty window)}" ${f:+build/t/$f}
           done
-          for f in sample.pdf sample.webm sample.stl; do
+          for f in sample.pdf sample.webm sample.mp4 sample-4k.mp4 sample.stl; do
             trace "again $f" build/t/$f
           done
           # does GTK load the system's opengl32.dll by itself (could Mesa load later)?

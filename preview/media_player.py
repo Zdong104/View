@@ -34,6 +34,7 @@ gi.require_version("Gst", "1.0")
 gi.require_version("Graphene", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Graphene, Gst, Gtk  # noqa: E402
 
+from . import runtime  # noqa: E402
 from .i18n import _  # noqa: E402
 
 RATES = ("0.5", "1", "1.25", "1.5", "2")
@@ -252,6 +253,7 @@ class MediaPlayer(Adw.Bin):
         self._vsink = None
 
         self._paused_by_unmap = False
+        self._traced = set()
         self._last_xy = None
         self._updating_scale = False
 
@@ -451,9 +453,17 @@ class MediaPlayer(Adw.Bin):
         self._bus = bus
         self._bus_hid = bus.connect("message", self._on_bus_message)
         pb.set_state(Gst.State.PAUSED)
+        self._trace("pipeline started")
         self._sync_controls()
         self.show_controls()
         return False
+
+    def _trace(self, what):
+        """--startup-trace: when the video got to `what` (once per player)."""
+        if runtime.startup_trace and what not in self._traced:
+            self._traced.add(what)
+            age = runtime.process_age()
+            print(f"{age if age is not None else 0:7.2f} s  video: {what}", flush=True)
 
     def _teardown(self):
         for attr in ("_pos_timer", "_settle_timer", "_start_id"):
@@ -568,6 +578,8 @@ class MediaPlayer(Adw.Bin):
         elif t == Gst.MessageType.STATE_CHANGED and msg.src is pb:
             _old, new, _pending = msg.parse_state_changed()
             self._state = new
+            if new == Gst.State.PLAYING:
+                self._trace("playing")
             if new == Gst.State.PLAYING and not self._pos_timer:
                 self._pos_timer = GLib.timeout_add(POS_INTERVAL_MS, self._tick)
             elif new != Gst.State.PLAYING and self._pos_timer:
@@ -575,6 +587,7 @@ class MediaPlayer(Adw.Bin):
                 self._pos_timer = 0
             self._sync_controls()
         elif t == Gst.MessageType.ASYNC_DONE:
+            self._trace(f"first frame ready ({self.describe_decoder() or 'no video decoder'})")
             self._seek_busy = False
             self._query_duration()
             self._query_size()
@@ -678,6 +691,8 @@ class MediaPlayer(Adw.Bin):
             ok, p = pb.query_position(Gst.Format.TIME)
             if ok and p >= 0:
                 self.position = p
+                if p >= 2 * Gst.SECOND:
+                    self._trace(f"played 2 s ({self.qos_dropped} frames dropped)")
         if self.duration <= 0:
             self._query_duration()
         self._update_position_ui()

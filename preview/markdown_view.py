@@ -184,6 +184,31 @@ def _inline_markup(children, out_links):
     return "".join(parts)
 
 
+FRONT_MATTER = re.compile(r"\A---[ \t]*\n(.*?\n)(?:---|\.\.\.)[ \t]*(?:\n|\Z)", re.S)
+
+
+def _is_block_start(tok) -> bool:
+    """A top-level block or a list item: the units a document and its
+    translation share."""
+    return tok.nesting != -1 and tok.map is not None and (
+        tok.level == 0 or tok.type == "list_item_open")
+
+
+def block_lines(text: str) -> list[int]:
+    """The source line where each top-level block starts (front matter
+    first), matching the preview's block marks."""
+    from markdown_it import MarkdownIt
+    fm = FRONT_MATTER.match(text)
+    out, off = [], 0
+    if fm:
+        out.append(0)
+        off = fm.group(0).count("\n")
+        text = text[fm.end():]
+    md = MarkdownIt("commonmark", {"html": True}).enable(["table", "strikethrough"])
+    out += [tok.map[0] + off for tok in md.parse(text) if _is_block_start(tok)]
+    return out
+
+
 def build_ops(text: str, dark: bool, base_dir: str | None) -> Ops:
     """Parse Markdown into insert operations (worker thread)."""
     from markdown_it import MarkdownIt
@@ -191,8 +216,11 @@ def build_ops(text: str, dark: bool, base_dir: str | None) -> Ops:
     md = MarkdownIt("commonmark", {"html": True}).enable(["table", "strikethrough"])
     ops = Ops()
     # YAML front matter: shown as a code block, not as a rule and a heading
-    fm = re.match(r"\A---[ \t]*\n(.*?\n)(?:---|\.\.\.)[ \t]*(?:\n|\Z)", text, re.S)
+    fm = FRONT_MATTER.match(text)
+    nblock = 0
     if fm:
+        ops.ops.append(("mark", "b:0"))
+        nblock = 1
         _code_block(ops, fm.group(1), "yaml", dark, 0, 0, syntax)
         text = text[fm.end():]
     tokens = md.parse(text)
@@ -215,6 +243,9 @@ def build_ops(text: str, dark: bool, base_dir: str | None) -> Ops:
     while i < len(tokens):
         tok = tokens[i]
         t = tok.type
+        if _is_block_start(tok):       # (for scrolling a translation in step)
+            ops.ops.append(("mark", f"b:{nblock}"))
+            nblock += 1
         if t == "heading_open":
             heading = int(tok.tag[1])
             inline = tokens[i + 1] if i + 1 < len(tokens) else None
@@ -390,6 +421,8 @@ class MarkdownPreview(Gtk.ScrolledWindow):
         self.base_dir = None
         self.links = []
         self.marks = {}
+        self.blocks = []                # a mark where each top-level block starts
+        self.on_translate_document = None     # callback for the context menu
         self._gen = 0
         self._timer = 0
         self._text = None
@@ -416,6 +449,48 @@ class MarkdownPreview(Gtk.ScrolledWindow):
                 if p._text is not None:
                     p._render(p._text)
         self._dark_id = sm.connect("notify::dark", on_dark)
+
+        # right-click: Translate (the selection) / Translate Document…
+        group = Gio.SimpleActionGroup()
+        self._act_tr = Gio.SimpleAction.new("translate", None)
+        self._act_tr.connect("activate", lambda *_: self._translate_selection())
+        self._act_tr.set_enabled(False)
+        group.add_action(self._act_tr)
+        act_doc = Gio.SimpleAction.new("translate-doc", None)
+        act_doc.connect("activate", lambda *_: self.on_translate_document and
+                        self.on_translate_document())
+        group.add_action(act_doc)
+        self.view.insert_action_group("mdp", group)
+        extra = Gio.Menu()
+        extra.append(_("Translate"), "mdp.translate")
+        extra.append(_("Translate Document…"), "mdp.translate-doc")
+        self.view.set_extra_menu(extra)
+
+    def _sel_changed(self, buf):
+        if buf is self.view.get_buffer():
+            self._act_tr.set_enabled(buf.get_has_selection())
+
+    def _translate_selection(self):
+        from . import translate_ui
+        buf = self.view.get_buffer()
+        sel = buf.get_selection_bounds()
+        if not sel:
+            return
+        start, end = sel
+        loc = self.view.get_iter_location(start)
+        x, y = self.view.buffer_to_window_coords(Gtk.TextWindowType.WIDGET, loc.x,
+                                                 loc.y + loc.height)
+        # (the table and image placeholders are U+FFFC: not text)
+        text = buf.get_text(start, end, False).replace("\ufffc", "").replace("\u200b", "")
+        translate_ui.show(self.view, text, translate_ui.rect(x, y))
+
+    def block_marks(self):
+        return self.blocks
+
+    def block_iter(self, i):
+        if i >= len(self.blocks) or self.blocks[i].get_deleted():
+            return None
+        return self.view.get_buffer().get_iter_at_mark(self.blocks[i])
 
     def release(self):
         if not self._alive:
@@ -572,6 +647,7 @@ class MarkdownPreview(Gtk.ScrolledWindow):
             return False
         self._styles = ops.styles
         marks = {}
+        blocks = []
         tables = []
         end = buf.get_end_iter()
         for op in ops.ops:
@@ -588,6 +664,8 @@ class MarkdownPreview(Gtk.ScrolledWindow):
                 name = op[1]
                 if name not in marks:
                     marks[name] = buf.create_mark(None, end, True)
+                    if name.startswith("b:"):
+                        blocks.append(marks[name])
             elif kind == "table":
                 start_off = end.get_offset()
                 anchor = buf.create_child_anchor(end)
@@ -600,7 +678,9 @@ class MarkdownPreview(Gtk.ScrolledWindow):
         vadj = self.get_vadjustment()
         old = vadj.get_value()
         self.view.set_buffer(buf)
-        self.links, self.marks = ops.links, marks
+        self.links, self.marks, self.blocks = ops.links, marks, blocks
+        buf.connect("notify::has-selection", lambda b, _p: self._sel_changed(b))
+        self._sel_changed(buf)
         for anchor, rows, aligns in tables:
             self.view.add_child_at_anchor(self._table_widget(rows, aligns), anchor)
         if old > 0:

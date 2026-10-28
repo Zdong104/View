@@ -39,6 +39,11 @@ icon: data/io.github.zdong104.View.svg
 base: core26
 grade: devel
 confinement: strict
+# lzo, not the default xz: every start reads Python, its modules and (when a
+# file is opened) numpy, Pillow, Poppler... from the squashfs, and xz is slow
+# to decompress (cold start, empty window: ~0.4 s less reading).  The snap
+# gets ~25% larger.
+compression: lzo
 
 platforms:
   amd64:
@@ -109,6 +114,12 @@ parts:
       install -d "$CRAFT_PART_INSTALL/usr/lib/view-app" "$CRAFT_PART_INSTALL/usr/bin"
       cp -r "$CRAFT_PART_SRC/preview" "$CRAFT_PART_INSTALL/usr/lib/view-app/"
       find "$CRAFT_PART_INSTALL/usr/lib/view-app" -name __pycache__ -prune -exec rm -rf {} +
+      # The snap is read-only, so Python can't cache the byte code it compiles:
+      # ship it, or every start compiles each module it imports again.
+      # unchecked-hash: never compared with the .py (squashfs mtimes don't matter).
+      # python3 is the SDK's, the one the venv (and so the snap) runs.
+      python3 -m compileall -q -j 0 \
+        --invalidation-mode unchecked-hash "$CRAFT_PART_INSTALL/usr/lib/view-app/preview"
       # Files extension template for `view-app --print-files-extension`
       install -Dm644 "$CRAFT_PART_SRC/data/view-nautilus-extension.py" \
         "$CRAFT_PART_INSTALL/usr/lib/view-app/data/view-nautilus-extension.py"
@@ -128,7 +139,9 @@ parts:
           [ -x "\$s" ] && export GST_PLUGIN_SCANNER="\$s" && break
       done
       export GST_REGISTRY="\$SNAP_USER_COMMON/gstreamer-registry.bin"
-      exec "\$SNAP/bin/python3" -s -m preview "\$@"
+      # -P: don't put the working directory on sys.path (a "preview" folder
+      # there would be imported instead of View)
+      exec "\$SNAP/bin/python3" -s -P -m preview "\$@"
       EOF
       chmod 755 "$CRAFT_PART_INSTALL/usr/bin/view-app"
       install -Dm644 "$CRAFT_PART_SRC/data/io.github.zdong104.View.svg" \

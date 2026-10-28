@@ -385,11 +385,6 @@ class TranslateCard(_Body, Gtk.Box):
         handle.append(grab)
         handle.append(top)
         handle.set_cursor_from_name("grab")
-        drag = Gtk.GestureDrag()
-        drag.connect("drag-begin", self._drag_begin)
-        drag.connect("drag-update", self._drag_update)
-        drag.connect("drag-end", lambda *_: handle.set_cursor_from_name("grab"))
-        handle.add_controller(drag)
         self._handle = handle
 
         inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, margin_start=12,
@@ -399,10 +394,8 @@ class TranslateCard(_Body, Gtk.Box):
         grip = Gtk.Box(css_classes=["resize-grip"], valign=Gtk.Align.END,
                        tooltip_text=_("Drag to resize"))
         grip.set_cursor_from_name("se-resize")
-        rs = Gtk.GestureDrag()
-        rs.connect("drag-begin", self._resize_begin)
-        rs.connect("drag-update", self._resize_update)
-        grip.add_controller(rs)
+        self._grip = grip
+        self._mode = None
         foot.append(grip)
         foot.set_margin_start(12)
         foot.set_margin_end(4)
@@ -425,17 +418,49 @@ class TranslateCard(_Body, Gtk.Box):
         self.set_margin_start(max(0, min(int(x), ow - w)))
         self.set_margin_top(max(0, min(int(y), oh - h)))
 
-    def _drag_begin(self, _g, _x, _y):
+    # Moving and resizing go through a drag gesture on the overlay, which does
+    # not move: one on the card (or its header) reports the pointer relative
+    # to the card, which the drag itself moves, so every move changed the next
+    # offset and the card jumped between two places each frame.
+    def drag_gesture(self, ov):
+        """The gesture for ``ov`` (the overlay the card is in)."""
+        g = Gtk.GestureDrag()
+        g.connect("drag-begin", self._drag_begin, ov)
+        g.connect("drag-update", self._drag_update)
+        g.connect("drag-end", self._drag_end)
+        return g
+
+    @staticmethod
+    def _inside(widget, ov, x, y):
+        ok, b = widget.compute_bounds(ov)
+        return ok and b.contains_point(Graphene.Point().init(x, y))
+
+    def _drag_begin(self, g, x, y, ov):
+        if self.closed or not self.get_mapped():
+            mode = None
+        elif self._inside(self._grip, ov, x, y):
+            mode = "size"
+        elif self._inside(self._handle, ov, x, y):
+            mode = "move"
+        else:
+            mode = None
+        self._mode = mode
+        if mode is None:            # a press anywhere else is not ours
+            g.set_state(Gtk.EventSequenceState.DENIED)
+            return
         self._origin = (self.get_margin_start(), self.get_margin_top())
-        self._handle.set_cursor_from_name("grabbing")
-
-    def _drag_update(self, _g, dx, dy):
-        self.move_to(self._origin[0] + dx, self._origin[1] + dy)
-
-    def _resize_begin(self, _g, _x, _y):
         self._size0 = (self.get_width(), self.stack.get_height())
+        if mode == "move":
+            self._handle.set_cursor_from_name("grabbing")
 
-    def _resize_update(self, _g, dx, dy):
+    def _drag_update(self, g, dx, dy):
+        if self._mode is None:
+            return
+        if abs(dx) + abs(dy) > 2:
+            g.set_state(Gtk.EventSequenceState.CLAIMED)
+        if self._mode == "move":
+            self.move_to(self._origin[0] + dx, self._origin[1] + dy)
+            return
         ow, oh = self._bounds()
         w0, h0 = self._size0
         extra = self.get_height() - self.stack.get_height()
@@ -443,6 +468,11 @@ class TranslateCard(_Body, Gtk.Box):
         h = max(MIN_BODY, min(int(h0 + dy), oh - self.get_margin_top() - extra))
         self.set_size_request(w, -1)
         self.stack.set_size_request(-1, h)
+
+    def _drag_end(self, _g, _dx, _dy):
+        if self._mode == "move":
+            self._handle.set_cursor_from_name("grab")
+        self._mode = None
 
     def place(self, sel, ow, oh):
         """Next to ``sel`` (x, y, w, h in the overlay) without covering it:
@@ -546,6 +576,8 @@ def show(parent, text, rect=None, side_by_side=None):
         GLib.idle_add(lambda: (show(parent, text, rect, side_by_side), False)[1])
     card = TranslateCard(text, reopen, side_by_side)
     ov.add_overlay(card)
+    drag = card.drag_gesture(ov)
+    ov.add_controller(drag)
     root = ov.get_root()
     keys = Gtk.EventControllerKey(propagation_phase=Gtk.PropagationPhase.CAPTURE)
 
@@ -561,10 +593,11 @@ def show(parent, text, rect=None, side_by_side=None):
     def closed(c):
         if _cards.get(ov) is c:
             del _cards[ov]
-        try:
-            root.remove_controller(keys)
-        except Exception:  # noqa: BLE001
-            pass
+        for owner, ctl in ((root, keys), (ov, drag)):
+            try:
+                owner.remove_controller(ctl)
+            except Exception:  # noqa: BLE001
+                pass
         if c.get_parent() is ov:
             ov.remove_overlay(c)
     card.on_close = closed

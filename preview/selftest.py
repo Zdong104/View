@@ -143,7 +143,8 @@ MODULES = ["app", "viewer_base", "image_view", "image_ops", "pdf_view", "pdf_ops
            "dxf_repair", "video_view", "media_player",
            "inspector", "convert", "ocr", "ocr_install", "preferences", "touchpad",
            "integration", "screenshot", "translate", "translate_install", "translate_ui",
-           "translate_helper", "translate_view", "md_translate"]
+           "translate_helper", "translate_view", "md_translate",
+           "code_translate"]
 LINUX_MODULES = ["quicklook", "quicklook_renderers"]
 
 
@@ -678,6 +679,60 @@ def _translate_markdown():
     return "structure kept (3 stand-in translators); paragraphs, line numbers"
 
 
+def _translate_mixed():
+    """Text partly in the target language already, code, tables: what goes to
+    the engine and what is kept (a stand-in translator, no engine)."""
+    import re
+    from . import code_translate as ct, syntax, translate as tr
+
+    def run(text, src, tgt):            # translate_batch's own segmenting, a fake engine
+        units = tr._segment(text, src, tgt)
+        sent = [u[1] for u in units if u[0] == "s"]
+        it = iter(["<" + x.upper() + ">" for x in sent])
+        return tr._assemble([("s", next(it)) if u[0] == "s" else u for u in units], tgt), sent
+    out, sent = run("Wendong finished, HR first.\nExpectation, 上班的具体jd, O1, H1b, "
+                    "是否远程, 股份, 工资.\n说明。dd", "en", "zh")
+    if "上班的具体jd, O1, H1b, 是否远程, 股份, 工资." not in out or "说明。dd" not in out \
+            or any(re.search(r"[一-鿿]", x) for x in sent):
+        raise RuntimeError(f"mixed en/zh into zh: {sent!r} -> {out!r}")
+    out, sent = run("今天天气很好 and we are going out", "zh", "en")
+    if sent != ["今天天气很好"] or "and we are going out" not in out:
+        raise RuntimeError(f"mixed zh/en into en: {sent!r}")
+    if tr.detect("Wendong finished, HR first. Expectation, O1, H1b, description.dd") != "en":
+        raise RuntimeError("stray 'O1' taken for Portuguese")
+    if tr.detect("TagGraph is a memory framework with a pipeline that turns each note into a "
+                 "graph. Retrieval is a staged pipeline.") != "en":
+        raise RuntimeError("English with many 'a' taken for Hungarian")
+    # code: comments and messages only, on the same lines
+    src = ('#!/usr/bin/env python3\n# -*- coding: utf-8 -*-\nimport os  # noqa: F401\n\n\n'
+           'def f(path, n):\n    """Open the file and read\n    every line of it."""\n'
+           '    key = "user_id"\n    # Count the lines,\n    # skipping the empty ones.\n'
+           '    print("Found the lines in the file")\n    return os.path.join(path, key)\n')
+    plan = ct.CodePlan(src, syntax.lexer_for("f.py"))
+    want = ["Open the file and read every line of it.", "Count the lines, skipping the empty ones.",
+            "Found the lines in the file"]
+    if plan.pieces != want:
+        raise RuntimeError(f"code pieces {plan.pieces!r}")
+    out = plan.render({p: p.upper() for p in plan.pieces})
+    for must in ("# -*- coding: utf-8 -*-", '"user_id"', "# noqa: F401", "# COUNT THE LINES,",
+                 "# SKIPPING THE EMPTY ONES.", '"""OPEN THE FILE AND READ', "def f(path, n):"):
+        if must not in out:
+            raise RuntimeError(f"code: lost {must!r}")
+    if out.count("\n") != src.count("\n"):
+        raise RuntimeError("code: the line count changed")
+    if ct.distribute("数字来源于店家CSV出口，作为团队的短篇摘要印刷。", [55, 33]) != \
+            ["数字来源于店家CSV出口，", "作为团队的短篇摘要印刷。"]:
+        raise RuntimeError("laying a block back over its lines")
+    # tables: text cells only
+    cells = {"Wireless keyboard": True, "Please deliver before noon": True, "无线键盘": True,
+             "2026-09-01": False, "49.90": False, "SKU-1001": False, "user_id": False,
+             "a@b.com": False, "https://x.org": False, "12 kg": False, "USD": False}
+    bad = [c for c, want in cells.items() if ct.cell_worth(c) != want]
+    if bad:
+        raise RuntimeError(f"table cells misjudged: {bad}")
+    return "target-language text kept; code comments/strings only; table text cells"
+
+
 def _translate_engine():
     from . import translate as tr
     helper = tr.helper_path()
@@ -899,6 +954,7 @@ def main(argv=()):
             res.check("OCR recognize", lambda: _ocr_run(paths, d))
         res.check("translation (detection, sentences)", _translate_text)
         res.check("translation (Markdown structure, side-by-side)", _translate_markdown)
+        res.check("translation (mixed languages, code, tables)", _translate_mixed)
         res.check("translation engine", _translate_engine, required=runtime.OCR_BUNDLED)
         if not no_ui:
             _ui(paths, res, shots)

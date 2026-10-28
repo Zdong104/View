@@ -123,6 +123,61 @@ begin
     Log(Format('Could not look for running screenshot watchers: %s', [SysErrorMessage(Code)]));
 end;
 
+// Uninstall: stop View running from {app} (its windows, helpers and screenshot
+// watchers), else the files it has open stay behind ("Removed all? No").  Its
+// windows first, as if the user closed them (a document with unsaved changes
+// asks); what is left after a while is stopped.  Mode: close (close the windows
+// and wait), wait, or stop (force).  Returns how many View windows (close,
+// wait) or View processes (stop) are still running.
+function StopView(const Mode: String): Integer;
+var
+  Script: String;
+begin
+  Script := ExpandConstant('{tmp}\stop-view.ps1');
+  SaveStringToFile(Script,
+    'param([string]$Dir, [string]$Mode)' + #13#10 +
+    '$dir = $Dir.TrimEnd(''\'') + ''\''' + #13#10 +
+    '# (@(...).Count: one CimInstance has no Count)' + #13#10 +
+    'function All { Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and' + #13#10 +
+    '  $_.ExecutablePath.StartsWith($dir, [StringComparison]::OrdinalIgnoreCase) -and $_.Name -notlike ''unins*'' } }' + #13#10 +
+    'function Gui { All | Where-Object { $_.Name -in ''View.exe'', ''view-app.exe'' -and' + #13#10 +
+    '  $_.CommandLine -notlike ''*--screenshot-watcher*'' } }' + #13#10 +
+    'if ($Mode -eq ''stop'') {' + #13#10 +
+    '  $p = @(All)' + #13#10 +
+    '  $p | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }' + #13#10 +
+    '  $p | ForEach-Object { Wait-Process -Id $_.ProcessId -Timeout 10 -ErrorAction SilentlyContinue }' + #13#10 +
+    '  exit @(All).Count }' + #13#10 +
+    '# without /F taskkill closes the windows (WM_CLOSE), like the user would' + #13#10 +
+    'if ($Mode -eq ''close'') { Gui | ForEach-Object { taskkill.exe /PID $_.ProcessId | Out-Null } }' + #13#10 +
+    '$end = (Get-Date).AddSeconds(15)' + #13#10 +
+    'while (@(Gui).Count -and (Get-Date) -lt $end) { Start-Sleep -Milliseconds 300 }' + #13#10 +
+    'exit @(Gui).Count' + #13#10, False);
+  if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+              '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + Script +
+              '" -Dir "' + ExpandConstant('{app}') + '" -Mode ' + Mode, '', SW_HIDE,
+              ewWaitUntilTerminated, Result) then begin
+    Log(Format('Could not look for a running View: %s', [SysErrorMessage(Result)]));
+    Result := 0;
+  end;
+end;
+
+procedure StopRunningView;
+var
+  Left: Integer;
+begin
+  Left := StopView('close');
+  while (Left > 0) and not UninstallSilent and (MsgBox('View is still open, perhaps ' +
+         'asking whether to save a document.' + #13#10#13#10 + 'Close View, then click ' +
+         'Retry. Cancel closes it without saving.', mbConfirmation, MB_RETRYCANCEL) = IDRETRY) do
+    Left := StopView('wait');
+  Log(Format('View windows still open after closing them: %d', [Left]));
+  Left := StopView('stop');
+  Log(Format('View processes still running from %s: %d', [ExpandConstant('{app}'), Left]));
+  if (Left > 0) and not UninstallSilent then
+    MsgBox('View could not be stopped, so some of its files stay in ' +
+           ExpandConstant('{app}') + '. Delete that folder after closing View.', mbError, MB_OK);
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   StopScreenshotWatchers;
@@ -132,7 +187,7 @@ end;
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usUninstall then
-    StopScreenshotWatchers;
+    StopRunningView;
 end;
 
 function RelaunchRequested: Boolean;

@@ -22,7 +22,8 @@ import time
 import zlib
 from pathlib import Path
 
-import numpy as np
+# numpy is imported where it is needed (Instant Alpha, colour adjustment,
+# flattening markup): loading it (and OpenBLAS) would slow down opening every image.
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageOps
 from .runtime import replace_file
 
@@ -191,6 +192,7 @@ def load_thumb(path, size=256):
 
 def _propagate(mask, region, axis):
     """Grow `region` to every run of `mask` along `axis` that touches it."""
+    import numpy as np
     m = mask if axis == 1 else mask.T
     r = (region & mask) if axis == 1 else (region & mask).T
     prev = np.zeros_like(m)
@@ -206,6 +208,7 @@ def _propagate(mask, region, axis):
 
 def flood_region(cand, x, y):
     """Connected (4-neighbour) component of boolean mask `cand` containing (x, y)."""
+    import numpy as np
     reg = np.zeros_like(cand)
     if not cand[y, x]:
         return reg
@@ -220,6 +223,7 @@ def flood_region(cand, x, y):
 
 def _alpha_fill(im, x, y, tol):
     """Make the colour region connected to (x, y) transparent (Instant Alpha)."""
+    import numpy as np
     im = im.convert("RGBA")
     a = np.asarray(im).copy()
     h, w = a.shape[:2]
@@ -239,6 +243,7 @@ def adjust_color(im, p):
     """Apply colour-adjustment params (see COLOR_DEFAULTS) to a PIL image."""
     if color_is_neutral(p):
         return im
+    import numpy as np
     alpha = im.getchannel("A") if im.mode == "RGBA" else None
     rgb = im.convert("RGB")
     a = np.asarray(rgb, dtype=np.float32) / 255.0
@@ -310,6 +315,7 @@ def _composite_sig(im, ov):
 
 def _composite_markup(im, items):
     import cairo
+    import numpy as np
     from .markup import Item, render_items
     w, h = im.size
     surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, w, h)

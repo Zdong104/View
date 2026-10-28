@@ -12,9 +12,7 @@ import tempfile
 import threading
 from pathlib import Path
 
-import img2pdf
 from PIL import Image, ImageOps
-from pypdf import PdfWriter, PdfReader
 from .runtime import replace_file
 from .i18n import _, N_, ngettext
 
@@ -168,6 +166,10 @@ def images_to_pdf(paths, out_path, page_size="fit", margin_mm=0, landscape_auto=
     page_size: "fit" (page = image), "a4" or "letter". Overwrites out_path.
     progress(done, total) is called after each image. Returns the output Path.
     """
+    # here, not at the top: the image viewer imports this module, and these
+    # (with pikepdf, which img2pdf loads) are slow to load
+    import img2pdf
+    from pypdf import PdfWriter, PdfReader
     paths = [str(p) for p in paths]
     if not paths:
         raise ConvertError("No images to convert")

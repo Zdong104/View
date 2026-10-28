@@ -559,6 +559,7 @@ class PreviewApp(Adw.Application):
         self.primary_menu = self._build_menu()
         self._want_signature = False
         self.updater = None
+        self._updater_started = False
         self.add_main_option("new-signature", 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE,
                              "Draw a new signature with the touchpad", None)
         self.connect("handle-local-options", self._on_local_options)
@@ -752,12 +753,13 @@ class PreviewApp(Adw.Application):
     def _start_updater(self):
         """Background update checks, only for the real app (not --selftest
         or --startup-trace)."""
-        if self.updater is not None or runtime.startup_trace or \
+        if self._updater_started or runtime.startup_trace or \
                 self.get_application_id() != APP_ID:
             return
-        from .updates import Updater
-        self.updater = Updater(self)
-        self.updater.start()
+        self._updater_started = True
+        # the first check is 20 s away: load the network code (urllib, ssl)
+        # once the first window is up, not before
+        GLib.idle_add(lambda: (self._get_updater().start(), GLib.SOURCE_REMOVE)[1])
 
     def _start_screenshots(self):
         """Screenshot quick edit: once, a little after the first window, make

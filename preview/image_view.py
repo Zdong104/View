@@ -845,6 +845,9 @@ class ImageViewer(Viewer):
         self.canvas.connect("alpha-click", self._on_alpha_click)
         self.canvas.connect("selection-changed", lambda *_: self._update_actions())
         self.canvas.connect("need-detail", self._on_need_detail)
+        ctx = Gtk.GestureClick(button=Gdk.BUTTON_SECONDARY)
+        ctx.connect("pressed", lambda _g, _n, x, y: self._text_menu(x, y))
+        self.canvas.add_controller(ctx)
         self._detail_gen = 0
         self._tiles = None         # (rendered image, [(key, texture)]) newest first
 
@@ -1128,6 +1131,7 @@ class ImageViewer(Viewer):
         add("slideshow", self._toggle_slideshow)
         add("markup", self._toggle_markup)
         add("copy-text", self._copy_all_text)
+        add("translate", self._translate_text)
         add("recognize", lambda: self._run_ocr(force=True))
         add("show-text", self._toggle_text_boxes)
         tool = Gio.SimpleAction.new_stateful("tool", GLib.VariantType.new("s"),
@@ -1201,7 +1205,7 @@ class ImageViewer(Viewer):
             "markup": ready,
             "copy-text": bool(self.canvas.text is not None and self.canvas.text.has_text()),
             "show-text": bool(self.canvas.text is not None and self.canvas.text.has_text()),
-            "recognize": ready,
+            "recognize": ready, "translate": ready,
         }
         for name, a in self._acts.items():
             ok = en.get(name, True)
@@ -1295,6 +1299,7 @@ class ImageViewer(Viewer):
         t5.append(_("Recognize Text"), "img.recognize")
         t5.append(_("Show Recognized Text"), "img.show-text")
         t5.append(_("Copy All Text"), "img.copy-text")
+        t5.append(_("Translate Text…"), "img.translate")
         tools.append_section(None, t5)
         t4 = Gio.Menu()
         t4.append(_("Slideshow"), "img.slideshow")
@@ -2264,6 +2269,10 @@ class ImageViewer(Viewer):
             ov.on_change = self.canvas.queue_draw
             self.canvas.text = ov
             self.canvas.text_k = k
+            if getattr(self, "_translate_after", None) is o:    # Translate Text… asked for it
+                self._translate_after = None
+                if lines:
+                    GLib.idle_add(lambda: (self._translate_text(), False)[1])
             if force:
                 self.toast(ngettext("Recognized {n} line of text", "Recognized {n} lines of text", len(lines)).format(n=len(lines))
                            if lines else _("No text found"))
@@ -2285,6 +2294,45 @@ class ImageViewer(Viewer):
         from . import ocr
         self.get_clipboard().set(ocr.lines_to_text(t.lines))
         self.toast(_("All text copied"))
+
+    def _text_menu(self, x, y):
+        """Right-click on an image with recognized text: Copy / Translate."""
+        t = self.canvas.text
+        if t is None or not t.has_text():
+            return
+        menu = Gio.Menu()
+        if t.has_selection():
+            menu.append(_("Copy"), "img.copy")
+            menu.append(_("Translate"), "img.translate")
+        else:
+            menu.append(_("Translate All Text"), "img.translate")
+        menu.append(_("Copy All Text"), "img.copy-text")
+        pm = Gtk.PopoverMenu.new_from_model(menu)
+        pm.set_has_arrow(False)
+        self.canvas.add_popover(pm)
+        r = Gdk.Rectangle()
+        r.x, r.y, r.width, r.height = int(x), int(y), 1, 1
+        pm.set_pointing_to(r)
+        pm.connect("closed", lambda p: GLib.idle_add(
+            lambda: (self.canvas.remove_popover(p), False)[1]))
+        self._ctx_xy = (x, y)
+        pm.popup()
+
+    def _translate_text(self):
+        """Translate the selected recognized text, else all of it (recognizing
+        it first when Live Text has not run)."""
+        t = self.canvas.text
+        xy, self._ctx_xy = getattr(self, "_ctx_xy", None), None
+        if t is None or not t.has_text():
+            if t is None and self.current is not None:
+                self._run_ocr(force=True)
+                self._translate_after = self._ocr
+            else:
+                self.toast(_("No recognized text"))
+            return
+        from . import ocr, translate_ui
+        text = t.selected_text() if t.has_selection() else ocr.lines_to_text(t.lines)
+        translate_ui.show(self.canvas, text, translate_ui.rect(*xy) if xy else None)
 
     # ---- adjust colour ------------------------------------------------------------------------
     def _color_open(self):

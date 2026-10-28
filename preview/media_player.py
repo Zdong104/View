@@ -42,6 +42,7 @@ HIDE_DELAY_MS = 2000
 POS_INTERVAL_MS = 250
 START_DELAY_MS = 40
 SCRUB_SETTLE_MS = 180
+SPINNER_DELAY_MS = 300
 
 CSS = """
 .mp-stage { background-color: black; }
@@ -246,6 +247,7 @@ class MediaPlayer(Adw.Bin):
         self._hide_timer = 0
         self._settle_timer = 0
         self._osd_timer = 0
+        self._spin_timer = 0
         self._scrubbing = False
         self._suspended = None     # (uri, pos, playing, audio) while unrealized
         self._sink_mode = "dmabuf"
@@ -284,7 +286,12 @@ class MediaPlayer(Adw.Bin):
         self.revealer = Gtk.Revealer(child=self.bar, reveal_child=True, valign=Gtk.Align.END,
                                      transition_type=Gtk.RevealerTransitionType.CROSSFADE,
                                      transition_duration=200)
+        # shown while the first frame is on its way (a big file, a slow disk)
+        self.spinner = Adw.Spinner(halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER,
+                                   width_request=48, height_request=48, visible=False,
+                                   can_target=False)
         self.overlay = Gtk.Overlay(child=self.stage)
+        self.overlay.add_overlay(self.spinner)
         self.overlay.add_overlay(self.osd_label)
         self.overlay.add_overlay(self.revealer)
         self.set_child(self.overlay)
@@ -386,6 +393,7 @@ class MediaPlayer(Adw.Bin):
         self._pending_seek = (start_ns, True) if start_ns > 0 or self.loop else None
         self._show_stage()
         self._sync_controls()
+        self._spin_timer = GLib.timeout_add(SPINNER_DELAY_MS, self._show_spinner)
         # Coalesce bursts (sibling switching, Quick Look arrowing through
         # files): only the last request within START_DELAY_MS builds a pipeline.
         self._start_id = GLib.timeout_add(START_DELAY_MS, self._start_pipeline)
@@ -465,7 +473,19 @@ class MediaPlayer(Adw.Bin):
             age = runtime.process_age()
             print(f"{age if age is not None else 0:7.2f} s  video: {what}", flush=True)
 
+    def _show_spinner(self):
+        self._spin_timer = 0
+        self.spinner.set_visible(not self.audio_only)
+        return False
+
+    def _hide_spinner(self):
+        if self._spin_timer:
+            GLib.source_remove(self._spin_timer)
+            self._spin_timer = 0
+        self.spinner.set_visible(False)
+
     def _teardown(self):
+        self._hide_spinner()
         for attr in ("_pos_timer", "_settle_timer", "_start_id"):
             tid = getattr(self, attr)
             if tid:
@@ -588,6 +608,7 @@ class MediaPlayer(Adw.Bin):
             self._sync_controls()
         elif t == Gst.MessageType.ASYNC_DONE:
             self._trace(f"first frame ready ({self.describe_decoder() or 'no video decoder'})")
+            self._hide_spinner()
             self._seek_busy = False
             self._query_duration()
             self._query_size()
@@ -900,6 +921,7 @@ class MediaPlayer(Adw.Bin):
 
     def _show_stage(self):
         if self.audio_only and self.audio_widget is not None:
+            self.spinner.set_visible(False)
             self.stage.set_visible_child_name("audio")
             self.show_controls(pin=True)
         else:

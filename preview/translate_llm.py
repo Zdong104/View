@@ -143,7 +143,38 @@ def dirs() -> list[str]:
 def server_exe() -> str | None:
     exe = os.path.join(_llama_dir(), "llama-server.exe" if sys.platform == "win32"
                        else "llama-server")
-    return exe if os.path.isfile(exe) else None
+    if not os.path.isfile(exe):
+        return None
+    if sys.platform == "win32":
+        _vc_runtime(os.path.dirname(exe))
+    return exe
+
+
+_VC_DLLS = ("msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll")
+
+
+def _vc_runtime(dest):
+    """llama.cpp's Windows build needs the Visual C++ runtime 14.40 or newer:
+    with an older msvcp140.dll in System32 (14.36 on a Windows 11 that never
+    updated it) every llama.cpp program crashes at start (0xC0000005).
+    View's own bundles ship a new one; a copy next to llama-server.exe is
+    loaded before System32's."""
+    if os.path.isfile(os.path.join(dest, _VC_DLLS[0])):
+        return
+    base = os.path.dirname(sys.executable)
+    for d in (os.path.join(base, "translate", "_internal"), os.path.join(base, "ocr", "_internal"),
+              getattr(sys, "_MEIPASS", base)):
+        try:
+            names = {n.lower(): n for n in os.listdir(d)}
+        except OSError:
+            continue
+        if all(n in names for n in _VC_DLLS):
+            try:                  # (msvcp140.dll last: it marks a complete copy)
+                for n in reversed(_VC_DLLS):
+                    shutil.copyfile(os.path.join(d, names[n]), os.path.join(dest, n))
+            except OSError:
+                pass
+            return
 
 
 def installed() -> bool:

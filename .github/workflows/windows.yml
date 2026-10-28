@@ -218,10 +218,19 @@ jobs:
             audiotestsrc num-buffers=431 ! audioconvert ! avenc_aac ! aacparse ! m. || true
           # real films: Big Buck Bunny (CC BY 3.0, Blender Foundation), 10 min,
           # H.264 with MP3 and AC-3 sound, 1080p (~270 MB) and 4K
+          bbb=https://download.blender.org/demo/movies/BBB
+          curl -fsSL "$bbb/" | grep -o 'href="[^"?/]*"' || true
           for res in 1080p 2160p; do
-            curl -fsSL --retry 3 -o build/t/bbb-$res.mp4 \
-              "https://download.blender.org/demo/movies/BBB/bbb_sunflower_${res}_30fps_normal.mp4" \
+            name=bbb_sunflower_${res}_30fps_normal.mp4
+            # served zipped these days; the plain .mp4 as a fallback
+            { curl -fsSL --retry 3 -o build/t/bbb.zip "$bbb/$name.zip" &&
+              python -c "import shutil, sys, zipfile
+          z = zipfile.ZipFile(sys.argv[1])
+          n = next(i for i in z.namelist() if i.endswith('.mp4'))
+          shutil.copyfileobj(z.open(n), open(sys.argv[2], 'wb'))" build/t/bbb.zip build/t/bbb-$res.mp4
+            } || curl -fsSL --retry 3 -o build/t/bbb-$res.mp4 "$bbb/$name" \
               || rm -f build/t/bbb-$res.mp4
+            rm -f build/t/bbb.zip
           done
           ls -la build/t
           local_app=$(cygpath -u "$LOCALAPPDATA")

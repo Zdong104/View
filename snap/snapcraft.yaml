@@ -1,6 +1,6 @@
 name: view
 title: View
-version: '0.1.9'
+version: '0.2.0'
 summary: View and annotate PDFs, images, videos, text and 3D models
 description: |
   View is a fast, macOS Preview-style viewer for GNOME. One app opens

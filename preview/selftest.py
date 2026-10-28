@@ -997,7 +997,8 @@ def _ui_cjk_table(pump, shots=None):
             raise RuntimeError(f"expected a table of 12 cells, found {len(labels)}")
         glyph = labels[0].create_pango_layout("中").get_pixel_size()[0]
         widths = [lab.get_width() for lab in labels[:3]]
-        if min(widths) < 2 * glyph or widths[1] < 8 * glyph:
+        # (two characters can measure a pixel under 2 × "中" without a CJK font)
+        if min(widths) < 1.5 * glyph or widths[1] < 8 * glyph:
             raise RuntimeError(f"columns {widths} px wide, a character is {glyph} px")
         wrapped = [lab.get_text() for lab in labels if lab.get_layout().get_line_count() > 1]
         if wrapped:

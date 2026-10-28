@@ -787,10 +787,12 @@ class _Adapter:
         code = code if code in translate.CJK else None
         buf = getattr(self.viewer, "buf", None)
         if isinstance(buf, Gtk.TextBuffer):
-            buf.apply_tag(language_tag(buf, code, "src-lang"), *buf.get_bounds())
+            view = getattr(self.viewer, "view", None)
+            mono = not isinstance(view, Gtk.TextView) or view.get_monospace()
+            buf.apply_tag(language_tag(buf, code, "src-lang", mono), *buf.get_bounds())
         md = getattr(self.viewer, "_md", None)
         if md is not None:
-            md.set_language(translate.pango_language(code))
+            md.set_language(translate.pango_language(code), translate.font_family(code))
 
 
 class _ParagraphView:
@@ -1290,7 +1292,8 @@ class MarkdownAdapter(_Adapter):
         plan = md_translate.Plan(text)
         self.plan = plan
         src = self.pane.src_for(plan.sample())
-        self.preview.set_language(translate.pango_language(self.pane.tgt))
+        self.preview.set_language(translate.pango_language(self.pane.tgt),
+                                  translate.font_family(self.pane.tgt))
         self.pane.set_status("")
         self._round(plan, src)
         self._render(now=True)
@@ -1335,7 +1338,7 @@ class MarkdownAdapter(_Adapter):
             keep = vadj.get_value()
             buf = self.src_view.get_buffer()
             buf.set_text(self.result)
-            buf.apply_tag(language_tag(buf, self.pane.tgt), *buf.get_bounds())
+            buf.apply_tag(language_tag(buf, self.pane.tgt, mono=True), *buf.get_bounds())
             GLib.idle_add(lambda: (vadj.set_value(keep), False)[1])
             done, total = self.plan.progress()
             if done < total:
@@ -1587,7 +1590,7 @@ class CodeAdapter(_Adapter):
         if not n:
             return False
         src = self.pane.src_for("\n".join(plan.pieces[:200]))
-        language_tag(self.buf, self.pane.tgt, "translated")
+        language_tag(self.buf, self.pane.tgt, "translated", mono=True)
         self.pane.set_status(ngettext("{n} comment or text to translate",
                                       "{n} comments and texts to translate", n).format(n=n))
         index = {}

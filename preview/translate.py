@@ -103,6 +103,23 @@ def pango_language(code: str | None) -> str | None:
     return {"zh": "zh-cn", "zt": "zh-tw"}.get(code, code) if code else None
 
 
+# On Windows Pango ignores the language when it falls back to other fonts: it
+# goes down Segoe UI's list, so Chinese came out in MS UI Gothic (Japanese)
+# with the simplified-only characters in Microsoft JhengHei, two fonts on two
+# baselines.  Naming the language's own font first keeps the text in one font.
+_WINDOWS_FONTS = {"zh": "Microsoft YaHei UI,Microsoft YaHei",
+                  "zt": "Microsoft JhengHei UI,Microsoft JhengHei",
+                  "ja": "Yu Gothic UI,Meiryo UI,Meiryo",
+                  "ko": "Malgun Gothic"}
+
+
+def font_family(code: str | None) -> str | None:
+    """A font family (list) for proportional text in the language `code`
+    where Pango does not pick one by the language (Windows), else None."""
+    fonts = _WINDOWS_FONTS.get(code) if sys.platform == "win32" else None
+    return fonts and fonts + ",Segoe UI"
+
+
 CJK = {"zh", "zt", "ja", "ko"}
 
 

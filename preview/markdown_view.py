@@ -520,6 +520,7 @@ class MarkdownPreview(Gtk.ScrolledWindow):
         self.on_translate_document = None     # callback for the context menu
         self.on_rendered = None               # callback after each render
         self.language = None                  # the text's (Pango) language; see set_language
+        self.family = None                    # and a font for it, if Pango needs one
         self._gen = 0
         self._timer = 0
         self._text = None
@@ -636,12 +637,14 @@ class MarkdownPreview(Gtk.ScrolledWindow):
             pass
 
     # ---- input ------------------------------------------------------------
-    def set_language(self, lang):
+    def set_language(self, lang, family=None):
         """The language of the text, a Pango language ("zh-cn", "ja"…) or
         None for the default: Pango picks the fonts by it (Chinese without
-        one can come out in Japanese glyph forms or in mixed fonts)."""
-        if lang != self.language:
-            self.language = lang
+        one can come out in Japanese glyph forms or in mixed fonts).  Where
+        Pango does not (Windows), `family` names the fonts for the text
+        outside code."""
+        if (lang, family) != (self.language, self.family):
+            self.language, self.family = lang, family
             if self._text is not None:
                 self._render(self._text)
 
@@ -816,8 +819,15 @@ class MarkdownPreview(Gtk.ScrolledWindow):
                             if n.startswith("blk:")), default=self.view.get_left_margin())
                 tables.append((anchor, op[1], op[2], left))
         if self.language:
-            tag = self._table.lookup("lang") or buf.create_tag("lang")
+            tag = self._table.lookup("lang")
+            if tag is None:
+                tag = buf.create_tag("lang")
+                tag.set_priority(0)             # (code keeps its monospace)
             tag.set_property("language", self.language)
+            if self.family:
+                tag.set_property("family", self.family)
+            else:
+                tag.set_property("family-set", False)
             buf.apply_tag(tag, buf.get_start_iter(), end)
         # keep the reading position across re-renders
         vadj = self.get_vadjustment()
@@ -846,14 +856,17 @@ class MarkdownPreview(Gtk.ScrolledWindow):
         grid = Gtk.Grid(css_classes=["md-table"], overflow=Gtk.Overflow.HIDDEN)
         xal = {"left": 0.0, "center": 0.5, "right": 1.0}
         attrs = Pango.AttrList()
+        face = None
         if self.language:
             attrs.insert(Pango.attr_language_new(Pango.Language.from_string(self.language)))
+            if self.family:     # (in the markup, so that code in a cell stays monospace)
+                face = GLib.markup_escape_text(self.family)
         for r, row in enumerate(rows):
             for c, cell in enumerate(row):
                 lab = Gtk.Label(wrap=True, max_width_chars=48, selectable=True,
                                 xalign=xal.get(aligns[c] if c < len(aligns) else "left", 0.0),
                                 css_classes=["md-cell"] + (["md-head"] if r == 0 else []))
-                lab.set_markup(cell)
+                lab.set_markup(f"<span face='{face}'>{cell}</span>" if face else cell)
                 lab.set_attributes(attrs)
                 lab.connect("activate-link", lambda _l, uri: self._open_link(uri) or True)
                 grid.attach(lab, c, r, 1, 1)

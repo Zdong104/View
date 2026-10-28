@@ -61,24 +61,39 @@ def _install_css():
     _css_done = True
 
 
-def language_tag(buf, code, name="lang"):
+def language_tag(buf, code, name="lang", mono=False):
     """buf's tag `name`, set to the language `code` (one of translate.CODES,
-    None: unset), for the text it is applied to; see translate.pango_language."""
-    tag = buf.get_tag_table().lookup(name) or buf.create_tag(name)
+    None: unset), for the text it is applied to; see translate.pango_language.
+    Unless the text is `mono`(space), the tag also gives it the language's
+    font where Pango needs one (translate.font_family), at the lowest
+    priority so that other tags' fonts (code spans) still apply."""
+    tag = buf.get_tag_table().lookup(name)
+    if tag is None:
+        tag = buf.create_tag(name)
+        tag.set_priority(0)
     lang = translate.pango_language(code)
     if lang:
         tag.set_property("language", lang)
     else:
         tag.set_property("language-set", False)
+    family = None if mono else translate.font_family(code)
+    if family:
+        tag.set_property("family", family)
+    else:
+        tag.set_property("family-set", False)
     return tag
 
 
 def language_attrs(code):
-    """Pango attributes giving a label the language `code` (see language_tag)."""
+    """Pango attributes giving a label the language `code` and its font
+    (see language_tag)."""
     attrs = Pango.AttrList()
     lang = translate.pango_language(code)
     if lang:
         attrs.insert(Pango.attr_language_new(Pango.Language.from_string(lang)))
+    family = translate.font_family(code)
+    if family:
+        attrs.insert(Pango.attr_family_new(family))
     return attrs
 
 

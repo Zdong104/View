@@ -977,13 +977,15 @@ def _ui_cjk_table(pump, shots=None):
     may wrap between any two characters, and the table used to be laid out
     at its minimum width: one character per line.)"""
     from gi.repository import Gtk
+    from . import translate
     from .markdown_view import MarkdownPreview
     win = Gtk.Window(default_width=900, default_height=400)
     preview = MarkdownPreview()
     win.set_child(preview)
     win.present()
     try:
-        preview.set_language("zh-cn")       # (as a translation into Chinese has)
+        family = translate.font_family("zh")
+        preview.set_language("zh-cn", family)   # (as a translation into Chinese has)
         preview.set_source(CJK_TABLE)
         end = time.monotonic() + 5
         labels = []
@@ -1010,6 +1012,20 @@ def _ui_cjk_table(pump, shots=None):
                 not buf.get_start_iter().has_tag(tag) or
                 any("zh-cn" not in lab.get_attributes().to_string() for lab in labels)):
             raise RuntimeError("text or table cells without the zh-cn language")
+        # where Pango ignores the language (Windows), the cells are in one font,
+        # not Japanese glyphs with the simplified characters from another font
+        if family:
+            fonts = set()
+            for lab in labels:
+                it = lab.get_layout().get_iter()
+                while True:
+                    run = it.get_run_readonly()
+                    if run is not None:
+                        fonts.add(run.item.analysis.font.describe().get_family())
+                    if not it.next_run():
+                        break
+            if len(fonts) != 1:
+                raise RuntimeError(f"Chinese table cells in fonts {sorted(fonts)}")
         if shots:
             try:
                 _snapshot(win, os.path.join(shots, "selftest-markdown-cjk-table.png"))

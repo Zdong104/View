@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: View\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-27 22:58-0400\n"
+"POT-Creation-Date: 2026-10-28 18:27-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1651,6 +1651,68 @@ msgstr ""
 msgid "Remove"
 msgstr ""
 
+msgid "High quality with a dedicated GPU, otherwise Fast"
+msgstr ""
+
+msgid ""
+"Small, works on any computer, lower quality (Argos, 70–300 MB per language "
+"pair)"
+msgstr ""
+
+msgid ""
+"Hy-MT2 1.8B, 1.2 GB, best with a GPU (23 languages; the others use Fast)"
+msgstr ""
+
+msgid "Model"
+msgstr ""
+
+msgid "Automatic"
+msgstr ""
+
+msgid "Fast"
+msgstr ""
+
+msgid "High quality"
+msgstr ""
+
+#, python-brace-format
+msgid "Downloaded ({size})"
+msgstr ""
+
+#, python-brace-format
+msgid "Not downloaded yet ({size}, on first use)"
+msgstr ""
+
+msgid "High-quality model"
+msgstr ""
+
+msgid "Checking for a GPU…"
+msgstr ""
+
+msgid "Remove…"
+msgstr ""
+
+msgid "Remove the High-Quality Model?"
+msgstr ""
+
+msgid "It is downloaded again when needed."
+msgstr ""
+
+#, python-brace-format
+msgid "Runs on the GPU: {name}"
+msgstr ""
+
+msgid "Runs on the processor (VIEW_TRANSLATE_CPU is set)"
+msgstr ""
+
+msgid ""
+"The GPU could not run it, so it runs on the processor: expect minutes per "
+"document"
+msgstr ""
+
+msgid "No GPU found: it runs on the processor, slowly (minutes per document)"
+msgstr ""
+
 msgid "Quick Look"
 msgstr ""
 
@@ -1897,9 +1959,6 @@ msgid ", {s:.2f} s total"
 msgstr ""
 
 msgid "Load time"
-msgstr ""
-
-msgid "Model"
 msgstr ""
 
 msgid "{n:,} open edges"
@@ -2513,6 +2572,26 @@ msgstr ""
 msgid "Norwegian"
 msgstr ""
 
+msgid "High-quality model (Hy-MT2)"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"This needs the high-quality translation model, downloaded once ({size})."
+msgstr ""
+
+msgid ""
+"No GPU was found, so it runs on the processor: expect minutes per document. "
+"The Fast model in Preferences is quicker."
+msgstr ""
+
+#, python-brace-format
+msgid "This needs a language pack, downloaded once (70–300 MB): {names}."
+msgid_plural ""
+"This needs {n} language packs, downloaded once (70–300 MB each): {names}."
+msgstr[0] ""
+msgstr[1] ""
+
 msgid ""
 "Could not reach the language pack index. Check your internet connection and "
 "try again."
@@ -2576,6 +2655,22 @@ msgstr ""
 msgid "Could Not Install Translation"
 msgstr ""
 
+msgid "The high-quality model is not available on this computer."
+msgstr ""
+
+msgid "Downloading the high-quality translation model…"
+msgstr ""
+
+msgid "The download was damaged (its checksum does not match). Try again."
+msgstr ""
+
+msgid "The translation model could not start."
+msgstr ""
+
+#, python-brace-format
+msgid "The translation model stopped: {error}"
+msgstr ""
+
 msgid "Translate from"
 msgstr ""
 
@@ -2602,13 +2697,6 @@ msgstr ""
 
 msgid "Translating…"
 msgstr ""
-
-#, python-brace-format
-msgid "This needs a language pack, downloaded once (70–300 MB): {names}."
-msgid_plural ""
-"This needs {n} language packs, downloaded once (70–300 MB each): {names}."
-msgstr[0] ""
-msgstr[1] ""
 
 msgid "Download"
 msgstr ""

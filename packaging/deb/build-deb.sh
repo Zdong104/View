@@ -110,9 +110,11 @@ DEPENDS="python3 (>= 3.12), python3-gi (>= 3.48), python3-gi-cairo, python3-cair
  gstreamer1.0-plugins-base, gstreamer1.0-plugins-good, gstreamer1.0-gtk4,
  python3-numpy, python3-pil, python3-pypdf, python3-opengl, python3-img2pdf,
  python3-pygments, python3-openpyxl, python3-ezdxf, python3-markdown-it, libegl1, libgl1"
+# libgomp1, libvulkan1: llama.cpp's llama-server, which runs the high-quality translation
+# model (downloaded with it on first use; Vulkan for the GPU)
 RECOMMENDS="gstreamer1.0-libav, gstreamer1.0-plugins-bad, gstreamer1.0-plugins-ugly,
  ghostscript, python3-nautilus, python3-venv, librsvg2-common, webp-pixbuf-loader, heif-gdk-pixbuf,
- 7zip | p7zip-full"
+ 7zip | p7zip-full, libgomp1, libvulkan1"
 SUGGESTS="nautilus, gir1.2-gtksource-5, libreoffice-core"
 
 SIZE_KB="$(du -sk --exclude=DEBIAN "$P" | cut -f1)"

@@ -191,7 +191,8 @@ class PreferencesDialog(Adw.PreferencesDialog):
         rows.append(target)
 
         refill = lambda: GLib.idle_add(lambda: (self._fill_translate(), False)[1])  # noqa: E731
-        if translate.is_available():
+        rows += self._model_rows(refill)
+        if translate.engine_available():
             sub = _("Included with this build") if runtime.OCR_BUNDLED else _("Installed")
             if translate_install._activated:
                 sub = _("Installed in {path}").format(path=translate_install.venv_dir().replace(
@@ -210,11 +211,10 @@ class PreferencesDialog(Adw.PreferencesDialog):
                 row.add_suffix(btn)
         rows.append(row)
 
-        packs = translate.installed()
+        packs = [p for p in translate.installed() if p != translate.MODEL_PACK]
         if packs:
-            names = ", ".join(f"{translate.language_name(a)} → {translate.language_name(b)}"
-                              for a, b in packs)
-            sub = f"{names} ({GLib.format_size(translate.installed_size())})"
+            names = ", ".join(translate.pack_name(p) for p in packs)
+            sub = f"{names} ({GLib.format_size(translate.installed_size(model=False))})"
         else:
             sub = _("None yet: each language pair is downloaded the first time it is used")
         row = Adw.ActionRow(title=_("Language packs"), subtitle=sub)
@@ -229,7 +229,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
                 dlg.add_response("remove", _("Remove"))
                 dlg.set_response_appearance("remove", Adw.ResponseAppearance.DESTRUCTIVE)
                 dlg.set_close_response("cancel")
-                dlg.connect("response", lambda _d, rid: (translate.remove_all(), refill())
+                dlg.connect("response", lambda _d, rid: (translate.remove_packs(), refill())
                             if rid == "remove" else None)
                 dlg.present(self)
             btn.connect("clicked", remove)
@@ -238,3 +238,72 @@ class PreferencesDialog(Adw.PreferencesDialog):
         for r in rows:
             self.tr_group.add(r)
         self._tr_rows = rows
+
+    def _model_rows(self, refill):
+        """Model: Automatic / Fast / High quality, and the high-quality
+        model's row: the device it runs on, its size and Remove."""
+        from . import translate, translate_llm
+        if not translate_llm.supported():
+            return []
+        choices = [translate.MODEL_AUTO, translate.MODEL_FAST, translate.MODEL_QUALITY]
+        about = {
+            translate.MODEL_AUTO: _("High quality with a dedicated GPU, otherwise Fast"),
+            translate.MODEL_FAST: _("Small, works on any computer, lower quality "
+                                    "(Argos, 70–300 MB per language pair)"),
+            translate.MODEL_QUALITY: _("Hy-MT2 1.8B, 1.2 GB, best with a GPU (23 languages; "
+                                       "the others use Fast)"),
+        }
+        choice = translate.model_choice()
+        model = Adw.ComboRow(title=_("Model"), subtitle=about[choice],
+                             model=Gtk.StringList.new([_("Automatic"), _("Fast"),
+                                                       _("High quality")]))
+        model.set_selected(choices.index(choice))
+
+        def changed(r, _pspec):
+            try:
+                translate.set_model_choice(choices[r.get_selected()])
+            except OSError as e:
+                self.add_toast(Adw.Toast(
+                    title=_("Could not change the setting: {error}").format(error=e)))
+            refill()
+        model.connect("notify::selected", changed)
+
+        have = translate_llm.installed()
+        state = (_("Downloaded ({size})").format(size=GLib.format_size(translate_llm.size()))
+                 if have else _("Not downloaded yet ({size}, on first use)").format(
+                     size=GLib.format_size(translate_llm.download_size())))
+        row = Adw.ActionRow(title=_("High-quality model"),
+                            subtitle=_("Checking for a GPU…") + "\n" + state)
+        if have:
+            btn = Gtk.Button(label=_("Remove…"), valign=Gtk.Align.CENTER,
+                             css_classes=["destructive-action"])
+
+            def remove(*_a):
+                dlg = Adw.AlertDialog(heading=_("Remove the High-Quality Model?"),
+                                      body=_("It is downloaded again when needed."))
+                dlg.add_response("cancel", _("Cancel"))
+                dlg.add_response("remove", _("Remove"))
+                dlg.set_response_appearance("remove", Adw.ResponseAppearance.DESTRUCTIVE)
+                dlg.set_close_response("cancel")
+                dlg.connect("response", lambda _d, rid: (translate_llm.remove(), refill())
+                            if rid == "remove" else None)
+                dlg.present(self)
+            btn.connect("clicked", remove)
+            row.add_suffix(btn)
+
+        def probe():                     # (llama.cpp lists the Vulkan devices: ~1 s)
+            dev = translate_llm.device()
+            if dev["kind"] == "gpu":
+                text = _("Runs on the GPU: {name}").format(name=dev["name"])
+            elif dev["why"] == "forced":
+                text = _("Runs on the processor (VIEW_TRANSLATE_CPU is set)")
+            elif dev["why"] == "failed":
+                text = _("The GPU could not run it, so it runs on the processor: "
+                         "expect minutes per document")
+            else:
+                text = _("No GPU found: it runs on the processor, slowly "
+                         "(minutes per document)")
+            GLib.idle_add(lambda: (row.set_subtitle(text + "\n" + state), False)[1])
+        import threading
+        threading.Thread(target=probe, daemon=True, name="translate-gpu").start()
+        return [model, row]

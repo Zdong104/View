@@ -1,4 +1,7 @@
-# Optional offline translation (Argos Translate language packs run on
-# CTranslate2), ~45 MB; each language pack (70-300 MB) downloads on first use.
+# Optional offline translation, "Fast" model (Argos Translate language packs run
+# on CTranslate2), ~45 MB; each language pack (70-300 MB) downloads on first use.
+# The "High quality" model (Hy-MT2-1.8B, 1.13 GB) needs no Python packages: it
+# runs on llama.cpp's prebuilt llama-server, which View downloads with it
+# (pinned build and SHA-256s in preview/translate_llm.py).
 ctranslate2>=4.0
 sentencepiece

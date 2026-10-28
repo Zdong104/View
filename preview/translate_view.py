@@ -539,7 +539,7 @@ class TranslationPane(Gtk.Box):
         self.runner.cancel_all()
         self._busy_jobs.clear()
         self._sync_busy()
-        if not translate.is_available():
+        if not translate.is_available(self.src_choice or self.detected, self.tgt):
             from . import translate_install
             ok, why = translate_install.can_install()
             if ok:
@@ -646,13 +646,8 @@ class TranslationPane(Gtk.Box):
 
     def _ask_download(self, need):
         from .translate_ui import _Download
-        names = ", ".join(f"{translate.language_name(a)} → {translate.language_name(b)}"
-                          for a, b in need)
-        self.show_info(_("Language Pack Needed"), ngettext(
-            "This needs a language pack, downloaded once (70–300 MB): {names}.",
-            "This needs {n} language packs, downloaded once (70–300 MB each): {names}.",
-            len(need)).format(n=len(need), names=names),
-            _("Download"), lambda: self._follow(_Download(need)))
+        self.show_info(_("Language Pack Needed"), translate.download_message(need),
+                       _("Download"), lambda: self._follow(_Download(need)))
 
     def _follow(self, dl):
         gen = self.gen

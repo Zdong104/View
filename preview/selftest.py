@@ -144,7 +144,7 @@ MODULES = ["app", "viewer_base", "image_view", "image_ops", "pdf_view", "pdf_ops
            "inspector", "convert", "ocr", "ocr_install", "preferences", "touchpad",
            "integration", "screenshot", "translate", "translate_install", "translate_ui",
            "translate_helper", "translate_view", "md_translate",
-           "code_translate"]
+           "code_translate", "translate_llm"]
 LINUX_MODULES = ["quicklook", "quicklook_renderers"]
 
 
@@ -752,7 +752,7 @@ def _translate_engine():
     if helper:
         tr._helper(helper)._start()         # starts the helper and waits for "ready"
         return f"helper process {helper}"
-    if tr.is_available():
+    if tr.engine_available():
         import ctranslate2  # noqa: F401  (find_spec alone misses broken installs)
         import sentencepiece  # noqa: F401
         return f"ctranslate2 {ctranslate2.__version__} importable"
@@ -789,8 +789,10 @@ def _translate_download(d):
         calls.append(url)
         return Response(blob)
 
-    saved = tr.packs_dir, tr._index, tr._urlopen
+    from . import translate_llm
+    saved = tr.packs_dir, tr._index, tr._urlopen, translate_llm.root
     tr.packs_dir = lambda: os.path.join(d, "packs")
+    translate_llm.root = lambda: os.path.join(d, "packs")     # (not the real model)
     tr._index = lambda: {("xx", "yy"): ["https://example.invalid/xx_yy"]}
     tr._urlopen = urlopen
     errors = []
@@ -821,8 +823,71 @@ def _translate_download(d):
         if os.listdir(incoming):
             raise RuntimeError(f"left behind: {os.listdir(incoming)}")
     finally:
-        tr.packs_dir, tr._index, tr._urlopen = saved
+        tr.packs_dir, tr._index, tr._urlopen, translate_llm.root = saved
     return "one download for two windows; separate .part files, complete pack kept"
+
+
+def _translate_llm():
+    """The high-quality model's text handling and routing, without the
+    model: names kept, replies cleaned, which pairs go to it."""
+    from . import translate as tr, translate_llm as tl
+    terms = tl.keep_terms("SWE-bench Verified top-ten scores sit around 76-80% (Fig. 2c); "
+                          "0/30 OSWorld, 0/20 τ²-bench (the ABC checklist, HAL, Cost-of-Pass). "
+                          "Call `os.path.join` or translate_batch() in preview/translate.py, "
+                          "e.g. X1. Re-scoring Terminal-Bench 2.0 runs.")
+    for must in ("SWE-bench Verified", "OSWorld", "τ²-bench", "ABC", "HAL", "Cost-of-Pass",
+                 "`os.path.join`", "translate_batch()", "X1", "Terminal-Bench 2.0"):
+        if must not in terms:
+            raise RuntimeError(f"keep_terms missed {must!r}: {terms}")
+    for wrong in ("76-80", "Fig", "e.g", "Re-scoring"):
+        if any(t.startswith(wrong) for t in terms):
+            raise RuntimeError(f"keep_terms kept {wrong!r}: {terms}")
+    gl = dict(tl.glossary("The leaderboard ranks agents on binary tasks; a ceiling effect.",
+                          "en", "zh"))
+    if gl.get("leaderboard") != "排行榜" or gl.get("agents") != "智能体" or \
+            gl.get("binary tasks") != "二值任务" or tl.glossary("agents", "en", "fr"):
+        raise RuntimeError(f"glossary {gl}")
+    p = tl.prompt("Strengths of SWE-bench Verified", "en", "zh")
+    if "SWE-bench Verified 翻译成 SWE-bench Verified" not in p or "翻译为中文" not in p:
+        raise RuntimeError(f"prompt {p!r}")
+    cases = {"【待翻译文本】\n1. 结果": "1. 结果", "<target>Bonjour</target>": "Bonjour",
+             "将以下文本翻译为中文，注意只需要输出翻译后的结果，不要额外解释：\nHAL 翻译成 HAL\n你好":
+             "你好", "译文：你好": "你好", "": "Hello HAL"}
+    for raw, want in cases.items():
+        if tl.clean(raw, "Hello HAL") != want:
+            raise RuntimeError(f"clean({raw!r}) -> {tl.clean(raw, 'Hello HAL')!r}")
+    units = tr._llm_units("Title\n\nA line that wraps in the\nmiddle of a sentence.\n\n"
+                          "- one\n- two\n\n12 34\n\n" + "Long sentence here. " * 80,
+                          "en", "zh")
+    kinds = [k for k, _s in units if k != "sep"]
+    if units[2] != ("s", "A line that wraps in the middle of a sentence.") or \
+            ("k", "12 34") not in units or kinds.count("s") < 6 or \
+            max(len(s) for k, s in units if k == "s") > tl.MAX_PIECE:
+        raise RuntimeError(f"pieces {units[:8]}")
+    saved_env = os.environ.get("VIEW_TRANSLATE_MODEL")
+    saved = tr._index
+    tr._index = lambda: {("en", "zh"): ["x"], ("en", "sv"): ["x"]}
+    try:
+        os.environ["VIEW_TRANSLATE_MODEL"] = tr.MODEL_FAST
+        if tr.plan("en", "zh") != [("en", "zh")]:
+            raise RuntimeError(f"Fast: {tr.plan('en', 'zh')}")
+        os.environ["VIEW_TRANSLATE_MODEL"] = tr.MODEL_QUALITY
+        want = [tr.MODEL_PACK] if tl.supported() else [("en", "zh")]
+        if tr.plan("en", "zh") != want or tr.plan("en", "sv") != [("en", "sv")]:
+            raise RuntimeError(f"High quality: {tr.plan('en', 'zh')} {tr.plan('en', 'sv')}")
+        if tl.supported() and "GB" not in tr.download_message([tr.MODEL_PACK]) and \
+                not tl.installed():
+            raise RuntimeError(tr.download_message([tr.MODEL_PACK]))
+    finally:
+        tr._index = saved
+        if saved_env is None:
+            os.environ.pop("VIEW_TRANSLATE_MODEL", None)
+        else:
+            os.environ["VIEW_TRANSLATE_MODEL"] = saved_env
+    dev = tl.device()
+    where = dev["name"] if dev["kind"] == "gpu" else "the CPU"
+    return (f"names kept, replies cleaned, routing; model {'downloaded' if tl.installed() else 'not downloaded'}"
+            f", would run on {where}")
 
 
 # ------------------------------------------------------------- UI checks ---
@@ -1164,6 +1229,7 @@ def main(argv=()):
         res.check("translation (mixed languages, code, tables)", _translate_mixed)
         res.check("translation engine", _translate_engine, required=runtime.OCR_BUNDLED)
         res.check("language pack downloads (concurrent)", lambda: _translate_download(d))
+        res.check("translation (high-quality model: names, routing)", _translate_llm)
         if not no_ui:
             _ui(paths, res, shots)
     if res.failed:

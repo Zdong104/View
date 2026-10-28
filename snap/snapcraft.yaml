@@ -109,6 +109,12 @@ parts:
       - libegl1
       - libgl1
       - ghostscript                     # "Reduce File Size"
+      # llama-server (the high-quality translation model; View downloads
+      # llama.cpp's build into $SNAP_USER_COMMON, which strict confinement
+      # may execute): its OpenMP runtime, and the Vulkan loader for the GPU
+      # (the opengl plug gives it the drivers; without them it runs on the CPU)
+      - libgomp1
+      - libvulkan1
     override-build: |
       craftctl default
       TRIPLET="$CRAFT_ARCH_TRIPLET_BUILD_FOR"

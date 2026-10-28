@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: View\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-27 22:58-0400\n"
+"POT-Creation-Date: 2026-10-28 18:27-0400\n"
 "PO-Revision-Date: 2026-10-26 15:40-0400\n"
 "Last-Translator: View contributors\n"
 "Language-Team: Simplified Chinese\n"
@@ -1640,6 +1640,68 @@ msgstr "需要时会重新下载。"
 msgid "Remove"
 msgstr "移除"
 
+msgid "High quality with a dedicated GPU, otherwise Fast"
+msgstr "有独立显卡时用高质量，否则用快速"
+
+msgid ""
+"Small, works on any computer, lower quality (Argos, 70–300 MB per language "
+"pair)"
+msgstr "体积小，任何电脑都能用，质量较低（Argos，每个语言对 70–300 MB）"
+
+msgid ""
+"Hy-MT2 1.8B, 1.2 GB, best with a GPU (23 languages; the others use Fast)"
+msgstr "Hy-MT2 1.8B，1.2 GB，最好配合 GPU 使用（23 种语言；其他语言使用快速模型）"
+
+msgid "Model"
+msgstr "模型"
+
+msgid "Automatic"
+msgstr "自动"
+
+msgid "Fast"
+msgstr "快速"
+
+msgid "High quality"
+msgstr "高质量"
+
+#, python-brace-format
+msgid "Downloaded ({size})"
+msgstr "已下载（{size}）"
+
+#, python-brace-format
+msgid "Not downloaded yet ({size}, on first use)"
+msgstr "尚未下载（{size}，首次使用时下载）"
+
+msgid "High-quality model"
+msgstr "高质量模型"
+
+msgid "Checking for a GPU…"
+msgstr "正在检测 GPU…"
+
+msgid "Remove…"
+msgstr "移除…"
+
+msgid "Remove the High-Quality Model?"
+msgstr "移除高质量模型？"
+
+msgid "It is downloaded again when needed."
+msgstr "需要时会重新下载。"
+
+#, python-brace-format
+msgid "Runs on the GPU: {name}"
+msgstr "在 GPU 上运行：{name}"
+
+msgid "Runs on the processor (VIEW_TRANSLATE_CPU is set)"
+msgstr "在处理器上运行（已设置 VIEW_TRANSLATE_CPU）"
+
+msgid ""
+"The GPU could not run it, so it runs on the processor: expect minutes per "
+"document"
+msgstr "GPU 无法运行它，因此改在处理器上运行：每篇文档需要几分钟"
+
+msgid "No GPU found: it runs on the processor, slowly (minutes per document)"
+msgstr "未找到 GPU：将在处理器上运行，速度较慢（每篇文档需要几分钟）"
+
 msgid "Quick Look"
 msgstr "快速查看"
 
@@ -1889,9 +1951,6 @@ msgstr "，共 {s:.2f} 秒"
 
 msgid "Load time"
 msgstr "加载时间"
-
-msgid "Model"
-msgstr "模型"
 
 msgid "{n:,} open edges"
 msgstr "{n:,} 条开放边"
@@ -2508,6 +2567,25 @@ msgstr "丹麦语"
 msgid "Norwegian"
 msgstr "挪威语"
 
+msgid "High-quality model (Hy-MT2)"
+msgstr "高质量模型（Hy-MT2）"
+
+#, python-brace-format
+msgid ""
+"This needs the high-quality translation model, downloaded once ({size})."
+msgstr "这需要高质量翻译模型，只需下载一次（{size}）。"
+
+msgid ""
+"No GPU was found, so it runs on the processor: expect minutes per document. "
+"The Fast model in Preferences is quicker."
+msgstr "未找到 GPU，因此将在处理器上运行：每篇文档需要几分钟。偏好设置中的快速模型更快。"
+
+#, python-brace-format
+msgid "This needs a language pack, downloaded once (70–300 MB): {names}."
+msgid_plural ""
+"This needs {n} language packs, downloaded once (70–300 MB each): {names}."
+msgstr[0] "需要下载 {n} 个语言包（仅需一次，每个 70–300 MB）：{names}。"
+
 msgid ""
 "Could not reach the language pack index. Check your internet connection and "
 "try again."
@@ -2575,6 +2653,22 @@ msgstr "翻译功能已安装"
 msgid "Could Not Install Translation"
 msgstr "无法安装翻译功能"
 
+msgid "The high-quality model is not available on this computer."
+msgstr "这台电脑无法使用高质量模型。"
+
+msgid "Downloading the high-quality translation model…"
+msgstr "正在下载高质量翻译模型…"
+
+msgid "The download was damaged (its checksum does not match). Try again."
+msgstr "下载的文件已损坏（校验和不匹配）。请重试。"
+
+msgid "The translation model could not start."
+msgstr "翻译模型无法启动。"
+
+#, python-brace-format
+msgid "The translation model stopped: {error}"
+msgstr "翻译模型已停止：{error}"
+
 msgid "Translate from"
 msgstr "源语言"
 
@@ -2601,12 +2695,6 @@ msgstr "翻译在本机进行，需要一次性下载翻译引擎（{size}）。
 
 msgid "Translating…"
 msgstr "正在翻译…"
-
-#, python-brace-format
-msgid "This needs a language pack, downloaded once (70–300 MB): {names}."
-msgid_plural ""
-"This needs {n} language packs, downloaded once (70–300 MB each): {names}."
-msgstr[0] "需要下载 {n} 个语言包（仅需一次，每个 70–300 MB）：{names}。"
 
 msgid "Download"
 msgstr "下载"

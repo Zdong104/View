@@ -1,6 +1,19 @@
 """Offline translation for View.
 
-Engine: Argos Translate's language packs (OpenNMT Transformer models,
+Two models, chosen in Preferences (``model_choice()``):
+
+  * High quality: Tencent's Hy-MT2-1.8B on llama.cpp (preview.translate_llm),
+    1.2 GB, 23 of View's languages, a paragraph at a time, on the GPU
+    (Vulkan) when there is one.  It appears here as the pseudo pack
+    MODEL_PACK, so plan() / missing() / download() / installed() and the
+    "Language Pack Needed" flow work for it unchanged.
+  * Fast: the Argos packs below, for every pair when chosen, and always for
+    the pairs Hy-MT2 does not cover (Swedish, Greek, Romanian, Hungarian,
+    Finnish, Danish, Norwegian).
+
+"Automatic" (the default) is High quality with a dedicated GPU, else Fast.
+
+Fast engine: Argos Translate's language packs (OpenNMT Transformer models,
 CTranslate2 format) run directly on ``ctranslate2`` + ``sentencepiece``.  The
 ``argostranslate`` package itself is not used: it pulls in stanza, spaCy and
 PyTorch (gigabytes); its runtime core is the same two libraries.  Packs with
@@ -25,16 +38,21 @@ Public API:
 
     LANGUAGES, language_name(code)
     detect(text) -> code | None
-    is_available() -> bool                  engine importable or helper present
+    is_available(src=None, tgt=None) -> bool   something can translate (src -> tgt)
+    engine_available() -> bool              Argos's engine importable or helper present
     target() / set_target(code) / default_target()
+    model_choice() / set_model_choice(MODEL_AUTO | MODEL_FAST | MODEL_QUALITY)
     plan(src, tgt) -> [(from, to), ...]     the packs a translation uses
     missing(src, tgt) -> [(from, to), ...]  of those, the ones not downloaded
+    pack_name(pair), download_message(need) for the UI
     download(pairs, on_progress, cancelled) blocking
     translate(text, src, tgt, on_partial=None, cancelled=None) -> str   blocking
     translate_batch(texts, src, tgt, on_item=None, cancelled=None) -> [str]
                                             blocking; one result per piece
 
 CLI:  python -m preview.translate [--from xx] --to yy "text" | -  (stdin)
+      VIEW_TRANSLATE_MODEL=auto|fast|quality overrides the setting,
+      VIEW_TRANSLATE_CPU=1 keeps the high-quality model off the GPU.
 """
 from __future__ import annotations
 
@@ -49,7 +67,7 @@ import threading
 import time
 import zipfile
 
-from .i18n import N_, _
+from .i18n import N_, _, ngettext
 
 # (code, English name for _()).  Argos codes: "zh" Simplified, "zt" Traditional.
 LANGUAGES = [
@@ -71,6 +89,10 @@ MAX_CHARS = 20_000            # longer text is cut (a document: the first pages)
 _NO_SPACE = {"zh", "zt", "ja", "th"}   # sentences are joined without a space
 
 _LOCAL_ONLY = False           # set inside the helper process itself
+
+# the high-quality model as a "pack" (no "_" in it: never taken for an Argos pair)
+MODEL_PACK = ("hy-mt2", "*")
+MODEL_AUTO, MODEL_FAST, MODEL_QUALITY = "auto", "fast", "quality"
 
 
 class NotInstalled(RuntimeError):
@@ -181,6 +203,47 @@ def set_target(code: str):
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
     os.replace(tmp, path)
+
+
+def model_choice() -> str:
+    """MODEL_AUTO (the default), MODEL_FAST or MODEL_QUALITY."""
+    env = os.environ.get("VIEW_TRANSLATE_MODEL")
+    if env in (MODEL_AUTO, MODEL_FAST, MODEL_QUALITY):
+        return env
+    from . import i18n
+    m = i18n._read().get("translate-model")
+    return m if m in (MODEL_FAST, MODEL_QUALITY) else MODEL_AUTO
+
+
+def set_model_choice(choice: str):
+    from . import i18n
+    data = i18n._read()
+    data["translate-model"] = choice
+    path = i18n.settings_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+    os.replace(tmp, path)
+
+
+def quality_model() -> bool:
+    """Whether the high-quality model is the one in use (where it covers
+    the pair).  "Automatic" asks for a dedicated GPU (may take a second the
+    first time: llama.cpp lists the Vulkan devices)."""
+    from . import translate_llm
+    if _LOCAL_ONLY or not translate_llm.supported():
+        return False
+    choice = model_choice()
+    if choice == MODEL_AUTO:
+        return translate_llm.has_gpu()
+    return choice == MODEL_QUALITY
+
+
+def _llm_pair(src, tgt) -> bool:
+    from . import translate_llm
+    return (src in translate_llm.CODES and tgt in translate_llm.CODES and src != tgt
+            and quality_model())
 
 
 # ---------------------------------------------------------------------------
@@ -319,7 +382,7 @@ def _pack_dir(pair) -> str:
 
 
 def installed() -> list[tuple[str, str]]:
-    """Downloaded packs as (from, to)."""
+    """Downloaded packs as (from, to), MODEL_PACK last if it is there."""
     out = []
     try:
         for name in sorted(os.listdir(packs_dir())):
@@ -328,24 +391,83 @@ def installed() -> list[tuple[str, str]]:
                 out.append(tuple(name.split("_", 1)))
     except OSError:
         pass
+    from . import translate_llm
+    if translate_llm.installed():
+        out.append(MODEL_PACK)
     return out
 
 
-def installed_size() -> int:
-    total = 0
-    for root, _dirs, files in os.walk(packs_dir()):
-        for f in files:
-            try:
-                total += os.path.getsize(os.path.join(root, f))
-            except OSError:
-                pass
+def installed_size(packs=True, model=True) -> int:
+    """Bytes on disk: the Argos packs and/or the high-quality model."""
+    from . import translate_llm
+    total = translate_llm.size() if model else 0
+    if packs:
+        skip = {os.path.normcase(os.path.abspath(p)) for p in translate_llm.dirs()}
+        for root, dirs, files in os.walk(packs_dir()):
+            dirs[:] = [d for d in dirs
+                       if os.path.normcase(os.path.abspath(os.path.join(root, d))) not in skip]
+            for f in files:
+                try:
+                    total += os.path.getsize(os.path.join(root, f))
+                except OSError:
+                    pass
     return total
 
 
 def remove_all():
+    """Every Argos pack and the high-quality model (its server stopped)."""
+    from . import translate_llm
+    translate_llm.remove()
     shutil.rmtree(packs_dir(), ignore_errors=True)
     with _models_lock:
         _models.clear()
+
+
+def remove_packs():
+    """The Argos packs only."""
+    from . import translate_llm
+    keep = {os.path.normcase(os.path.abspath(p)) for p in translate_llm.dirs()}
+    try:
+        names = os.listdir(packs_dir())
+    except OSError:
+        names = []
+    for name in names:
+        p = os.path.join(packs_dir(), name)
+        if os.path.normcase(os.path.abspath(p)) not in keep:
+            shutil.rmtree(p, ignore_errors=True) if os.path.isdir(p) else os.remove(p)
+    with _models_lock:
+        _models.clear()
+
+
+def pack_name(pair) -> str:
+    """A pack as the UI names it."""
+    if tuple(pair) == MODEL_PACK:
+        return _("High-quality model (Hy-MT2)")
+    return f"{language_name(pair[0])} → {language_name(pair[1])}"
+
+
+def download_message(need) -> str:
+    """What the "Language Pack Needed" prompt says about ``need`` (from
+    missing()): which downloads, and how large."""
+    need = [tuple(p) for p in need]
+    packs = [p for p in need if p != MODEL_PACK]
+    parts = []
+    if MODEL_PACK in need:
+        from . import translate_llm
+        n = translate_llm.download_size()
+        size = f"{n / 1e9:.1f} GB" if n >= 1e9 else f"{n / 1e6:.0f} MB"
+        parts.append(_("This needs the high-quality translation model, downloaded once "
+                       "({size}).").format(size=size))
+        if translate_llm.device()["kind"] != "gpu":
+            parts.append(_("No GPU was found, so it runs on the processor: expect minutes "
+                           "per document. The Fast model in Preferences is quicker."))
+    if packs:
+        names = ", ".join(pack_name(p) for p in packs)
+        parts.append(ngettext(
+            "This needs a language pack, downloaded once (70–300 MB): {names}.",
+            "This needs {n} language packs, downloaded once (70–300 MB each): {names}.",
+            len(packs)).format(n=len(packs), names=names))
+    return " ".join(parts)
 
 
 def _index_cache() -> str:
@@ -396,10 +518,14 @@ def _index() -> dict:
 
 
 def plan(src: str, tgt: str, index: dict | None = None) -> list[tuple[str, str]]:
-    """The packs that translate src -> tgt: direct, else through English.
-    Uses only downloaded packs when they suffice (no network)."""
+    """The packs that translate src -> tgt: [MODEL_PACK] where the
+    high-quality model is in use and covers both, else Argos packs, direct
+    or through English.  Uses only downloaded packs when they suffice (no
+    network)."""
     if src == tgt:
         return []
+    if _llm_pair(src, tgt):
+        return [MODEL_PACK]
     have = set(installed())
     direct, pivot = [(src, tgt)], [(src, PIVOT), (PIVOT, tgt)]
     if (src, tgt) in have:
@@ -418,7 +544,17 @@ def plan(src: str, tgt: str, index: dict | None = None) -> list[tuple[str, str]]
 
 def missing(src: str, tgt: str) -> list[tuple[str, str]]:
     have = set(installed())
-    return [p for p in plan(src, tgt) if p not in have]
+    need = [p for p in plan(src, tgt) if p not in have]
+    if MODEL_PACK in need:
+        _probe_device()
+    return need
+
+
+def _probe_device():
+    """Find the GPU now, in this (worker) thread: download_message() tells
+    the user about it from the main thread, and that should not wait."""
+    from . import translate_llm
+    translate_llm.device()
 
 
 _pair_locks: dict = {}
@@ -444,13 +580,15 @@ def _incoming_dir() -> str:
 def download(pairs, on_progress=None, cancelled=None):
     """Download and unpack packs.  on_progress(fraction, text) from this thread;
     cancelled() -> True stops it.  Blocking.  A pack another window is already
-    downloading is waited for, not fetched twice."""
-    idx = _index()
-    incoming = _incoming_dir()
+    downloading is waited for, not fetched twice.  MODEL_PACK fetches the
+    high-quality model and llama.cpp (preview.translate_llm.download)."""
+    pairs = [tuple(p) for p in pairs]
+    argos = [p for p in pairs if p != MODEL_PACK]
+    idx = _index() if argos else {}
+    incoming = _incoming_dir() if argos else None
     for k, pair in enumerate(pairs):
-        pair = tuple(pair)
         urls = idx.get(pair)
-        if not urls:
+        if pair != MODEL_PACK and not urls:
             raise Unsupported(_("No language pack for {pair}.").format(pair=f"{pair[0]}→{pair[1]}"))
         label = _("Downloading {src} → {tgt}…").format(src=language_name(pair[0]),
                                                        tgt=language_name(pair[1]))
@@ -460,7 +598,14 @@ def download(pairs, on_progress=None, cancelled=None):
             if cancelled and cancelled():
                 raise RuntimeError("Cancelled")
         try:
-            if pair not in installed():
+            if pair == MODEL_PACK:
+                from . import translate_llm
+                if not translate_llm.installed():
+                    n = len(pairs)
+                    translate_llm.download(
+                        on_progress and (lambda f, t, k=k: on_progress((k + f) / n, t)),
+                        cancelled)
+            elif pair not in installed():
                 _download_pack(pair, urls[0], incoming, label, (k, len(pairs)),
                                on_progress, cancelled)
         finally:
@@ -560,7 +705,20 @@ def helper_path() -> str | None:
     return None
 
 
-def is_available() -> bool:
+def is_available(src: str | None = None, tgt: str | None = None) -> bool:
+    """Whether something can translate src -> tgt (unknown: any pair): the
+    high-quality model (downloaded on use, nothing to install) where it is
+    in use and covers the pair, else Argos's engine."""
+    if engine_available():
+        return True
+    from . import translate_llm
+    return (translate_llm.supported() and quality_model()
+            and (src is None or src in translate_llm.CODES)
+            and (tgt is None or tgt in translate_llm.CODES))
+
+
+def engine_available() -> bool:
+    """Argos's engine: ctranslate2 + sentencepiece importable, or the helper."""
     if helper_path():
         return True
     import importlib.util
@@ -646,7 +804,9 @@ def translate(text, src, tgt, on_partial=None, cancelled=None) -> str:
     src = src or detect(text) or PIVOT
     if src == tgt or not text.strip():
         return text
-    if not is_available():
+    if _llm_pair(src, tgt):
+        return _llm_translate(text, src, tgt, on_partial, cancelled)
+    if not engine_available():
         raise NotInstalled(_("The translation engine is not installed."))
     hops = plan(src, tgt)
     need = [p for p in hops if p not in set(installed())]
@@ -678,7 +838,9 @@ def translate_batch(texts, src, tgt, on_item=None, cancelled=None) -> list[str]:
             todo.append(i)
     if not todo:
         return out
-    if not is_available():
+    if _llm_pair(src, tgt):
+        return _llm_batch(texts, todo, out, src, tgt, on_item, cancelled)
+    if not engine_available():
         raise NotInstalled(_("The translation engine is not installed."))
     hops = plan(src, tgt)
     need = [p for p in hops if p not in set(installed())]
@@ -750,6 +912,98 @@ def translate_local(text, dirs, tgt, on_partial=None, cancelled=None) -> str:
     for i, t in zip(todo, sents):
         out[i] = ("s", t)
     return _assemble(out, tgt)
+
+
+# ---------------------------------------------------------------------------
+# The high-quality model: a paragraph (a hard line) per request
+# ---------------------------------------------------------------------------
+def _llm_units(text, src, tgt):
+    """Text -> [("s", piece for the model) | ("k", kept) | ("sep", separator)]:
+    one piece per hard line (a paragraph once _reflow has joined a PDF's
+    wrapped lines), so the model sees whole sentences in their context; a
+    line over translate_llm.MAX_PIECE characters goes as runs of whole
+    sentences.  A line with nothing to translate, or already in the target
+    language, is kept (see _runs)."""
+    from .translate_llm import MAX_PIECE
+    text = text.replace("\r\n", "\n").replace("\r", "\n").replace("\f", "\n\n")
+    units = []
+    for block in re.split(r"\n[ \t]*\n+", text):
+        lines = [l.strip() for l in block.split("\n") if l.strip()]
+        if not lines:
+            continue
+        if units:
+            units.append(("sep", "\n\n"))
+        for j, line in enumerate(_reflow(lines)):
+            if j:
+                units.append(("sep", "\n"))
+            if all(k == "k" for k, _s in _runs(line, src, tgt)):
+                units.append(("k", line))
+                continue
+            chunk = ""
+            for s in _sentences(line) if len(line) > MAX_PIECE else [line]:
+                if chunk and len(chunk) + 1 + len(s) > MAX_PIECE:
+                    units += [("s", chunk), ("sep", " ")]
+                    chunk = s
+                else:
+                    chunk = f"{chunk} {s}" if chunk else s
+            if chunk:
+                units.append(("s", chunk))
+    return units
+
+
+def _llm_join(units, tgt):
+    return "".join(s for k, s in units
+                   if not (k == "sep" and s == " " and tgt in _NO_SPACE)).rstrip()
+
+
+def _llm_translate(text, src, tgt, on_partial, cancelled):
+    from . import translate_llm
+    if not translate_llm.installed():
+        _probe_device()
+        raise NeedsDownload([MODEL_PACK])
+    units = _llm_units(text, src, tgt)
+    idx = [i for i, u in enumerate(units) if u[0] == "s"]
+    out = list(units)
+
+    def piece(k, res):
+        out[idx[k]] = ("s", res)
+        if on_partial:
+            on_partial(_llm_join(out[:idx[k] + 1], tgt))
+    translate_llm.translate_pieces([units[i][1] for i in idx], src, tgt, piece, cancelled)
+    return _llm_join(out, tgt)
+
+
+def _llm_batch(texts, todo, out, src, tgt, on_item, cancelled):
+    """translate_batch() on the high-quality model: every piece of every
+    text in one queue (the server runs translate_llm.SLOTS at once), each
+    text reported as soon as it and the ones before it are done."""
+    from . import translate_llm
+    if not translate_llm.installed():
+        _probe_device()
+        raise NeedsDownload([MODEL_PACK])
+    units = {i: _llm_units(texts[i], src, tgt) for i in todo}
+    flat = [(i, k) for i in todo for k, u in enumerate(units[i]) if u[0] == "s"]
+    left = {i: sum(1 for u in units[i] if u[0] == "s") for i in todo}
+    emitted = [0]
+
+    def flush():
+        while emitted[0] < len(todo) and left[todo[emitted[0]]] == 0:
+            i = todo[emitted[0]]
+            out[i] = _llm_join(units[i], tgt)
+            if on_item:
+                on_item(i, out[i])
+            emitted[0] += 1
+
+    def piece(n, res):
+        i, k = flat[n]
+        units[i][k] = ("s", res)
+        left[i] -= 1
+        flush()
+    flush()
+    translate_llm.translate_pieces([units[i][k][1] for i, k in flat], src, tgt, piece,
+                                   cancelled)
+    flush()
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -1155,7 +1409,13 @@ def _main(argv):
         print(file=sys.stderr)
     t0 = time.perf_counter()
     print(translate(text, src, tgt))
-    print(f"[{time.perf_counter() - t0:.2f} s]", file=sys.stderr)
+    engine = "Argos"
+    if plan(src, tgt) == [MODEL_PACK]:
+        from . import translate_llm
+        on = translate_llm.running_on()
+        engine = ("Hy-MT2 (not started: nothing to translate)" if on is None else
+                  f"Hy-MT2 on {on} (Vulkan)" if on else "Hy-MT2 on the CPU")
+    print(f"[{time.perf_counter() - t0:.2f} s, {engine}]", file=sys.stderr)
     return 0
 
 

@@ -79,7 +79,10 @@
   - **CSV / TSV**: same rows and columns; numbers, dates, IDs and codes are skipped. Save writes the translated table.
   - **Images and scanned pages** go through Live Text first (needs the OCR engine).
   - The source language is detected automatically; parts of the text already in the target language are kept as written.
-  - 30 languages, including English, Spanish, French, German, Japanese and Chinese, using Argos Translate language packs on CTranslate2. Each language pair is downloaded the first time you use it. Pick the default target language, and remove downloaded packs, in **Preferences → Translation**.
+  - Two models, chosen in **Preferences → Translation → Model**:
+    - **High quality**: Tencent's [Hy-MT2-1.8B](https://huggingface.co/tencent/Hy-MT2-1.8B) translation model on [llama.cpp](https://github.com/ggml-org/llama.cpp), a 1.2 GB download on first use. It translates a paragraph at a time, keeps benchmark names, code and acronyms as written, and covers 23 of the 30 languages. It runs on the GPU through Vulkan (a few seconds per page) and falls back to the processor, which is much slower (minutes per document).
+    - **Fast**: Argos Translate language packs on CTranslate2 (70–300 MB per language pair, downloaded the first time you use it), all 30 languages, lower quality. Swedish, Greek, Romanian, Hungarian, Finnish, Danish and Norwegian always use it.
+    - **Automatic** (the default) picks High quality when there is a dedicated GPU, otherwise Fast. The same page shows which GPU the model runs on, picks the default target language, and removes downloaded models and packs.
   - Nothing leaves your computer. The engine is built into the snap and the Windows build; with the .deb or a source install, View offers to download it (about 45 MB) the first time you translate.
 - **Live Text (OCR)**: select and copy text in images and scanned PDFs, export searchable PDFs (RapidOCR, CPU, English + Chinese).
 
@@ -141,7 +144,7 @@ The **first start after installing** can take 20 seconds or more while Windows c
 
 **Known problem:** the Windows build isn't code-signed yet, so on PCs with **Smart App Control** turned on (or a work PC with an App Control policy) it stops at startup with *"DLL load failed … An Application Control policy has blocked this file"* ([#3](https://github.com/Zdong104/View/issues/3)). Signed builds fix this; until then it only runs where Smart App Control is off (Windows Security → App & browser control → Smart App Control settings). Without Smart App Control, Windows may show a SmartScreen warning instead: click **More info → Run anyway**.
 
-Text recognition (OCR) and translation each run in a small helper program, `ocr\view-ocr.exe` and `translate\view-translate.exe`, which View starts in the background. Translation language packs are downloaded the first time a language pair is used.
+Text recognition (OCR) and translation each run in a small helper program, `ocr\view-ocr.exe` and `translate\view-translate.exe`, which View starts in the background. Translation language packs are downloaded the first time a language pair is used; the high-quality model downloads llama.cpp's own Windows build (Vulkan, with the CPU fallback) next to it and runs it the same way.
 
 ### Chrome extension
 

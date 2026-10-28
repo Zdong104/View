@@ -79,7 +79,10 @@
   - **CSV / TSV**：行列保持不变，跳过数字、日期、编号和代码。保存时写出翻译后的表格。
   - **图片和扫描页面** 会先经过实况文本识别（需要 OCR 引擎）。
   - 自动检测源语言；文中已经是目标语言的部分会原样保留。
-  - 支持 30 种语言，包括英语、西班牙语、法语、德语、日语和中文，基于 CTranslate2 上运行的 Argos Translate 语言包。每个语言对在首次使用时下载。可在 **偏好设置 → 翻译** 中选择默认目标语言，以及删除已下载的语言包。
+  - 两种模型，可在 **偏好设置 → 翻译 → 模型** 中选择：
+    - **高质量**：腾讯的 [Hy-MT2-1.8B](https://huggingface.co/tencent/Hy-MT2-1.8B) 翻译模型，运行在 [llama.cpp](https://github.com/ggml-org/llama.cpp) 上，首次使用时下载约 1.2 GB。它按段落翻译，保留基准名称、代码和缩写原样，覆盖 30 种语言中的 23 种。通过 Vulkan 在 GPU 上运行（每页几秒），没有可用的 GPU 时改用处理器，速度慢得多（每篇文档需要几分钟）。
+    - **快速**：CTranslate2 上运行的 Argos Translate 语言包（每个语言对 70–300 MB，首次使用时下载），支持全部 30 种语言，质量较低。瑞典语、希腊语、罗马尼亚语、匈牙利语、芬兰语、丹麦语和挪威语始终使用它。
+    - **自动**（默认）：有独立显卡时用高质量，否则用快速。同一页面还会显示模型运行在哪块 GPU 上，可选择默认目标语言，以及删除已下载的模型和语言包。
   - 所有内容都不会离开你的电脑。snap 和 Windows 版本已内置翻译引擎；使用 .deb 或源码安装时，首次翻译时 View 会提示下载引擎（约 45 MB）。
 - **实况文本（OCR）**：选择并复制图片和扫描版 PDF 中的文字，导出可搜索的 PDF（RapidOCR，纯 CPU 运行，支持英文和中文）。
 
@@ -141,7 +144,7 @@ sudo apt install python3-nautilus && mkdir -p ~/.local/share/nautilus-python/ext
 
 **已知问题：** Windows 版本尚未进行代码签名，因此在开启了**智能应用控制（Smart App Control）**的电脑上（或带有应用控制策略的工作电脑上），启动时会中断并提示 *"DLL load failed … An Application Control policy has blocked this file"*（[#3](https://github.com/Zdong104/View/issues/3)）。签名版本可以解决这个问题；在此之前，它只能在关闭智能应用控制的电脑上运行（Windows 安全中心 → 应用和浏览器控制 → 智能应用控制设置）。如果没有开启智能应用控制，Windows 可能会改为弹出 SmartScreen 警告：点击 **更多信息 → 仍要运行** 即可。
 
-文本识别（OCR）和翻译分别运行在小型辅助程序 `ocr\view-ocr.exe` 和 `translate\view-translate.exe` 中，由 View 在后台启动。翻译语言包会在首次使用某个语言对时下载。
+文本识别（OCR）和翻译分别运行在小型辅助程序 `ocr\view-ocr.exe` 和 `translate\view-translate.exe` 中，由 View 在后台启动。翻译语言包会在首次使用某个语言对时下载；高质量模型会在旁边下载 llama.cpp 的官方 Windows 版本（Vulkan，带 CPU 后备）并以同样方式运行。
 
 ### Chrome 扩展
 

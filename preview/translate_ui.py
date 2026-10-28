@@ -29,7 +29,7 @@ gi.require_version("Graphene", "1.0")
 from gi.repository import Adw, Gdk, GLib, Graphene, Gtk, Pango  # noqa: E402
 
 from . import translate  # noqa: E402
-from .i18n import _, ngettext  # noqa: E402
+from .i18n import _  # noqa: E402
 
 
 WIDTH = 400                     # the card's / popover's width
@@ -268,7 +268,7 @@ class _Body:
             self._info(_("The text is already in {lang}. Choose another language to "
                          "translate into.").format(lang=translate.language_name(tgt)))
             return
-        if not translate.is_available():
+        if not translate.is_available(src, tgt):
             from . import translate_install
             ok, why = translate_install.can_install()
             if ok:
@@ -307,13 +307,8 @@ class _Body:
     def _ask_download(self, gen, need):
         if not self._alive(gen):
             return False
-        names = ", ".join(f"{translate.language_name(a)} → {translate.language_name(b)}"
-                          for a, b in need)
-        self._info(ngettext(
-            "This needs a language pack, downloaded once (70–300 MB): {names}.",
-            "This needs {n} language packs, downloaded once (70–300 MB each): {names}.",
-            len(need)).format(n=len(need), names=names),
-            _("Download"), lambda: self._follow(_Download(need), self.gen))
+        self._info(translate.download_message(need),
+                   _("Download"), lambda: self._follow(_Download(need), self.gen))
         return False
 
     def _follow(self, dl, gen):

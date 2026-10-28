@@ -89,20 +89,45 @@ Filename: "{app}\View.exe"; Flags: nowait runasoriginaluser; Check: RelaunchRequ
 ; once if the user turned the feature off, and registers its login entry if not).
 Filename: "{app}\View.exe"; Parameters: "--screenshot-watcher"; Flags: nowait runasoriginaluser
 
-[UninstallRun]
-Filename: "{app}\view-app.exe"; Parameters: "--screenshot-watcher --stop"; Flags: runhidden waituntilterminated; RunOnceId: "StopScreenshotWatcher"
-
 [Code]
-// Stop a running screenshot watcher before its files are replaced (an
-// older View without the feature just exits on the unknown option).
-function PrepareToInstall(var NeedsRestart: Boolean): String;
+// Stop a running screenshot watcher (View.exe --screenshot-watcher, resident
+// since 0.1.6) before its files are replaced or removed.  Restart Manager cannot
+// close it (it has no window), and a silent in-app update then aborts at once.
+// Not with the installed  view-app --screenshot-watcher --stop: up to 0.1.9 that
+// finds no PID to stop (see screenshot._lock_owner), so match the processes.
+procedure StopScreenshotWatchers;
 var
+  Script: String;
   Code: Integer;
 begin
-  if FileExists(ExpandConstant('{app}\view-app.exe')) then
-    Exec(ExpandConstant('{app}\view-app.exe'), '--screenshot-watcher --stop', '',
-         SW_HIDE, ewWaitUntilTerminated, Code);
+  Script := ExpandConstant('{tmp}\stop-watcher.ps1');
+  SaveStringToFile(Script,
+    'param([string]$Dir)' + #13#10 +
+    '$dir = $Dir.TrimEnd(''\'') + ''\''' + #13#10 +
+    '$w = @(Get-CimInstance Win32_Process -Filter "Name=''View.exe'' OR Name=''view-app.exe''" |' + #13#10 +
+    '  Where-Object { $_.ExecutablePath -and $_.CommandLine -like ''*--screenshot-watcher*'' -and' + #13#10 +
+    '    $_.ExecutablePath.StartsWith($dir, [StringComparison]::OrdinalIgnoreCase) })' + #13#10 +
+    '$w | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }' + #13#10 +
+    '$w | ForEach-Object { Wait-Process -Id $_.ProcessId -Timeout 10 -ErrorAction SilentlyContinue }' + #13#10 +
+    'exit $w.Count' + #13#10, False);
+  if Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+          '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + Script +
+          '" -Dir "' + ExpandConstant('{app}') + '"', '', SW_HIDE, ewWaitUntilTerminated, Code) then
+    Log(Format('Stopped %d screenshot watcher(s) running from %s', [Code, ExpandConstant('{app}')]))
+  else
+    Log(Format('Could not look for running screenshot watchers: %s', [SysErrorMessage(Code)]));
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  StopScreenshotWatchers;
   Result := '';
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep = usUninstall then
+    StopScreenshotWatchers;
 end;
 
 function RelaunchRequested: Boolean;

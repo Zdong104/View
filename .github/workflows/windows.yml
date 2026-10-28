@@ -204,7 +204,8 @@ jobs:
           python packaging/windows/test-files.py build/t
           gst-launch-1.0 -q videotestsrc num-buffers=90 ! video/x-raw,width=640,height=360 \
             ! vp8enc deadline=1 ! webmmux ! filesink location=build/t/sample.webm || true
-          # realistic videos: a minute of 1080p H.264 + AAC (~60 MB) and 4K
+          # a minute of 1080p H.264 + AAC and 10 s of 4K (small: the test
+          # pattern compresses to almost nothing)
           gst-launch-1.0 -q videotestsrc num-buffers=1800 pattern=ball \
             ! video/x-raw,width=1920,height=1080,framerate=30/1 \
             ! x264enc speed-preset=ultrafast bitrate=8000 key-int-max=60 ! h264parse \
@@ -215,6 +216,13 @@ jobs:
             ! x264enc speed-preset=ultrafast bitrate=30000 key-int-max=60 ! h264parse \
             ! mp4mux name=m ! filesink location=build/t/sample-4k.mp4 \
             audiotestsrc num-buffers=431 ! audioconvert ! avenc_aac ! aacparse ! m. || true
+          # real films: Big Buck Bunny (CC BY 3.0, Blender Foundation), 10 min,
+          # H.264 with MP3 and AC-3 sound, 1080p (~270 MB) and 4K
+          for res in 1080p 2160p; do
+            curl -fsSL --retry 3 -o build/t/bbb-$res.mp4 \
+              "https://download.blender.org/demo/movies/BBB/bbb_sunflower_${res}_30fps_normal.mp4" \
+              || rm -f build/t/bbb-$res.mp4
+          done
           ls -la build/t
           local_app=$(cygpath -u "$LOCALAPPDATA")
           fresh() {
@@ -228,12 +236,16 @@ jobs:
             VIEW_STARTUP_TRACE_WAIT=10 timeout 180 env PATH=/c/Windows/system32:/c/Windows \
               ./dist/View/view-app.exe --startup-trace "$@" 2>&1 | tee build/trace.txt
             echo "::notice title=Startup: $title::$(sed -z 's/\r//g; s/\n/%0A/g' build/trace.txt)"
+            # each run is a cold start: nothing of View may stay behind
+            tasklist | grep -i "^view" || echo "no View process left"
           }
-          for f in "" sample.pdf sample.stl sample.webm sample.mp4 sample-4k.mp4 sample.jpg; do
+          for f in "" sample.pdf sample.stl sample.webm sample.mp4 sample-4k.mp4 bbb-1080p.mp4 bbb-2160p.mp4 sample.jpg; do
+            [ -z "$f" ] || [ -e build/t/$f ] || continue
             fresh
             trace "fresh profile ${f:-(empty window)}" ${f:+build/t/$f}
           done
-          for f in sample.pdf sample.webm sample.mp4 sample-4k.mp4 sample.stl; do
+          for f in sample.pdf sample.webm sample.mp4 sample-4k.mp4 bbb-1080p.mp4 bbb-2160p.mp4 sample.stl; do
+            [ -e build/t/$f ] || continue
             trace "again $f" build/t/$f
           done
           # does GTK load the system's opengl32.dll by itself (could Mesa load later)?

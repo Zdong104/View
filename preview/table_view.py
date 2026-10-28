@@ -133,6 +133,7 @@ class TableViewer(Viewer):
         self.gfile: Gio.File | None = None
         self.data = TableData()
         self.data.listeners.append(self._on_data_event)
+        self._translation = None        # translate_view.SideBySide, when open
         self._gen = 0
         self._loading = False
         self._busy = 0
@@ -298,6 +299,8 @@ class TableViewer(Viewer):
             (_("Clear Contents"), "table.clear")]))
         self.menu_cell.append_section(None, self.menu_rows_cols)
         self.menu_cell.append_section(None, sec([(_("Select All"), "table.select-all")]))
+        self.menu_cell.append_section(None, sec([(_("Translate"), "table.translate"),
+                                                 (_("Translate Document…"), "table.translate-doc")]))
         self.cell_popover = Gtk.PopoverMenu.new_from_model(self.menu_cell)
         self.cell_popover.set_has_arrow(False)
         self.cell_popover.set_halign(Gtk.Align.START)
@@ -326,6 +329,9 @@ class TableViewer(Viewer):
         s2 = Gio.Menu()
         s2.append(_("Clear Sorting"), "table.clear-sort")
         self.menu_format.append_section(None, s2)
+        s3 = Gio.Menu()
+        s3.append(_("Translate Document…"), "table.translate-doc")
+        self.menu_format.append_section(None, s3)
 
     @staticmethod
     def _radio_item(label, action, value):
@@ -353,6 +359,8 @@ class TableViewer(Viewer):
         add("clear", lambda p: self.clear_selection())
         add("select-all", lambda p: self.select_all())
         add("find", lambda p: self.show_search())
+        add("translate", lambda p: self._translate_selection())
+        add("translate-doc", lambda p: self.translate_document())
         add("insert-row-above", lambda p: self.insert_rows(False))
         add("insert-row-below", lambda p: self.insert_rows(True))
         add("delete-rows", lambda p: self.delete_rows())
@@ -665,6 +673,8 @@ class TableViewer(Viewer):
         elif kind == "history":
             self._update_sensitivity()
             self.refresh_title()
+        if kind != "history" and self._translation is not None:
+            self._translation.adapter.data_changed()
 
     def _after_edit(self):
         self._numcache.clear()
@@ -1201,6 +1211,7 @@ class TableViewer(Viewer):
                     self._set_cursor(r, c, scroll=False)
             rect = Gdk.Rectangle()
             rect.x, rect.y, rect.width, rect.height = int(x), int(y), 1, 1
+            self._ctx_xy = (x, y)
             self.cell_popover.set_pointing_to(rect)
             self.cell_popover.popup()
 
@@ -1553,6 +1564,32 @@ class TableViewer(Viewer):
         if "\t" in s or "\n" in s or "\r" in s or '"' in s:
             return '"' + s.replace('"', '""') + '"'
         return s
+
+    # ---- translation --------------------------------------------------------------------
+    def translate_document(self):
+        """The table translated beside it: same rows and columns, text cells
+        translated (numbers, dates, IDs stay)."""
+        if not self.data.loaded:
+            return
+        from . import translate_view
+        main, put = translate_view.box_slot(self, lambda: self.overlay)
+        translate_view.open_for(self, "table", main, put)
+
+    def _translate_selection(self):
+        """The selected cells in a card beside them."""
+        from . import translate_ui
+        try:
+            text = self.selection_text()
+        except TableError:
+            text = ""
+        if not text.strip():
+            self.translate_document()
+            return
+        xy, self._ctx_xy = getattr(self, "_ctx_xy", None), None
+        x, y = xy if xy else (self.cv.get_width() / 2, 0)
+        h = self._row_height() if hasattr(self, "_row_height") else 24
+        translate_ui.show(self.cv, text, translate_ui.rect(x - 40, y - h / 2, 80, h),
+                          side_by_side=self.translate_document)
 
     def selection_text(self):
         d = self.data

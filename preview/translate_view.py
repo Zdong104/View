@@ -10,11 +10,14 @@ own and back:
     Markdown   the document translated with its structure kept
                (preview.md_translate), rendered by the same Markdown view;
                its source can be shown and saved
-    Text/code  paragraph by paragraph, scrolled in step with the original
+    Text       paragraph by paragraph, scrolled in step with the original
+    Code       the file with its comments, docstrings and messages translated
+               (preview.code_translate), line for line
+    Table      CSV/TSV: the same rows and columns, text cells translated as
+               they scroll into view (numbers, dates, IDs stay)
     Image      the recognized (Live Text) blocks in reading order
 
-    open_for(viewer)   toggle it for a viewer (pdf_view, text_view, image_view
-                       call this from their menus)
+    open_for(viewer, kind, main, put)   from the viewers' menus
 
 The engine runs in one worker thread per pane: translations are cached per
 piece of text and language pair, the piece in view goes first, anything
@@ -1203,7 +1206,8 @@ class MarkdownAdapter(_Adapter):
         for name, label, tip in (("preview", _("Preview"), _("Rendered Markdown")),
                                  ("source", _("Source"), _("Translated Markdown source"))):
             self.toggle.add(Adw.Toggle(name=name, label=label, tooltip=tip))
-        self.preview.view.set_extra_menu(None)      # (no "translate the translation")
+        self.preview.translate_menu = False      # (no "translate the translation")
+        self.preview.view.set_extra_menu(None)
         self.toggle.set_active_name("preview")
         self.toggle.connect("notify::active-name",
                             lambda g, _p: self.stack.set_visible_child_name(g.get_active_name()))
@@ -1331,6 +1335,474 @@ class MarkdownAdapter(_Adapter):
             self.viewer.buf.disconnect(self._hid)
         except Exception:  # noqa: BLE001
             pass
+
+
+# ---- code ---------------------------------------------------------------------------------
+class CodeAdapter(_Adapter):
+    """Source code: the file as it is, with its comments, docstrings and
+    messages translated (code_translate), line for line beside the original."""
+
+    def __init__(self, viewer):
+        super().__init__(viewer)
+        v = viewer.view
+        self.view = Gtk.TextView(editable=False, cursor_visible=False, monospace=True,
+                                 wrap_mode=v.get_wrap_mode(), top_margin=v.get_top_margin(),
+                                 bottom_margin=v.get_bottom_margin(), left_margin=10,
+                                 right_margin=14, hexpand=True, vexpand=True,
+                                 css_classes=[viewer._cls, "tx-view"])
+        self.view.set_monospace(True)       # (after css_classes, which would drop it)
+        self.scroll = Gtk.ScrolledWindow(child=self.view, hexpand=True, vexpand=True)
+        self.buf = self.view.get_buffer()
+        self.plan = None
+        self.marks = []                 # per block: [(start mark, end mark)] per line
+        self.gen = 0
+        self._timer = 0
+        self._hid = viewer.buf.connect("changed", self._changed)
+        self._wrap_id = v.connect("notify::wrap-mode",
+                                  lambda w, _p: self.view.set_wrap_mode(w.get_wrap_mode()))
+        self.tag_tr = self.buf.create_tag("translated")
+        self._padded = {}               # line -> (side, pixels) of spacing added
+        self._style_tags()
+
+    def _style_tags(self):
+        dark = Adw.StyleManager.get_default().get_dark()
+        self.tag_tr.set_property("background", "rgba(98,160,234,0.16)" if dark
+                                 else "rgba(53,132,228,0.10)")
+
+    def widget(self):
+        return self.scroll
+
+    save_name = TextAdapter.save_name
+
+    def _changed(self, *_):
+        if self._timer:
+            GLib.source_remove(self._timer)
+
+        def fire():
+            self._timer = 0
+            if self.pane is not None and self.pane.alive:
+                self.refresh()
+            return False
+        self._timer = GLib.timeout_add(900, fire)
+
+    def refresh(self):
+        """Lex the file in a thread (Pygments can take a while), then show
+        it and ask for its prose."""
+        from . import code_translate, syntax
+        self.gen += 1
+        gen = self.gen
+        text = self.viewer._current_text()
+        lexer = self.viewer.lexer
+        dark = Adw.StyleManager.get_default().get_dark()
+        self.pane.set_status(_("Reading the code…"))
+
+        def work():
+            try:
+                plan = code_translate.CodePlan(text, lexer)
+                runs = syntax.lex_runs(text, lexer) if len(text) < 2_000_000 else []
+            except Exception as e:  # noqa: BLE001
+                plan, runs = None, e
+            GLib.idle_add(self._show, gen, text, plan, runs, dark,
+                          priority=GLib.PRIORITY_DEFAULT)
+        threading.Thread(target=work, daemon=True, name="code-plan").start()
+
+    def _show(self, gen, text, plan, runs, dark):
+        if gen != self.gen or self.pane is None or not self.pane.alive:
+            return False
+        from . import syntax
+        if plan is None:
+            self.pane.show_info(_("Could Not Translate"), str(runs), _("Try Again"),
+                                self.pane.refresh)
+            return False
+        self.plan = plan
+        self._unpad()
+        vadj = self.scroll.get_vadjustment()
+        keep = vadj.get_value()
+        buf = self.buf
+        buf.set_text(text)
+        table = buf.get_tag_table()
+        for ttype, a, b in runs:
+            st = syntax.style_for(ttype, dark)
+            if not st:
+                continue
+            name = "hl:" + str(ttype)
+            tag = table.lookup(name)
+            if tag is None:
+                tag = buf.create_tag(name)
+                if st.get("color"):
+                    tag.set_property("foreground", "#" + st["color"])
+                if st.get("bold"):
+                    tag.set_property("weight", Pango.Weight.BOLD)
+                if st.get("italic"):
+                    tag.set_property("style", Pango.Style.ITALIC)
+            buf.apply_tag(tag, buf.get_iter_at_offset(a), buf.get_iter_at_offset(b))
+        self.marks = [[(buf.create_mark(None, buf.get_iter_at_offset(s[0]), True),
+                        buf.create_mark(None, buf.get_iter_at_offset(s[1]), True))
+                       for s in block] for block in plan.blocks]
+        GLib.idle_add(lambda: (vadj.set_value(keep), False)[1])
+        n = len(plan.pieces)
+        self.pane.set_status(ngettext("{n} comment or text to translate",
+                                      "{n} comments and texts to translate", n).format(n=n))
+        if not n:
+            return False
+        src = self.pane.src_for("\n".join(plan.pieces[:200]))
+        self.pane.set_status(ngettext("{n} comment or text to translate",
+                                      "{n} comments and texts to translate", n).format(n=n))
+        index = {}
+        for k, piece in enumerate(plan.pieces):
+            index.setdefault(piece, []).append(k)
+
+        def on_item(piece, tr):
+            if self.plan is plan:
+                for k in index.get(piece, ()):
+                    self._put(k, tr)
+        have = self.pane.request(plan.pieces, src, on_item)
+        for piece, tr in have.items():
+            on_item(piece, tr)
+        return False
+
+    # ---- keeping the lines level --------------------------------------------------------
+    # Chinese/Japanese text makes a line taller than the code font's; each
+    # line whose two sides differ gets the difference as space below it on
+    # the shorter side (a tag, on the original too: removed on close).
+    def _pad_tag(self, buf, n):
+        name = f"tr-pad:{n}"
+        tag = buf.get_tag_table().lookup(name)
+        if tag is None:
+            tag = buf.create_tag(name, pixels_below_lines=n)
+            tag.set_priority(buf.get_tag_table().get_size() - 1)
+        return tag
+
+    def _unpad(self):
+        for buf in (self.viewer.buf, self.buf):
+            table = buf.get_tag_table()
+            names = []
+            table.foreach(lambda t: names.append(t.get_property("name") or ""))
+            for name in names:
+                if name.startswith("tr-pad:"):
+                    table.remove(table.lookup(name))
+        self._padded = {}
+
+    def _schedule_level(self):
+        if getattr(self, "_level_timer", 0):
+            return
+
+        def fire():
+            self._level_timer = 0
+            if self.pane is not None and self.pane.alive and self.plan is not None:
+                self._level()
+            return False
+        self._level_timer = GLib.timeout_add(120, fire)
+
+    def _level(self):
+        lv, lb = self.viewer.view, self.viewer.buf
+        rv, rb = self.view, self.buf
+        if lb.get_line_count() != rb.get_line_count():
+            return                          # (an edit in flight: the next plan levels it)
+        lines = {s[3] for block in self.plan.blocks for s in block}
+        for i in sorted(lines | set(self._padded)):
+            ok, li = lb.get_iter_at_line(i)
+            ok2, ri = rb.get_iter_at_line(i)
+            if not (ok and ok2):
+                continue
+            side, old = self._padded.get(i, (None, 0))
+            hl = lv.get_line_yrange(li)[1] - (old if side == "l" else 0)
+            hr = rv.get_line_yrange(ri)[1] - (old if side == "r" else 0)
+            new = ("l", hr - hl) if hr > hl else ("r", hl - hr) if hl > hr else (None, 0)
+            if new == (side, old):
+                continue
+            for s, buf, it in (("l", lb, li), ("r", rb, ri)):
+                end = it.copy()
+                if not end.ends_line():
+                    end.forward_to_line_end()
+                a = it.copy()
+                if a.equal(end):
+                    if not end.forward_char():
+                        continue
+                if side == s and old:
+                    buf.remove_tag(self._pad_tag(buf, old), a, end)
+                if new[0] == s and new[1]:
+                    buf.apply_tag(self._pad_tag(buf, new[1]), a, end)
+            self._padded[i] = new
+
+    def _put(self, k, tr):
+        from . import code_translate
+        block, marks = self.plan.blocks[k], self.marks[k]
+        if tr == self.plan.pieces[k]:
+            return
+        parts = code_translate.distribute(tr.replace("\n", " "), [len(s[2]) for s in block])
+        buf = self.buf
+        for (ms, me), part in zip(marks, parts):
+            a, b = buf.get_iter_at_mark(ms), buf.get_iter_at_mark(me)
+            tags = [t for t in a.get_tags() if t is not self.tag_tr]
+            buf.delete(a, b)
+            it = buf.get_iter_at_mark(ms)
+            buf.insert_with_tags(it, part, self.tag_tr, *tags)
+            buf.move_mark(me, it)
+        self._schedule_level()
+
+    def text(self):
+        return self.buf.get_text(self.buf.get_start_iter(), self.buf.get_end_iter(), False)
+
+    def sync_sides(self):
+        v = self.viewer
+
+        def lines(buf):
+            return lambda: buf.get_line_count()
+
+        def at(buf):
+            def start(i):
+                ok, it = buf.get_iter_at_line(i)
+                return it if ok else None
+            return start
+        return Side(v.view, lines(v.buf), at(v.buf)), Side(self.view, lines(self.buf), at(self.buf))
+
+    def release(self):
+        self.gen += 1
+        if self._timer:
+            GLib.source_remove(self._timer)
+            self._timer = 0
+        if getattr(self, "_level_timer", 0):
+            GLib.source_remove(self._level_timer)
+            self._level_timer = 0
+        try:
+            self._unpad()                   # (the original's spacing back as it was)
+        except Exception:  # noqa: BLE001
+            pass
+        for obj, hid in ((self.viewer.buf, self._hid), (self.viewer.view, self._wrap_id)):
+            try:
+                obj.disconnect(hid)
+            except Exception:  # noqa: BLE001
+                pass
+
+
+# ---- tables ----------------------------------------------------------------------------
+class ProportionalSync:
+    """Two scrolled lists scrolled in step (same rows: same fraction)."""
+
+    def __init__(self, a, b):
+        self.adjs = [a, b]
+        self._busy = False
+        self._ids = [(adj, adj.connect("value-changed", self._moved)) for adj in (a, b)]
+
+    def _moved(self, adj):
+        if self._busy:
+            return
+        other = self.adjs[1] if adj is self.adjs[0] else self.adjs[0]
+        span = adj.get_upper() - adj.get_page_size()
+        f = adj.get_value() / span if span > 0 else 0.0
+        self._busy = True
+        try:
+            other.set_value(f * max(0.0, other.get_upper() - other.get_page_size()))
+        finally:
+            self._busy = False
+
+    def release(self):
+        for adj, hid in self._ids:
+            try:
+                adj.disconnect(hid)
+            except Exception:  # noqa: BLE001
+                pass
+        self._ids = []
+
+
+class TableAdapter(_Adapter):
+    """CSV/TSV: the same rows and columns, text cells translated (numbers,
+    dates, IDs, codes stay); cells are translated as they scroll into view."""
+    MAX_COLS = 60
+
+    def __init__(self, viewer):
+        super().__init__(viewer)
+        from .table_view import RowModel
+        self.model = RowModel()
+        self.cv = Gtk.ColumnView(model=Gtk.NoSelection.new(self.model), show_row_separators=True,
+                                 show_column_separators=True, reorderable=False,
+                                 hexpand=True, vexpand=True, css_classes=["tv", "data-table"])
+        self.scroll = Gtk.ScrolledWindow(child=self.cv, hexpand=True, vexpand=True)
+        self.bound = {}                 # text -> {Gtk.Inscription}
+        self.src = None
+        self.gen = 0
+        self._flush_timer = 0
+        self._sync = None
+        self._cols = []
+
+    def widget(self):
+        return self.scroll
+
+    save_name = TextAdapter.save_name
+
+    def _tr(self, text):
+        return self.pane.runner.get(text, self.src, self.pane.tgt) if self.src else None
+
+    def _show_cell(self, ins, text):
+        from .code_translate import cell_worth
+        tr = self._tr(text) if cell_worth(text) else text
+        if tr is None:
+            ins.set_markup("<span alpha='50%'>" + GLib.markup_escape_text(text) + "</span>")
+            self.bound.setdefault(text, set()).add(ins)
+            self._schedule_flush()
+        else:
+            ins.set_attributes(None)        # (the dimming of a pending cell)
+            ins.set_text(tr)
+
+    def _factory(self, col):
+        f = Gtk.SignalListItemFactory()
+
+        def setup(_f, li):
+            li.set_child(Gtk.Inscription(xalign=0.0, nat_chars=1, min_chars=1, hexpand=True,
+                                         text_overflow=Gtk.InscriptionOverflow.ELLIPSIZE_END,
+                                         css_classes=["tv-rownum" if col < 0 else "tv-cell"]))
+
+        def bind(_f, li):
+            ins = li.get_child()
+            r = li.get_position()
+            d = self.viewer.data
+            if col < 0:
+                ins.set_attributes(None)
+                ins.set_text(str(r + 1))
+                return
+            text = d.cell_at(r, col) if r < d.n_view and col < d.ncols else ""
+            ins._text = text
+            self._show_cell(ins, text)
+
+        def unbind(_f, li):
+            ins = li.get_child()
+            s = self.bound.get(getattr(ins, "_text", None))
+            if s is not None:
+                s.discard(ins)
+        f.connect("setup", setup)
+        f.connect("bind", bind)
+        f.connect("unbind", unbind)
+        return f
+
+    def refresh(self):
+        from .code_translate import cell_worth
+        d = self.viewer.data
+        self.gen += 1
+        self.bound = {}
+        sample = []
+        for r in range(min(d.n_view, 400)):
+            for c in range(min(d.ncols, self.MAX_COLS)):
+                t = d.cell_at(r, c)
+                if cell_worth(t):
+                    sample.append(t)
+        titles = [d.title(c) for c in range(min(d.ncols, self.MAX_COLS))]
+        self.src = self.pane.src_for("\n".join(sample[:300] + titles))
+        cols = self.cv.get_columns()
+        for i in range(cols.get_n_items() - 1, -1, -1):
+            self.cv.remove_column(cols.get_item(i))
+        num = Gtk.ColumnViewColumn(title="", factory=self._factory(-1))
+        num.set_fixed_width(int(self.viewer._rownum_w) if hasattr(self.viewer, "_rownum_w") else 56)
+        self.cv.append_column(num)
+        self._cols = []
+        widths = getattr(d, "col_w", None) or []
+        for c, title in enumerate(titles):
+            col = Gtk.ColumnViewColumn(title=title, factory=self._factory(c), resizable=True)
+            w = widths[c] if c < len(widths) and widths[c] else 140
+            col.set_fixed_width(int(max(80, min(320, w))))
+            self.cv.append_column(col)
+            self._cols.append((col, title))
+        self.model.set_n(0)
+        self.model.set_n(d.n_view)
+        if d.has_header:                  # column titles too
+            heads = [t for t in titles if cell_worth(t)]
+            if heads:
+                def on_item(text, tr):
+                    for col, title in self._cols:
+                        if title == text:
+                            col.set_title(tr)
+                have = self.pane.request(heads, self.src, on_item, background=True)
+                for t, tr in have.items():
+                    on_item(t, tr)
+        n = d.ncols
+        self.pane.set_status(ngettext("{n} row", "{n} rows", d.n_view).format(n=d.n_view)
+                             + ("" if n <= self.MAX_COLS else " · " + _(
+                                 "the first {n} columns").format(n=self.MAX_COLS)))
+        if self._sync is None:
+            self._sync = ProportionalSync(self.viewer.vadj, self.scroll.get_vadjustment())
+
+    def data_changed(self):
+        """An edit, a sort, a filter in the original: follow it shortly."""
+        if getattr(self, "_data_timer", 0):
+            GLib.source_remove(self._data_timer)
+
+        def fire():
+            self._data_timer = 0
+            if self.pane is not None and self.pane.alive:
+                self.refresh()
+            return False
+        self._data_timer = GLib.timeout_add(400, fire)
+
+    def _schedule_flush(self):
+        if not self._flush_timer:
+            self._flush_timer = GLib.timeout_add(120, self._flush)
+
+    def _flush(self):
+        """Translate the text cells in view (asking again for all of them:
+        an earlier request is dropped when the view moves on)."""
+        self._flush_timer = 0
+        if self.pane is None or not self.pane.alive:
+            return False
+        todo = [t for t, s in self.bound.items() if s and self._tr(t) is None]
+        if not todo:
+            return False
+
+        def on_item(text, tr):
+            for ins in list(self.bound.get(text, ())):
+                if getattr(ins, "_text", None) == text:
+                    ins.set_attributes(None)
+                    ins.set_text(tr)
+            self.bound.pop(text, None)
+        self.pane.request(todo, self.src, on_item)
+        return False
+
+    def _rows(self, translated):
+        from .code_translate import cell_worth
+        d = self.viewer.data
+        rows = []
+        if d.has_header:
+            rows.append([translated(d.title(c)) if cell_worth(d.title(c)) else d.title(c)
+                         for c in range(d.ncols)])
+        for r in range(d.n_view):
+            rows.append([translated(t) if cell_worth(t) else t
+                         for t in (d.cell_at(r, c) for c in range(d.ncols))])
+        return rows
+
+    def text(self):
+        rows = self._rows(lambda t: self._tr(t) or t)
+        return "\n".join("\t".join(c.replace("\t", " ").replace("\n", " ") for c in row)
+                         for row in rows[:20000])
+
+    def save(self, path):
+        """Every text cell translated, written with the file's delimiter."""
+        import csv
+        import io
+        from .code_translate import cell_worth
+        d = self.viewer.data
+        texts = set()
+        for row in self._rows(lambda t: t):
+            texts.update(t for t in row if cell_worth(t))
+        pane, src = self.pane, self.src
+
+        def write():
+            out = io.StringIO()
+            w = csv.writer(out, delimiter=d.delim or ",", lineterminator="\n")
+            for row in self._rows(lambda t: pane.runner.get(t, src, pane.tgt) or t):
+                w.writerow(row)
+            pane.write_file(path, out.getvalue())
+            pane.spinner.set_visible(False)
+        pane.status.set_label(_("Translating the whole document…"))
+        pane.request(sorted(texts), src, None, write, background=True)
+
+    def release(self):
+        self.gen += 1
+        for t in ("_flush_timer", "_data_timer"):
+            if getattr(self, t, 0):
+                GLib.source_remove(getattr(self, t))
+                setattr(self, t, 0)
+        if self._sync is not None:
+            self._sync.release()
+            self._sync = None
 
 
 # ---------------------------------------------------------------------------
@@ -1470,7 +1942,7 @@ class SideBySide:
 
 def open_for(viewer, kind, main, put):
     """Show (or bring back) the side-by-side translation for ``viewer``;
-    kind: "pdf", "image", "text" or "markdown"."""
+    kind: "pdf", "image", "text", "code", "markdown" or "table"."""
     cur = getattr(viewer, "_translation", None)
     if cur is not None:
         if cur.win is not None:
@@ -1479,6 +1951,7 @@ def open_for(viewer, kind, main, put):
             cur.pane.refresh()
         return cur
     adapter = {"pdf": PdfAdapter, "image": ImageAdapter, "text": TextAdapter,
+               "code": CodeAdapter, "table": TableAdapter,
                "markdown": MarkdownAdapter}[kind](viewer)
     sbs = SideBySide(viewer, adapter, main, put)
     viewer._translation = sbs

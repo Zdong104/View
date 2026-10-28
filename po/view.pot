@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: View\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-27 20:42-0400\n"
+"POT-Creation-Date: 2026-10-27 21:51-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -870,6 +870,9 @@ msgstr ""
 msgid "Copied"
 msgstr ""
 
+msgid "Translate Document…"
+msgstr ""
+
 #, python-brace-format
 msgid "Could not render this Markdown: {error}"
 msgstr ""
@@ -1168,9 +1171,6 @@ msgstr ""
 msgid "Go to Page…"
 msgstr ""
 
-msgid "Translate Page…"
-msgstr ""
-
 msgid "Could not open the document"
 msgstr ""
 
@@ -1218,6 +1218,9 @@ msgstr ""
 
 #, python-brace-format
 msgid "of {total}"
+msgstr ""
+
+msgid "Translate Page…"
 msgstr ""
 
 msgid "Add Note Here"
@@ -2305,9 +2308,6 @@ msgstr ""
 msgid "Wrap Lines"
 msgstr ""
 
-msgid "Translate Document…"
-msgstr ""
-
 msgid "Text Options"
 msgstr ""
 
@@ -2619,6 +2619,86 @@ msgid "Could not translate: {error}"
 msgstr ""
 
 msgid "Try Again"
+msgstr ""
+
+msgid "Detect Language"
+msgstr ""
+
+msgid "Copy Translation"
+msgstr ""
+
+msgid "Open in a Separate Window"
+msgstr ""
+
+msgid "Close Translation"
+msgstr ""
+
+#, python-brace-format
+msgid "{lang} detected"
+msgstr ""
+
+msgid "Translation Engine Needed"
+msgstr ""
+
+msgid "Could Not Translate"
+msgstr ""
+
+msgid "Language Pack Needed"
+msgstr ""
+
+msgid "Downloading Language Pack"
+msgstr ""
+
+msgid "Could Not Save"
+msgstr ""
+
+msgid "Save Translation As…"
+msgstr ""
+
+msgid "Save Translated Document As…"
+msgstr ""
+
+#, python-brace-format
+msgid "Page {n} of {total}"
+msgstr ""
+
+msgid "No text on this page."
+msgstr ""
+
+msgid "This page is a scan, and text recognition is not available."
+msgstr ""
+
+msgid "Recognizing text on this page…"
+msgstr ""
+
+#, python-brace-format
+msgid "Page {n}"
+msgstr ""
+
+msgid "Translating the whole document…"
+msgstr ""
+
+msgid "Recognizing text…"
+msgstr ""
+
+#, python-brace-format
+msgid "{n} paragraph"
+msgid_plural "{n} paragraphs"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Translated Markdown source"
+msgstr ""
+
+#, python-brace-format
+msgid "{done} of {total} parts"
+msgstr ""
+
+#, python-brace-format
+msgid "Translation — {name}"
+msgstr ""
+
+msgid "Show Beside the Original"
 msgstr ""
 
 #, python-brace-format

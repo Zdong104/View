@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: View\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-27 20:42-0400\n"
+"POT-Creation-Date: 2026-10-27 21:48-0400\n"
 "PO-Revision-Date: 2026-10-26 15:40-0400\n"
 "Last-Translator: View contributors\n"
 "Language-Team: Simplified Chinese\n"
@@ -858,6 +858,9 @@ msgstr "打开文档以查看其详细信息。"
 msgid "Copied"
 msgstr "已复制"
 
+msgid "Translate Document…"
+msgstr "翻译文档…"
+
 #, python-brace-format
 msgid "Could not render this Markdown: {error}"
 msgstr "无法渲染此 Markdown：{error}"
@@ -1159,9 +1162,6 @@ msgstr "查找…"
 msgid "Go to Page…"
 msgstr "跳转到页面…"
 
-msgid "Translate Page…"
-msgstr "翻译页面…"
-
 msgid "Could not open the document"
 msgstr "无法打开文档"
 
@@ -1210,6 +1210,9 @@ msgstr "部分文档只能通过“另存为”保存"
 #, python-brace-format
 msgid "of {total}"
 msgstr "共 {total} 页"
+
+msgid "Translate Page…"
+msgstr "翻译页面…"
 
 msgid "Add Note Here"
 msgstr "在此添加注释"
@@ -2301,9 +2304,6 @@ msgstr "在文件中查找"
 msgid "Wrap Lines"
 msgstr "自动换行"
 
-msgid "Translate Document…"
-msgstr "翻译文档…"
-
 msgid "Text Options"
 msgstr "文本选项"
 
@@ -2618,6 +2618,85 @@ msgstr "无法翻译：{error}"
 
 msgid "Try Again"
 msgstr "重试"
+
+msgid "Detect Language"
+msgstr "检测语言"
+
+msgid "Copy Translation"
+msgstr "复制译文"
+
+msgid "Open in a Separate Window"
+msgstr "在单独窗口中打开"
+
+msgid "Close Translation"
+msgstr "关闭翻译"
+
+#, python-brace-format
+msgid "{lang} detected"
+msgstr "检测到{lang}"
+
+msgid "Translation Engine Needed"
+msgstr "需要翻译引擎"
+
+msgid "Could Not Translate"
+msgstr "无法翻译"
+
+msgid "Language Pack Needed"
+msgstr "需要语言包"
+
+msgid "Downloading Language Pack"
+msgstr "正在下载语言包"
+
+msgid "Could Not Save"
+msgstr "无法保存"
+
+msgid "Save Translation As…"
+msgstr "译文另存为…"
+
+msgid "Save Translated Document As…"
+msgstr "翻译后的文档另存为…"
+
+#, python-brace-format
+msgid "Page {n} of {total}"
+msgstr "第 {n} 页，共 {total} 页"
+
+msgid "No text on this page."
+msgstr "此页没有文字。"
+
+msgid "This page is a scan, and text recognition is not available."
+msgstr "此页是扫描件，且文字识别不可用。"
+
+msgid "Recognizing text on this page…"
+msgstr "正在识别此页上的文字…"
+
+#, python-brace-format
+msgid "Page {n}"
+msgstr "第 {n} 页"
+
+msgid "Translating the whole document…"
+msgstr "正在翻译整个文档…"
+
+msgid "Recognizing text…"
+msgstr "正在识别文字…"
+
+#, python-brace-format
+msgid "{n} paragraph"
+msgid_plural "{n} paragraphs"
+msgstr[0] "{n} 个段落"
+
+msgid "Translated Markdown source"
+msgstr "翻译后的 Markdown 源码"
+
+#, python-brace-format
+msgid "{done} of {total} parts"
+msgstr "第 {done} 部分，共 {total} 部分"
+
+#, python-brace-format
+msgid "Translation — {name}"
+msgstr "翻译 — {name}"
+
+msgid "Show Beside the Original"
+msgstr "显示在原文旁边"
 
 #, python-brace-format
 msgid "{APP_NAME} {version} is available"

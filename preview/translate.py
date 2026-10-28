@@ -191,6 +191,10 @@ _WORDS = {
     "nb": "og i det er en til på som av for med at ikke har jeg",
 }
 _WORDS = {k: set(v.split()) for k, v in _WORDS.items()}
+_WORD_LANGS: dict[str, list] = {}
+for _k, _ws in _WORDS.items():
+    for _w in _ws:
+        _WORD_LANGS.setdefault(_w, []).append(_k)
 _LETTERS = {
     "es": "ñ¿¡", "pt": "ãõ", "fr": "çèêœë", "de": "ßäöü", "pl": "łąęśźżćń", "tr": "ğışİ",
     "ro": "șțşţ", "cs": "řěůčš", "hu": "őű", "sv": "å", "da": "æø", "nb": "æø",
@@ -256,18 +260,22 @@ def detect(text: str) -> str | None:
     if script != "latin":
         return script
     low = sample.lower()
-    words = re.findall(r"[^\W\d_]+", low)
+    # (whole words only: "O1", "H1b" are not the Portuguese "o")
+    words = re.findall(r"(?<!\w)[^\W\d_]+(?!\w)", low)
     score = {k: 0.0 for k in _WORDS}
     score["en"] = 0.0
     for w in words:
-        for k, ws in _WORDS.items():
-            if w in ws:
-                score[k] += 1
+        langs = _WORD_LANGS.get(w)
+        if langs:                       # a word several languages share counts less
+            for k in langs:
+                score[k] += 1 / len(langs)
     for k, letters in _LETTERS.items():
         n = sum(low.count(c) for c in letters)
         score[k] += 2 * n
     best = max(score, key=score.get)
-    return best if score[best] > 0 else "en"
+    if score[best] <= 0 or (score[best] < 1.5 and best != "en" and len(words) >= 4):
+        return "en"                     # one stray hit in longer text is no evidence
+    return best
 
 
 # ---------------------------------------------------------------------------
@@ -612,7 +620,7 @@ def translate_batch(texts, src, tgt, on_item=None, cancelled=None) -> list[str]:
             if on_item:
                 on_item(i, out[i])
         return out
-    units = {i: _segment(texts[i]) for i in todo}
+    units = {i: _segment(texts[i], src, tgt) for i in todo}
     sents = [(i, k) for i in todo for k, u in enumerate(units[i]) if u[0] == "s"]
     left = {i: sum(1 for u in units[i] if u[0] == "s") for i in todo}
     emitted = 0
@@ -644,7 +652,8 @@ def translate_batch(texts, src, tgt, on_item=None, cancelled=None) -> list[str]:
 
 def translate_local(text, dirs, tgt, on_partial=None, cancelled=None) -> str:
     """Run the packs in ``dirs`` in turn (in this process)."""
-    units = _segment(text)
+    src = os.path.basename(dirs[0]).split("_", 1)[0] if dirs else None
+    units = _segment(text, src, tgt)
     todo = [i for i, u in enumerate(units) if u[0] == "s"]
     sents = [units[i][1] for i in todo]
     out = list(units)
@@ -736,9 +745,72 @@ def _sentences(line):
     return res
 
 
-def _segment(text):
-    """Text -> [("s", sentence) | ("sep", separator)] keeping paragraphs and
-    hard line breaks."""
+_SCRIPTS = {"zh": {"han"}, "zt": {"han"}, "ja": {"han", "kana"}, "ko": {"ko"},
+            "ru": {"cyr"}, "uk": {"cyr"}, "ar": {"arab"}, "fa": {"arab"}, "he": {"he"},
+            "el": {"el"}, "th": {"th"}, "hi": {"hi"}}
+_SHORT_WORDS = {"han", "kana", "ko", "th"}     # scripts where one character is a word
+
+
+def scripts_of(lang) -> set:
+    return _SCRIPTS.get(lang, {"latin"})
+
+
+def _runs(sentence, src, tgt):
+    """One sentence -> [("s", piece to translate) | ("k", piece kept as is)].
+
+    Text already in the target language is not run through the engine again
+    (the models garble it: "工资." -> "工资/工资工资/"): a sentence in the
+    target's script is kept; in a mixed one (English with Chinese words, into
+    Chinese) only the stretches in the source's script that hold a real word
+    are translated, the rest stays as written."""
+    if not src or not tgt or src == tgt:
+        return [("s", sentence)]
+    s_scr, t_scr = scripts_of(src), scripts_of(tgt)
+    word = r"[^\W\d_]" if s_scr & _SHORT_WORDS else r"[^\W\d_]{3,}"
+    if not re.search(word, sentence) and not any(_script(c) in t_scr for c in sentence):
+        return [("k", sentence)]        # no word to translate ("dd", "O1, H1b")
+    if s_scr & t_scr:
+        # same script (English -> Spanish): only a sentence that clearly is
+        # in the target language already is kept
+        if len(re.findall(r"[^\W\d_]+", sentence)) >= 4 and detect(sentence) == tgt:
+            return [("k", sentence)]
+        return [("s", sentence)]
+    kinds = []
+    for ch in sentence:
+        sc = _script(ch)
+        kinds.append("t" if sc in t_scr else "s" if sc in s_scr else "o" if sc else "n")
+    if "t" not in kinds:
+        return [("s", sentence)]
+    out, i, n = [], 0, len(sentence)
+    while i < n:
+        if kinds[i] != "s":
+            j = i
+            while j < n and kinds[j] != "s":
+                j += 1
+            out.append(("k", sentence[i:j]))
+            i = j
+            continue
+        j = i
+        last = i
+        while j < n and kinds[j] in ("s", "n"):
+            if kinds[j] == "s":
+                last = j
+            j += 1
+        piece = sentence[i:last + 1]
+        out.append(("s" if re.search(word, piece) else "k", piece))
+        i = last + 1
+    merged = []                         # neighbours of one kind as one piece
+    for k, t in out:
+        if merged and merged[-1][0] == k:
+            merged[-1] = (k, merged[-1][1] + t)
+        else:
+            merged.append((k, t))
+    return merged
+
+
+def _segment(text, src=None, tgt=None):
+    """Text -> [("s", sentence) | ("k", kept as is) | ("sep", separator)]
+    keeping paragraphs and hard line breaks (see _runs for "k")."""
     text = text.replace("\r\n", "\n").replace("\r", "\n").replace("\f", "\n\n")
     units = []
     for block in re.split(r"\n[ \t]*\n+", text):
@@ -753,7 +825,7 @@ def _segment(text):
             for k, s in enumerate(_sentences(line)):
                 if k:
                     units.append(("sep", " "))
-                units.append(("s", s))
+                units += _runs(s, src, tgt)
     return units
 
 

@@ -39,6 +39,7 @@ from gi.repository import Adw, GLib, Gtk, Pango  # noqa: E402
 
 from . import translate  # noqa: E402
 from .i18n import _, ngettext  # noqa: E402
+from .translate_ui import language_attrs, language_tag  # noqa: E402
 
 AUTO = None                         # "detect the source language"
 _BULLET = re.compile(r"^\s*([-*•·▪◦–]|\d{1,3}[.)]|\([a-z0-9]{1,3}\)|[a-z][.)])\s")
@@ -780,6 +781,17 @@ class _Adapter:
         """(left Side, right Side) to scroll together, or None."""
         return None
 
+    def source_language(self, code):
+        """The original's language (detected or chosen) for its fonts: given
+        to Chinese, Japanese and Korean text; other text keeps the default."""
+        code = code if code in translate.CJK else None
+        buf = getattr(self.viewer, "buf", None)
+        if isinstance(buf, Gtk.TextBuffer):
+            buf.apply_tag(language_tag(buf, code, "src-lang"), *buf.get_bounds())
+        md = getattr(self.viewer, "_md", None)
+        if md is not None:
+            md.set_language(translate.pango_language(code))
+
 
 class _ParagraphView:
     """A read-only text view of translated paragraphs; pieces not yet
@@ -801,6 +813,7 @@ class _ParagraphView:
         self._top0 = None
         self._align_timer = 0
         self._tags()
+        self.set_languages(None, None)
         ref = weakref.ref(self)
         sm = Adw.StyleManager.get_default()
         hid = sm.connect("notify::dark", lambda *_: ref() is not None and ref()._tags())
@@ -820,6 +833,11 @@ class _ParagraphView:
             tag = table.lookup(name) or self.buf.create_tag(name)
             for k, v in props.items():
                 tag.set_property(k, v)
+
+    def set_languages(self, src, tgt):
+        """The originals' and the translations' languages (for their fonts)."""
+        language_tag(self.buf, src, "src-lang")
+        language_tag(self.buf, tgt, "lang")
 
     def set_units(self, units, header=None, gap="\n"):
         """units: [(original, is_heading, translation | None)]"""
@@ -843,12 +861,12 @@ class _ParagraphView:
         orig, heading, tr = u
         tags = ["par"] + (["h"] if heading else [])
         if tr is None:
-            self.buf.insert_with_tags_by_name(it, orig, *(tags + ["pending"]))
+            self.buf.insert_with_tags_by_name(it, orig, *(tags + ["pending", "src-lang"]))
         else:
-            self.buf.insert_with_tags_by_name(it, tr, *tags)
+            self.buf.insert_with_tags_by_name(it, tr, *(tags + ["lang"]))
             if self.originals:
                 self.buf.insert_with_tags_by_name(it, "\n" + " ".join(orig.split()), "orig",
-                                                  "par")
+                                                  "par", "src-lang")
 
     def update(self, k, tr):
         if k >= len(self.units):
@@ -993,6 +1011,7 @@ class PdfAdapter(_Adapter):
             return
         texts = [p for p, _h in paras]
         src = self.pane.src_for("\n".join(texts))
+        self.pv.set_languages(src, self.pane.tgt)
         self.pane.set_status(where)
         page = self.page
         index = {}
@@ -1104,6 +1123,7 @@ class ImageAdapter(_Adapter):
         paras = ocr_paragraphs(t.lines)
         texts = [p for p, _h in paras]
         src = self.pane.src_for("\n".join(texts))
+        self.pv.set_languages(src, self.pane.tgt)
         self.pane.set_status(name)
         index = {}
         for k, x in enumerate(texts):
@@ -1169,6 +1189,7 @@ class TextAdapter(_Adapter):
         self.units = text_units(text)
         texts = [u[2] for u in self.units]
         src = self.pane.src_for("\n".join(texts[:60]))
+        self.pv.set_languages(src, self.pane.tgt)
         self.pane.set_status(ngettext("{n} paragraph", "{n} paragraphs",
                                       len(texts)).format(n=len(texts)))
         index = {}
@@ -1269,6 +1290,7 @@ class MarkdownAdapter(_Adapter):
         plan = md_translate.Plan(text)
         self.plan = plan
         src = self.pane.src_for(plan.sample())
+        self.preview.set_language(translate.pango_language(self.pane.tgt))
         self.pane.set_status("")
         self._round(plan, src)
         self._render(now=True)
@@ -1311,7 +1333,9 @@ class MarkdownAdapter(_Adapter):
             self.preview.set_source(self.result)
             vadj = self.src_scroll.get_vadjustment()
             keep = vadj.get_value()
-            self.src_view.get_buffer().set_text(self.result)
+            buf = self.src_view.get_buffer()
+            buf.set_text(self.result)
+            buf.apply_tag(language_tag(buf, self.pane.tgt), *buf.get_bounds())
             GLib.idle_add(lambda: (vadj.set_value(keep), False)[1])
             done, total = self.plan.progress()
             if done < total:
@@ -1563,6 +1587,7 @@ class CodeAdapter(_Adapter):
         if not n:
             return False
         src = self.pane.src_for("\n".join(plan.pieces[:200]))
+        language_tag(self.buf, self.pane.tgt, "translated")
         self.pane.set_status(ngettext("{n} comment or text to translate",
                                       "{n} comments and texts to translate", n).format(n=n))
         index = {}
@@ -1760,7 +1785,7 @@ class TableAdapter(_Adapter):
             self.bound.setdefault(text, set()).add(ins)
             self._schedule_flush()
         else:
-            ins.set_attributes(None)        # (the dimming of a pending cell)
+            ins.set_attributes(language_attrs(self.pane.tgt))   # (not a pending cell's dimming)
             ins.set_text(tr)
 
     def _factory(self, col):
@@ -1868,7 +1893,7 @@ class TableAdapter(_Adapter):
         def on_item(text, tr):
             for ins in list(self.bound.get(text, ())):
                 if getattr(ins, "_text", None) == text:
-                    ins.set_attributes(None)
+                    ins.set_attributes(language_attrs(self.pane.tgt))
                     ins.set_text(tr)
             self.bound.pop(text, None)
         self.pane.request(todo, self.src, on_item)
@@ -1995,6 +2020,7 @@ class SideBySide:
             def detected(code):
                 label.set_label(_("Original") + (" · " + translate.language_name(code)
                                                  if code else ""))
+                self.adapter.source_language(code)
             self.pane.on_detected = detected
             detected(self.pane.src_choice or self.pane.detected)
         else:

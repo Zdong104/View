@@ -96,6 +96,16 @@ def language_name(code: str | None) -> str:
     return code or "?"
 
 
+def pango_language(code: str | None) -> str | None:
+    """The language tag Pango takes for one of CODES.  Pango picks the fonts
+    by it: Chinese text without one can come out in Japanese glyph forms, or
+    in a mix of fonts."""
+    return {"zh": "zh-cn", "zt": "zh-tw"}.get(code, code) if code else None
+
+
+CJK = {"zh", "zt", "ja", "ko"}
+
+
 # ---------------------------------------------------------------------------
 # Settings: the target language (view/settings.json, next to the UI language)
 # ---------------------------------------------------------------------------

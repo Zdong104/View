@@ -519,6 +519,7 @@ class MarkdownPreview(Gtk.ScrolledWindow):
         self.blocks = []                # a mark where each top-level block starts
         self.on_translate_document = None     # callback for the context menu
         self.on_rendered = None               # callback after each render
+        self.language = None                  # the text's (Pango) language; see set_language
         self._gen = 0
         self._timer = 0
         self._text = None
@@ -635,6 +636,15 @@ class MarkdownPreview(Gtk.ScrolledWindow):
             pass
 
     # ---- input ------------------------------------------------------------
+    def set_language(self, lang):
+        """The language of the text, a Pango language ("zh-cn", "ja"…) or
+        None for the default: Pango picks the fonts by it (Chinese without
+        one can come out in Japanese glyph forms or in mixed fonts)."""
+        if lang != self.language:
+            self.language = lang
+            if self._text is not None:
+                self._render(self._text)
+
     def set_source(self, text: str, delay_ms: int = 0):
         """Render `text` (after `delay_ms`, coalescing quick edits)."""
         self._text = text
@@ -805,6 +815,10 @@ class MarkdownPreview(Gtk.ScrolledWindow):
                 left = max((self._tag(n).props.left_margin for n in op[3]
                             if n.startswith("blk:")), default=self.view.get_left_margin())
                 tables.append((anchor, op[1], op[2], left))
+        if self.language:
+            tag = self._table.lookup("lang") or buf.create_tag("lang")
+            tag.set_property("language", self.language)
+            buf.apply_tag(tag, buf.get_start_iter(), end)
         # keep the reading position across re-renders
         vadj = self.get_vadjustment()
         old = vadj.get_value()
@@ -831,12 +845,16 @@ class MarkdownPreview(Gtk.ScrolledWindow):
         # (fills its _TableBox, which is what decides the width)
         grid = Gtk.Grid(css_classes=["md-table"], overflow=Gtk.Overflow.HIDDEN)
         xal = {"left": 0.0, "center": 0.5, "right": 1.0}
+        attrs = Pango.AttrList()
+        if self.language:
+            attrs.insert(Pango.attr_language_new(Pango.Language.from_string(self.language)))
         for r, row in enumerate(rows):
             for c, cell in enumerate(row):
                 lab = Gtk.Label(wrap=True, max_width_chars=48, selectable=True,
                                 xalign=xal.get(aligns[c] if c < len(aligns) else "left", 0.0),
                                 css_classes=["md-cell"] + (["md-head"] if r == 0 else []))
                 lab.set_markup(cell)
+                lab.set_attributes(attrs)
                 lab.connect("activate-link", lambda _l, uri: self._open_link(uri) or True)
                 grid.attach(lab, c, r, 1, 1)
         return grid

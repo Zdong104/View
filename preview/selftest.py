@@ -983,6 +983,7 @@ def _ui_cjk_table(pump, shots=None):
     win.set_child(preview)
     win.present()
     try:
+        preview.set_language("zh-cn")       # (as a translation into Chinese has)
         preview.set_source(CJK_TABLE)
         end = time.monotonic() + 5
         labels = []
@@ -1001,6 +1002,13 @@ def _ui_cjk_table(pump, shots=None):
         wrapped = [lab.get_text() for lab in labels if lab.get_layout().get_line_count() > 1]
         if wrapped:
             raise RuntimeError(f"cells wrapped in a 900 px view: {wrapped}")
+        # Chinese text marked as Chinese (else Pango may take Japanese glyphs / mixed fonts)
+        buf = preview.view.get_buffer()
+        tag = buf.get_tag_table().lookup("lang")
+        if (tag is None or tag.get_property("language") != "zh-cn" or
+                not buf.get_start_iter().has_tag(tag) or
+                any("zh-cn" not in lab.get_attributes().to_string() for lab in labels)):
+            raise RuntimeError("text or table cells without the zh-cn language")
         if shots:
             try:
                 _snapshot(win, os.path.join(shots, "selftest-markdown-cjk-table.png"))

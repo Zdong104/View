@@ -61,6 +61,27 @@ def _install_css():
     _css_done = True
 
 
+def language_tag(buf, code, name="lang"):
+    """buf's tag `name`, set to the language `code` (one of translate.CODES,
+    None: unset), for the text it is applied to; see translate.pango_language."""
+    tag = buf.get_tag_table().lookup(name) or buf.create_tag(name)
+    lang = translate.pango_language(code)
+    if lang:
+        tag.set_property("language", lang)
+    else:
+        tag.set_property("language-set", False)
+    return tag
+
+
+def language_attrs(code):
+    """Pango attributes giving a label the language `code` (see language_tag)."""
+    attrs = Pango.AttrList()
+    lang = translate.pango_language(code)
+    if lang:
+        attrs.insert(Pango.attr_language_new(Pango.Language.from_string(lang)))
+    return attrs
+
+
 class _Download:
     """One language-pack download at a time, shared by every popover that
     needs it (closing a popover does not stop it)."""
@@ -194,6 +215,7 @@ class _Body:
     def _show_result(self, text, final):
         self.stack.set_visible_child_name("result")
         self.buf.set_text(text)
+        self.buf.apply_tag(language_tag(self.buf, self.tgt), *self.buf.get_bounds())
         self.result = text
         self.copy_btn.set_sensitive(final and bool(text.strip()))
 

@@ -823,6 +823,12 @@ def _ui(paths, res, shots=None):
                 win._confirmed_close = True
                 win.destroy()
                 pump(0.2)
+            try:
+                res.ok("ui: Markdown table widths (Chinese)", _ui_cjk_table(pump, shots))
+            except Exception as e:  # noqa: BLE001
+                if os.environ.get("PREVIEW_SELFTEST_TRACE"):
+                    traceback.print_exc()
+                res.fail("ui: Markdown table widths (Chinese)", f"{type(e).__name__}: {e}")
             # signature window with the mouse fallback
             try:
                 from .signature import SignatureCaptureWindow
@@ -874,6 +880,64 @@ def _ui(paths, res, shots=None):
 
     app.connect("activate", run_cases)
     app.run([sys.argv[0]])
+
+
+CJK_TABLE = """# 表格
+
+| 名称 | 描述 | 状态 |
+|------|------|:----:|
+| 甲 | 列表中的第一项，描述比较长 | 完成 |
+| 乙 | 简短 | 待定 |
+| PDF | 支持 PDF 文件的查看和搜索 | 完成 |
+"""
+
+
+def _ui_cjk_table(pump, shots=None):
+    """A Chinese table in a wide preview: every cell on one line.  (Chinese
+    may wrap between any two characters, and the table used to be laid out
+    at its minimum width: one character per line.)"""
+    from gi.repository import Gtk
+    from .markdown_view import MarkdownPreview
+    win = Gtk.Window(default_width=900, default_height=400)
+    preview = MarkdownPreview()
+    win.set_child(preview)
+    win.present()
+    try:
+        preview.set_source(CJK_TABLE)
+        end = time.monotonic() + 5
+        labels = []
+        while time.monotonic() < end:
+            pump(0.1)
+            grids = [w for w in _walk(preview) if isinstance(w, Gtk.Grid)]
+            labels = [w for g in grids for w in _walk(g) if isinstance(w, Gtk.Label)]
+            if labels and all(lab.get_width() > 0 for lab in labels):
+                break
+        if len(labels) != 12:
+            raise RuntimeError(f"expected a table of 12 cells, found {len(labels)}")
+        glyph = labels[0].create_pango_layout("中").get_pixel_size()[0]
+        widths = [lab.get_width() for lab in labels[:3]]
+        if min(widths) < 2 * glyph or widths[1] < 8 * glyph:
+            raise RuntimeError(f"columns {widths} px wide, a character is {glyph} px")
+        wrapped = [lab.get_text() for lab in labels if lab.get_layout().get_line_count() > 1]
+        if wrapped:
+            raise RuntimeError(f"cells wrapped in a 900 px view: {wrapped}")
+        if shots:
+            try:
+                _snapshot(win, os.path.join(shots, "selftest-markdown-cjk-table.png"))
+            except Exception:  # noqa: BLE001
+                pass
+        return f"columns {widths} px, a character {glyph} px"
+    finally:
+        preview.release()
+        win.destroy()
+
+
+def _walk(widget):
+    yield widget
+    child = widget.get_first_child()
+    while child is not None:
+        yield from _walk(child)
+        child = child.get_next_sibling()
 
 
 def _try_snapshot(res, widget, path):

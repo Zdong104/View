@@ -405,16 +405,94 @@ def _inline(ops, children, base, base_dir):
 # ---------------------------------------------------------------------------
 # The preview widget
 # ---------------------------------------------------------------------------
+class _TableBox(Gtk.Widget):
+    """Holds a table's grid at its natural width, or the text width when the
+    table is wider than that (its cells then wrap).
+
+    A Gtk.TextView gives a child at an anchor its *minimum* size, and the
+    minimum width of a wrapping label is its longest unbreakable run: a word
+    in English, but a single character in Chinese or Japanese, which may
+    break between any two characters.  Unwrapped, every table came out as
+    narrow as it could be; for CJK text one character per line."""
+
+    def __init__(self, grid, view, left):
+        super().__init__(halign=Gtk.Align.START)
+        self._grid = grid
+        self._view = weakref.ref(view)
+        self._left = left               # where the table starts in the view
+        grid.set_parent(self)
+
+    def _text_width(self):
+        view = self._view()
+        if view is None or view.get_width() <= 0:
+            return 0
+        # (2px less: at the full width the text view's layout comes out 1px
+        # wider than the view, its cursor's room at the end of the line)
+        return view.get_width() - self._left - view.get_right_margin() - 2
+
+    def do_get_request_mode(self):
+        return Gtk.SizeRequestMode.HEIGHT_FOR_WIDTH
+
+    def _width(self):
+        lo, nat, _b, _nb = self._grid.measure(Gtk.Orientation.HORIZONTAL, -1)
+        avail = self._text_width()
+        return max(lo, min(nat, avail)) if avail > 0 else nat
+
+    def do_measure(self, orientation, for_size):
+        if orientation == Gtk.Orientation.HORIZONTAL:
+            w = self._width()
+            return w, w, -1, -1
+        # (the height for no particular width: the height at the one width
+        # this asks for)
+        lo, nat, _b, _nb = self._grid.measure(orientation,
+                                              for_size if for_size >= 0 else self._width())
+        return lo, nat, -1, -1
+
+    def do_size_allocate(self, width, height, baseline):
+        self._grid.allocate(width, height, baseline, None)
+
+    def grid_min_width(self):
+        return self._grid.measure(Gtk.Orientation.HORIZONTAL, -1)[0] if self._grid else 0
+
+    def do_dispose(self):
+        if self._grid is not None:
+            self._grid.unparent()
+            self._grid = None
+        Gtk.Widget.do_dispose(self)
+
+
+class _TextView(Gtk.TextView):
+    """The preview's text view: its minimum width counts a table's own
+    minimum, not the width the table takes at present.  (Gtk.TextView takes
+    the largest minimum of its children, and a _TableBox asks for the width
+    of the text: the view could then never get narrower again.)"""
+
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.tables = []
+
+    def do_measure(self, orientation, for_size):
+        lo, nat, b, nb = Gtk.TextView.do_measure(self, orientation, for_size)
+        if orientation == Gtk.Orientation.VERTICAL:
+            return lo, nat, b, nb
+        if self.tables:
+            floor = max([self.get_left_margin() + self.get_right_margin()] +
+                        [t.grid_min_width() for t in self.tables])
+            lo = min(lo, floor)
+            nat = max(lo, nat)
+        return lo, nat, -1, -1
+
+
 class MarkdownPreview(Gtk.ScrolledWindow):
     """Read-only rendered view of Markdown source; call set_source()."""
 
     def __init__(self, css_class=None):
         super().__init__(hexpand=True, vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER)
         _install_css()
-        self.view = Gtk.TextView(editable=False, cursor_visible=False,
-                                 wrap_mode=Gtk.WrapMode.WORD_CHAR, top_margin=18,
-                                 bottom_margin=24, left_margin=28, right_margin=28,
-                                 hexpand=True, vexpand=True, css_classes=["md-preview"])
+        self.view = _TextView(editable=False, cursor_visible=False,
+                              wrap_mode=Gtk.WrapMode.WORD_CHAR, top_margin=18,
+                              bottom_margin=24, left_margin=28, right_margin=28,
+                              hexpand=True, vexpand=True, css_classes=["md-preview"])
         if css_class:
             self.view.add_css_class(css_class)
         self.set_child(self.view)
@@ -431,7 +509,15 @@ class MarkdownPreview(Gtk.ScrolledWindow):
         self._dark = Adw.StyleManager.get_default().get_dark()
         self._table = None
         self._styles = {}
+        self._tables = []               # the _TableBox of each table shown
+        self._text_w = 0
         self.on_open_file = None        # callback(Gio.File) for links to local files
+
+        # tables are as wide as the text: lay them out again when that changes
+        # (the text view sets its page size from its width on each allocation)
+        ref = weakref.ref(self)
+        self.get_hadjustment().connect(
+            "changed", lambda _a: (p := ref()) is not None and p._width_changed())
 
         click = Gtk.GestureClick()
         click.connect("released", self._on_click)
@@ -440,7 +526,6 @@ class MarkdownPreview(Gtk.ScrolledWindow):
         motion.connect("motion", self._on_motion)
         self.view.add_controller(motion)
         sm = Adw.StyleManager.get_default()
-        ref = weakref.ref(self)
 
         def on_dark(m, *_):
             p = ref()
@@ -476,6 +561,28 @@ class MarkdownPreview(Gtk.ScrolledWindow):
             self._act_tr.set_enabled(has)
             if self.translate_menu:
                 self.view.set_extra_menu(self._menu_sel if has else self._menu_nosel)
+
+    def _width_changed(self):
+        w = self.view.get_width()
+        if w == self._text_w or not self._tables:
+            self._text_w = w
+            return
+        self._text_w = w
+
+        def relayout():
+            # (after the text view's allocation, not in the middle of it)
+            if not self._alive:
+                return False
+            for box in self._tables:
+                box.queue_resize()
+            # and lay out every line again: lines drawn while a table was
+            # wider keep that width (a rule under a heading would run past the
+            # right margin); a margin change makes the view drop them all
+            m = self.view.get_right_margin()
+            self.view.set_right_margin(m + 1)
+            self.view.set_right_margin(m)
+            return False
+        GLib.idle_add(relayout)
 
     def _translate_selection(self):
         from . import translate_ui
@@ -678,7 +785,9 @@ class MarkdownPreview(Gtk.ScrolledWindow):
                 s = buf.get_iter_at_offset(start_off)
                 for n in op[3]:
                     buf.apply_tag(self._tag(n), s, end)
-                tables.append((anchor, op[1], op[2]))
+                left = max((self._tag(n).props.left_margin for n in op[3]
+                            if n.startswith("blk:")), default=self.view.get_left_margin())
+                tables.append((anchor, op[1], op[2], left))
         # keep the reading position across re-renders
         vadj = self.get_vadjustment()
         old = vadj.get_value()
@@ -686,8 +795,11 @@ class MarkdownPreview(Gtk.ScrolledWindow):
         self.links, self.marks, self.blocks = ops.links, marks, blocks
         buf.connect("notify::has-selection", lambda b, _p: self._sel_changed(b))
         self._sel_changed(buf)
-        for anchor, rows, aligns in tables:
-            self.view.add_child_at_anchor(self._table_widget(rows, aligns), anchor)
+        self._tables = self.view.tables = []
+        for anchor, rows, aligns, left in tables:
+            box = _TableBox(self._table_widget(rows, aligns), self.view, left)
+            self._tables.append(box)
+            self.view.add_child_at_anchor(box, anchor)
         if self.on_rendered is not None:
             GLib.idle_add(lambda: (self.on_rendered and self.on_rendered(), False)[1],
                           priority=GLib.PRIORITY_LOW)
@@ -699,8 +811,8 @@ class MarkdownPreview(Gtk.ScrolledWindow):
         return False
 
     def _table_widget(self, rows, aligns):
-        grid = Gtk.Grid(css_classes=["md-table"], overflow=Gtk.Overflow.HIDDEN,
-                        halign=Gtk.Align.START)
+        # (fills its _TableBox, which is what decides the width)
+        grid = Gtk.Grid(css_classes=["md-table"], overflow=Gtk.Overflow.HIDDEN)
         xal = {"left": 0.0, "center": 0.5, "right": 1.0}
         for r, row in enumerate(rows):
             for c, cell in enumerate(row):

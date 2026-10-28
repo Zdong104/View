@@ -439,7 +439,9 @@ class TextViewer(Viewer):
         add("translate-doc", lambda: self.translate_document())
         self.act_wrap = add("wrap", None, GLib.Variant("b", False))
         self.act_wrap.connect("change-state", self._on_wrap_state)
-        self.insert_action_group("text", g)
+        # the header bar is outside this widget: put the actions on the window
+        host = self.window if isinstance(self.window, Gtk.Widget) else self
+        host.insert_action_group("text", g)
 
         m = Gio.Menu()
         s = Gio.Menu()

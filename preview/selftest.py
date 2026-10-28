@@ -805,6 +805,9 @@ def _ui(paths, res, shots=None):
                             pump(0.1)
                         if win.viewer.canvas.raster is None:
                             raise RuntimeError("drawing not rendered")
+                    dead = _unreachable_actions(win, pump)
+                    if dead:
+                        raise RuntimeError("header bar can't reach " + ", ".join(dead))
                     title = win.viewer.get_title()
                     gl_err = getattr(win.viewer, "_gl_failed", None)
                     if gl_err:
@@ -930,6 +933,44 @@ def _ui_cjk_table(pump, shots=None):
     finally:
         preview.release()
         win.destroy()
+
+
+def _menu_actions(model, out):
+    for i in range(model.get_n_items()):
+        a = model.get_item_attribute_value(i, "action", None)
+        if a is not None:
+            out.append((a.get_string(), model.get_item_attribute_value(i, "target", None)))
+        links = model.iterate_item_links(i)
+        while links.next():
+            _menu_actions(links.get_value(), out)
+    return out
+
+
+def _unreachable_actions(win, pump):
+    """Header-bar buttons and menu items whose action the viewer has enabled
+    but which can't find it from the header (it lives outside the viewer)."""
+    from gi.repository import Gio, Gtk
+    groups = [g for g in vars(win.viewer).values() if isinstance(g, Gio.ActionGroup)]
+    wanted = []
+    for w in _walk(win.header):
+        if isinstance(w, Gtk.MenuButton) and w.get_menu_model() is not None:
+            wanted += _menu_actions(w.get_menu_model(), [])
+        elif isinstance(w, Gtk.Actionable) and w.get_action_name():
+            wanted.append((w.get_action_name(), w.get_action_target_value()))
+    dead = set()
+    for name, target in wanted:
+        short = name.partition(".")[2]
+        if not any(g.has_action(short) and g.get_action_enabled(short) for g in groups):
+            continue            # not the viewer's, or off for now
+        probe = Gtk.Button(action_name=name)
+        if target is not None:
+            probe.set_action_target_value(target)
+        win.header.pack_start(probe)
+        pump(0.02)
+        if not probe.get_sensitive():
+            dead.add(name)
+        win.header.remove(probe)
+    return sorted(dead)
 
 
 def _walk(widget):

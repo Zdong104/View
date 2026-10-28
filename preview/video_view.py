@@ -178,7 +178,9 @@ class VideoViewer(Viewer):
             a.connect("activate", lambda _a, _p, cb=cb: cb())
             g.add_action(a)
         self._actions = g
-        self.insert_action_group("video", g)
+        # the header bar is outside this widget: put the actions on the window
+        host = self.window if isinstance(self.window, Gtk.Widget) else self
+        host.insert_action_group("video", g)
 
         sc = Gtk.ShortcutController()
         sc.set_scope(Gtk.ShortcutScope.LOCAL)

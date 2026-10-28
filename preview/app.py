@@ -232,6 +232,8 @@ class MainWindow(Adw.ApplicationWindow):
                          title=APP_NAME)
         self.viewer = None
         self._confirmed_close = False
+        self._viewer_groups = set()     # action groups a viewer put on this window
+        self._viewer_chrome = []        # and the buttons it packed into the header
 
         self.toast_overlay = Adw.ToastOverlay()
         self.bin = Adw.Bin()
@@ -251,6 +253,7 @@ class MainWindow(Adw.ApplicationWindow):
         menu_btn = Gtk.MenuButton(icon_name="open-menu-symbolic", primary=True,
                                   tooltip_text=_("Main Menu"), menu_model=app.primary_menu)
         self.header.pack_end(menu_btn)
+        self._header_boxes = (open_btn.get_parent(), menu_btn.get_parent())
         self.header.pack_end(Gtk.Button(icon_name="dialog-information-symbolic",
                                         tooltip_text=_("Inspector (Ctrl+I)"),
                                         action_name="win.inspector"))
@@ -381,6 +384,32 @@ class MainWindow(Adw.ApplicationWindow):
     def is_empty(self):
         return self.viewer is None
 
+    def insert_action_group(self, name, group):
+        # viewers put their actions here, where the header bar finds them:
+        # remember which, so the next viewer in this window starts clean
+        if group is None:
+            self._viewer_groups.discard(name)
+        else:
+            self._viewer_groups.add(name)
+        super().insert_action_group(name, group)
+
+    def _header_children(self):
+        out = []
+        for box in self._header_boxes:
+            child = box.get_first_child()
+            while child is not None:
+                out.append(child)
+                child = child.get_next_sibling()
+        return out
+
+    def _drop_viewer_chrome(self):
+        """Remove the previous (failed) viewer's header buttons and actions."""
+        for w in self._viewer_chrome:
+            self.header.remove(w)
+        self._viewer_chrome = []
+        for name in list(self._viewer_groups):
+            self.insert_action_group(name, None)
+
     # ---- toast / title -------------------------------------------------------
     def show_toast(self, message, button_label=None, on_button=None):
         toast = Adw.Toast(title=message, timeout=6 if button_label else 4)
@@ -427,14 +456,18 @@ class MainWindow(Adw.ApplicationWindow):
         else:
             raise ValueError(f"Unsupported file type: {kind}")
         runtime.mark(f"{kind} viewer imported")
+        self._drop_viewer_chrome()
         viewer = cls(self)
         self.viewer = viewer
         self.bin.set_child(viewer)
+        before = set(self._header_children())
         viewer.build_header(self.header)
+        self._viewer_chrome = [w for w in self._header_children() if w not in before]
         return viewer
 
     def _show_error(self, e):
         self.viewer = None
+        self._drop_viewer_chrome()
         # an error that explains itself (e.g. DxfReadError) is shown as is
         text = str(e) if getattr(e, "user_message", False) else f"{type(e).__name__}: {e}"
         page = Adw.StatusPage(icon_name="dialog-error-symbolic",

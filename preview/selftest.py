@@ -143,7 +143,7 @@ MODULES = ["app", "viewer_base", "image_view", "image_ops", "pdf_view", "pdf_ops
            "dxf_repair", "video_view", "media_player",
            "inspector", "convert", "ocr", "ocr_install", "preferences", "touchpad",
            "integration", "screenshot", "translate", "translate_install", "translate_ui",
-           "translate_helper"]
+           "translate_helper", "translate_view", "md_translate"]
 LINUX_MODULES = ["quicklook", "quicklook_renderers"]
 
 
@@ -589,6 +589,95 @@ def _translate_text():
     return f"detection ok; {len(tr.installed())} language pack(s)"
 
 
+_MD_DOC = """---
+title: Keep this front matter
+---
+
+# Getting *started* with `view` ##
+
+Install it with `pip install view`, then read [the guide](https://example.com/a_b "Guide")
+or <https://example.com>. Some **bold text:** here.\\
+A hard break, <kbd>Ctrl</kbd> and ![a small logo](logo.png).
+
+> A quote with a list:
+> - first *item*
+> - second item
+
+1. [ ] task to do
+2. step two
+   continued here
+
+| Name | What it does |
+|------|:------------:|
+| `cli` | runs the tool |
+| plain | some *text* |
+
+Setext title
+------------
+
+```python
+print("never translated")
+```
+
+<div align="center">kept as it is</div>
+
+[ref]: https://example.com/ref
+"""
+
+
+def _translate_markdown():
+    """Structure-kept Markdown translation, with stand-in translators: one
+    that keeps the placeholders, one that loses them (the fallback), one
+    that answers in Chinese punctuation."""
+    import re
+    from . import md_translate as mt
+    keep = mt.structure(_MD_DOC)
+
+    def upper(texts):
+        return [re.sub(r"[a-z]+", lambda m: m.group(0).upper(), t) for t in texts]
+
+    def lossy(texts):
+        return [re.sub(r"[A-Z]\d+", "", t).upper() for t in texts]
+
+    def cjk(texts):
+        return [re.sub(r"[A-Za-z]+", "文", t).replace(":", "：").replace(" ", "") for t in texts]
+    for name, fn in (("placeholders kept", upper), ("placeholders lost", lossy),
+                     ("CJK", cjk)):
+        out = mt.translate(_MD_DOC, fn)
+        if mt.structure(out) != keep:
+            a = [x for x, y in zip(keep, mt.structure(out)) if x != y][:1]
+            raise RuntimeError(f"{name}: structure changed at {a}")
+        for must in ('print("never translated")', "title: Keep this front matter",
+                     "https://example.com/a_b", "`pip install view`", "<kbd>", "</kbd>",
+                     "<div align=\"center\">kept as it is</div>", "[ref]: https://example.com/ref",
+                     "logo.png", "------------"):
+            if must not in out:
+                raise RuntimeError(f"{name}: lost {must!r}")
+    out = mt.translate(_MD_DOC, upper)
+    for must in ("# GETTING *STARTED* WITH `view` ##", "[THE GUIDE](https://example.com/a_b",
+                 "> - FIRST *ITEM*", "1. [ ] TASK TO DO", "| `cli` | RUNS THE TOOL |",
+                 "![A SMALL LOGO](logo.png)", "SETEXT TITLE", "HERE.\\\nA HARD BREAK"):
+        if must not in out:
+            raise RuntimeError(f"translated text missing: {must!r}")
+    # pieces for the side-by-side views
+    from . import translate_view as tv
+    units = tv.text_units("one\ntwo\n\n\nthree\n" + "x\n" * 70)
+    if [(a, n) for a, n, _t in units] != [(0, 2), (4, 30), (34, 30), (64, 11)]:
+        raise RuntimeError(f"text units {[(a, n) for a, n, _t in units]}")
+    lines = [["001 A Title", 72, 60, 300, 80], ["002 First line of a paragraph that", 72, 100, 540, 110],
+             ["003 wraps here.", 72, 112, 200, 122], ["004 Second paragraph starts", 90, 124, 540, 134],
+             ["005 and ends.", 72, 136, 160, 146], ["7", 300, 700, 306, 710]]
+    paras = tv.group_lines(lines)
+    if paras != [("A Title", True), ("First line of a paragraph that\nwraps here.", False),
+                 ("Second paragraph starts\nand ends.", False)]:
+        raise RuntimeError(f"PDF paragraphs {paras!r}")
+    if tv.worth_translating("aj wj = cj dj , dj = wj ‖wj‖ , (1)") or \
+            not tv.worth_translating("We evaluate this inversion.") or \
+            not tv.worth_translating("今天天气很好"):
+        raise RuntimeError("formula / text tell-apart")
+    return "structure kept (3 stand-in translators); paragraphs, line numbers"
+
+
 def _translate_engine():
     from . import translate as tr
     helper = tr.helper_path()
@@ -809,6 +898,7 @@ def main(argv=()):
         if ocr_ok and run_ocr:
             res.check("OCR recognize", lambda: _ocr_run(paths, d))
         res.check("translation (detection, sentences)", _translate_text)
+        res.check("translation (Markdown structure, side-by-side)", _translate_markdown)
         res.check("translation engine", _translate_engine, required=runtime.OCR_BUNDLED)
         if not no_ui:
             _ui(paths, res, shots)

@@ -285,6 +285,7 @@ class TextViewer(Viewer):
         self._title_pending = False
         self._alive = True
         self._md = None                       # MarkdownPreview for .md files
+        self._translation = None              # translate_view.SideBySide, when open
         self._md_mode = "source"
         self._md_stale = False
         self.md_switch = None
@@ -430,7 +431,7 @@ class TextViewer(Viewer):
         add("zoom-out", lambda: self.zoom_by(-1))
         add("zoom-reset", lambda: self.set_zoom(DEFAULT_PT))
         add("translate", lambda: self._translate(selection=True))
-        add("translate-doc", lambda: self._translate(selection=False))
+        add("translate-doc", lambda: self.translate_document())
         self.act_wrap = add("wrap", None, GLib.Variant("b", False))
         self.act_wrap.connect("change-state", self._on_wrap_state)
         self.insert_action_group("text", g)
@@ -475,6 +476,19 @@ class TextViewer(Viewer):
         bind(["<Control>minus", "<Control>KP_Subtract"], "text.zoom-out")
         bind(["<Control>0", "<Control>KP_0"], "text.zoom-reset")
         self.add_controller(sc)
+
+    def translate_document(self):
+        """The whole text translated beside the original (Markdown: rendered,
+        with its structure kept)."""
+        from . import translate_view
+        if self._loading:
+            return
+        kind = "markdown" if self._md is not None else "text"
+        if kind == "markdown" and self._md_mode == "split":
+            self._set_md_mode("preview", save=False)      # original | translation
+        main, put = translate_view.box_slot(
+            self, lambda: self.md_paned if self._md is not None else self.overlay)
+        translate_view.open_for(self, kind, main, put)
 
     def _translate(self, selection=True):
         """Translate the selection (else the whole text), pointing at it."""
@@ -575,6 +589,9 @@ class TextViewer(Viewer):
         self._alive = False
         self._load_gen += 1
         self._hl_gen += 1
+        if self._translation is not None:
+            from . import translate_view
+            translate_view.shutdown_for(self)
         if self._md is not None:
             self._md.release()
         for attr in ("_hl_timer", "_search_timer", "_osd_timer"):
@@ -1224,6 +1241,7 @@ class TextViewer(Viewer):
         if self._md is None:
             self._md = markdown_view.MarkdownPreview(self._cls)
             self._md.on_open_file = lambda gf: self.window.open_files([gf])
+            self._md.on_translate_document = self.translate_document
             scroll = Gtk.EventControllerScroll(flags=Gtk.EventControllerScrollFlags.VERTICAL)
             scroll.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
             scroll.connect("scroll", self._on_scroll)
@@ -1264,6 +1282,8 @@ class TextViewer(Viewer):
             from . import markdown_view
             markdown_view.save_mode(mode)
             (self._md.view if mode == "preview" else self.view).grab_focus()
+        if self._translation is not None:
+            self._translation.restart_sync()          # the original side changed
 
     def _md_source(self, text):
         from .markdown_view import PREVIEW_CAP

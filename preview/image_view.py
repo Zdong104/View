@@ -805,6 +805,7 @@ class ImageViewer(Viewer):
         self.mk = None             # markup.MarkupController, created on first use
         self.mk_bar = None
         self._ocr = None           # {"item", "cancel": Gio.Cancellable, "timer"}
+        self._translation = None   # translate_view.SideBySide, when open
         self.live_text = True      # recognise text automatically (Live Text)
 
         self.split = Adw.OverlaySplitView(sidebar_position=Gtk.PackType.START,
@@ -1132,6 +1133,7 @@ class ImageViewer(Viewer):
         add("markup", self._toggle_markup)
         add("copy-text", self._copy_all_text)
         add("translate", self._translate_text)
+        add("translate-doc", lambda: self.translate_document())
         add("recognize", lambda: self._run_ocr(force=True))
         add("show-text", self._toggle_text_boxes)
         tool = Gio.SimpleAction.new_stateful("tool", GLib.VariantType.new("s"),
@@ -1205,7 +1207,7 @@ class ImageViewer(Viewer):
             "markup": ready,
             "copy-text": bool(self.canvas.text is not None and self.canvas.text.has_text()),
             "show-text": bool(self.canvas.text is not None and self.canvas.text.has_text()),
-            "recognize": ready, "translate": ready,
+            "recognize": ready, "translate": ready, "translate-doc": ready,
         }
         for name, a in self._acts.items():
             ok = en.get(name, True)
@@ -1214,6 +1216,9 @@ class ImageViewer(Viewer):
             a.set_enabled(ok)
 
     def _on_destroy(self, *_):
+        if self._translation is not None:
+            from . import translate_view
+            translate_view.shutdown_for(self)
         self._stop_slideshow()
         try:
             self._detach_host()
@@ -1224,6 +1229,9 @@ class ImageViewer(Viewer):
     def release(self):
         """Drop decoded images, textures and pending work (Quick Look calls this
         when switching files). The viewer can be load()ed again afterwards."""
+        if self._translation is not None:
+            from . import translate_view
+            translate_view.shutdown_for(self)
         self._clear_text()
         self._render_gen += 1          # stale-out running decodes / renders
         self._detail_gen += 1
@@ -1299,7 +1307,7 @@ class ImageViewer(Viewer):
         t5.append(_("Recognize Text"), "img.recognize")
         t5.append(_("Show Recognized Text"), "img.show-text")
         t5.append(_("Copy All Text"), "img.copy-text")
-        t5.append(_("Translate Text…"), "img.translate")
+        t5.append(_("Translate Text…"), "img.translate-doc")
         tools.append_section(None, t5)
         t4 = Gio.Menu()
         t4.append(_("Slideshow"), "img.slideshow")
@@ -1483,6 +1491,8 @@ class ImageViewer(Viewer):
                 self._color_close(apply=False)
             self._release(prev)
         self.current = item
+        if prev is not item and self._translation is not None:
+            self._translation.source_changed()
         self.refresh_title()
         self._update_actions()
         if item.texture is not None:
@@ -2217,6 +2227,9 @@ class ImageViewer(Viewer):
 
     def _schedule_ocr(self, item, delay=700):
         """Recognise text shortly after an image is shown (like Live Text)."""
+        if self._translation is not None and self._ocr is None:
+            self._run_ocr(force=True)              # the translation beside it waits for it
+            return
         if not self.live_text:
             return
         try:
@@ -2269,6 +2282,8 @@ class ImageViewer(Viewer):
             ov.on_change = self.canvas.queue_draw
             self.canvas.text = ov
             self.canvas.text_k = k
+            if self._translation is not None:
+                self._translation.source_changed()
             if getattr(self, "_translate_after", None) is o:    # Translate Text… asked for it
                 self._translate_after = None
                 if lines:
@@ -2305,7 +2320,7 @@ class ImageViewer(Viewer):
             menu.append(_("Copy"), "img.copy")
             menu.append(_("Translate"), "img.translate")
         else:
-            menu.append(_("Translate All Text"), "img.translate")
+            menu.append(_("Translate All Text"), "img.translate-doc")
         menu.append(_("Copy All Text"), "img.copy-text")
         pm = Gtk.PopoverMenu.new_from_model(menu)
         pm.set_has_arrow(False)
@@ -2318,10 +2333,22 @@ class ImageViewer(Viewer):
         self._ctx_xy = (x, y)
         pm.popup()
 
+    def translate_document(self):
+        """The image's recognized text, translated beside it."""
+        if self.current is None:
+            return
+        from . import translate_view
+        main, put = translate_view.content_slot(self.split)
+        translate_view.open_for(self, "image", main, put)
+
     def _translate_text(self):
-        """Translate the selected recognized text, else all of it (recognizing
-        it first when Live Text has not run)."""
+        """Translate the selected recognized text (a popover), else all of it
+        (beside the image)."""
         t = self.canvas.text
+        if t is not None and t.has_text() and not t.has_selection():
+            self._ctx_xy = None
+            self.translate_document()
+            return
         xy, self._ctx_xy = getattr(self, "_ctx_xy", None), None
         if t is None or not t.has_text():
             if t is None and self.current is not None:

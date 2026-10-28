@@ -31,6 +31,8 @@ Public API:
     missing(src, tgt) -> [(from, to), ...]  of those, the ones not downloaded
     download(pairs, on_progress, cancelled) blocking
     translate(text, src, tgt, on_partial=None, cancelled=None) -> str   blocking
+    translate_batch(texts, src, tgt, on_item=None, cancelled=None) -> [str]
+                                            blocking; one result per piece
 
 CLI:  python -m preview.translate [--from xx] --to yy "text" | -  (stdin)
 """
@@ -533,8 +535,10 @@ class _Model:
     def translate(self, sentences):
         toks = [self.encode(s) for s in sentences]
         kw = {"target_prefix": [[self.prefix]] * len(toks)} if self.prefix else {}
+        # no_repeat_ngram_size: the small models can loop on lists, arrows and
+        # slashes ("条条条条…", "packing packing …") until max_decoding_length
         res = self.translator.translate_batch(
-            toks, beam_size=2, max_batch_size=16, replace_unknowns=True,
+            toks, beam_size=2, max_batch_size=16, replace_unknowns=True, no_repeat_ngram_size=4,
             max_decoding_length=min(512, 32 + 3 * max((len(t) for t in toks), default=0)),
             **kw)
         return [self.decode(r.hypotheses[0]) for r in res]
@@ -570,6 +574,72 @@ def translate(text, src, tgt, on_partial=None, cancelled=None) -> str:
     if exe:
         return _helper(exe).translate(text, dirs, tgt, on_partial, cancelled)
     return translate_local(text, dirs, tgt, on_partial, cancelled)
+
+
+def translate_batch(texts, src, tgt, on_item=None, cancelled=None) -> list[str]:
+    """Translate each of ``texts`` (paragraph-sized pieces of one document)
+    from ``src`` into ``tgt``, keeping them apart: the result has one string
+    per input.  Blocking; on_item(i, translation) is called from this thread
+    as each piece is done (in order), cancelled() -> True stops between
+    batches (RuntimeError("Cancelled")).  No length limit: the caller shows
+    progress.  Raises NotInstalled, NeedsDownload or Unsupported."""
+    texts = [t or "" for t in texts]
+    out = [None] * len(texts)
+    todo = []
+    for i, t in enumerate(texts):
+        if src == tgt or not t.strip():
+            out[i] = t
+            if on_item:
+                on_item(i, t)
+        else:
+            todo.append(i)
+    if not todo:
+        return out
+    if not is_available():
+        raise NotInstalled(_("The translation engine is not installed."))
+    hops = plan(src, tgt)
+    need = [p for p in hops if p not in set(installed())]
+    if need:
+        raise NeedsDownload(need)
+    dirs = [_pack_dir(p) for p in hops]
+    exe = helper_path()
+    if exe:                      # one request per piece (the helper's protocol)
+        h = _helper(exe)
+        for i in todo:
+            if cancelled and cancelled():
+                raise RuntimeError("Cancelled")
+            out[i] = h.translate(texts[i], dirs, tgt, None, cancelled)
+            if on_item:
+                on_item(i, out[i])
+        return out
+    units = {i: _segment(texts[i]) for i in todo}
+    sents = [(i, k) for i in todo for k, u in enumerate(units[i]) if u[0] == "s"]
+    left = {i: sum(1 for u in units[i] if u[0] == "s") for i in todo}
+    emitted = 0
+    step = 12
+    for a in range(0, len(sents), step):
+        if cancelled and cancelled():
+            raise RuntimeError("Cancelled")
+        chunk = sents[a:a + step]
+        batch = [units[i][k][1] for i, k in chunk]
+        with _run_lock:           # per batch: a selection translation can slip in
+            for d in dirs:
+                batch = _model(d).translate(batch)
+        for (i, k), t in zip(chunk, batch):
+            units[i][k] = ("s", t)
+            left[i] -= 1
+        while emitted < len(todo) and left[todo[emitted]] == 0:
+            i = todo[emitted]
+            out[i] = _assemble(units[i], tgt)
+            if on_item:
+                on_item(i, out[i])
+            emitted += 1
+    for i in todo:                # pieces with only separators
+        if out[i] is None:
+            out[i] = _assemble(units[i], tgt)
+            if on_item:
+                on_item(i, out[i])
+    return out
 
 
 def translate_local(text, dirs, tgt, on_partial=None, cancelled=None) -> str:

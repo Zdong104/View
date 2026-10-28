@@ -95,6 +95,7 @@ parts:
     python-requirements:
       - requirements.txt
       - requirements-ocr.txt
+      - requirements-translate.txt      # offline translation engine (packs download on use)
     stage-packages:
       - python3-venv                    # interpreter for the plugin's venv
       # PyGObject + pycairo come from the gnome-core26 platform: the core26

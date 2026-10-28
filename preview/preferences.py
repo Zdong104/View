@@ -1,4 +1,5 @@
-"""Preferences dialog: GNOME Files integration and the optional OCR engine."""
+"""Preferences dialog: GNOME Files integration and the optional OCR and
+translation engines."""
 import os
 
 import gi
@@ -38,6 +39,13 @@ class PreferencesDialog(Adw.PreferencesDialog):
         page.add(self.ocr_group)
         self._ocr_row = None
         self._fill_ocr()
+
+        self.tr_group = Adw.PreferencesGroup(
+            title=_("Translation"),
+            description=_("Translation runs on this computer: text is never sent to a server."))
+        page.add(self.tr_group)
+        self._tr_rows = []
+        self._fill_translate()
 
     # ---- GNOME Files ----
     def _files_group(self):
@@ -161,3 +169,72 @@ class PreferencesDialog(Adw.PreferencesDialog):
                 row.add_suffix(btn)
         self._ocr_row = row
         self.ocr_group.add(row)
+
+    # ---- translation ----
+    def _fill_translate(self):
+        from . import translate, translate_install
+        for r in self._tr_rows:
+            self.tr_group.remove(r)
+        rows = []
+        target = Adw.ComboRow(title=_("Translate into"),
+                              model=Gtk.StringList.new(
+                                  [translate.language_name(c) for c in translate.CODES]))
+        target.set_selected(translate.CODES.index(translate.target()))
+
+        def changed(r, _pspec):
+            try:
+                translate.set_target(translate.CODES[r.get_selected()])
+            except OSError as e:
+                self.add_toast(Adw.Toast(
+                    title=_("Could not change the setting: {error}").format(error=e)))
+        target.connect("notify::selected", changed)
+        rows.append(target)
+
+        refill = lambda: GLib.idle_add(lambda: (self._fill_translate(), False)[1])  # noqa: E731
+        if translate.is_available():
+            sub = _("Included with this build") if runtime.OCR_BUNDLED else _("Installed")
+            if translate_install._activated:
+                sub = _("Installed in {path}").format(path=translate_install.venv_dir().replace(
+                    os.path.expanduser("~"), "~", 1))
+            row = Adw.ActionRow(title=_("CTranslate2 engine"), subtitle=sub)
+            row.add_suffix(Gtk.Image(icon_name="object-select-symbolic"))
+        else:
+            possible, reason = translate_install.can_install()
+            row = Adw.ActionRow(title=_("CTranslate2 engine"),
+                                subtitle=(_("Not installed ({size} download)").format(
+                                    size=translate_install.DOWNLOAD_SIZE) if possible else reason))
+            if possible:
+                btn = Gtk.Button(label=_("Install…"), valign=Gtk.Align.CENTER,
+                                 css_classes=["suggested-action"])
+                btn.connect("clicked", lambda *_: translate_install.offer(self, refill))
+                row.add_suffix(btn)
+        rows.append(row)
+
+        packs = translate.installed()
+        if packs:
+            names = ", ".join(f"{translate.language_name(a)} → {translate.language_name(b)}"
+                              for a, b in packs)
+            sub = f"{names} ({GLib.format_size(translate.installed_size())})"
+        else:
+            sub = _("None yet: each language pair is downloaded the first time it is used")
+        row = Adw.ActionRow(title=_("Language packs"), subtitle=sub)
+        if packs:
+            btn = Gtk.Button(label=_("Remove All…"), valign=Gtk.Align.CENTER,
+                             css_classes=["destructive-action"])
+
+            def remove(*_a):
+                dlg = Adw.AlertDialog(heading=_("Remove Language Packs?"),
+                                      body=_("They are downloaded again when needed."))
+                dlg.add_response("cancel", _("Cancel"))
+                dlg.add_response("remove", _("Remove"))
+                dlg.set_response_appearance("remove", Adw.ResponseAppearance.DESTRUCTIVE)
+                dlg.set_close_response("cancel")
+                dlg.connect("response", lambda _d, rid: (translate.remove_all(), refill())
+                            if rid == "remove" else None)
+                dlg.present(self)
+            btn.connect("clicked", remove)
+            row.add_suffix(btn)
+        rows.append(row)
+        for r in rows:
+            self.tr_group.add(r)
+        self._tr_rows = rows

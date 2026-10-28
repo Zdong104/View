@@ -26,6 +26,7 @@ binaries = []
 
 # Text recognition is not in this bundle: it is a separate program,
 # ocr\view-ocr.exe, built with python.org's Python (view-ocr.spec).
+# Translation likewise: translate\view-translate.exe (view-translate.spec).
 
 a = Analysis(
     [os.path.join(SPECPATH, "preview_main.py")],

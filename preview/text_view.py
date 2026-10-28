@@ -424,6 +424,8 @@ class TextViewer(Viewer):
         add("zoom-in", lambda: self.zoom_by(1))
         add("zoom-out", lambda: self.zoom_by(-1))
         add("zoom-reset", lambda: self.set_zoom(DEFAULT_PT))
+        add("translate", lambda: self._translate(selection=True))
+        add("translate-doc", lambda: self._translate(selection=False))
         self.act_wrap = add("wrap", None, GLib.Variant("b", False))
         self.act_wrap.connect("change-state", self._on_wrap_state)
         self.insert_action_group("text", g)
@@ -432,7 +434,11 @@ class TextViewer(Viewer):
         s = Gio.Menu()
         s.append(_("Wrap Lines"), "text.wrap")
         s.append(_("Go to Line…"), "text.goto")
+        s.append(_("Translate Document…"), "text.translate-doc")
         m.append_section(None, s)
+        extra = Gio.Menu()
+        extra.append(_("Translate"), "text.translate")
+        self.view.set_extra_menu(extra)        # in the text's right-click menu
         s = Gio.Menu()
         s.append(_("Larger Text"), "text.zoom-in")
         s.append(_("Smaller Text"), "text.zoom-out")
@@ -464,6 +470,21 @@ class TextViewer(Viewer):
         bind(["<Control>minus", "<Control>KP_Subtract"], "text.zoom-out")
         bind(["<Control>0", "<Control>KP_0"], "text.zoom-reset")
         self.add_controller(sc)
+
+    def _translate(self, selection=True):
+        """Translate the selection (else the whole text), pointing at it."""
+        from . import translate_ui
+        b = self.buf
+        sel = b.get_selection_bounds() if selection else ()
+        start, end = sel if sel else b.get_bounds()
+        text = b.get_text(start, end, False)
+        rect = None
+        if sel:
+            loc = self.view.get_iter_location(start)
+            x, y = self.view.buffer_to_window_coords(Gtk.TextWindowType.WIDGET,
+                                                     loc.x, loc.y + loc.height)
+            rect = translate_ui.rect(x, y)
+        translate_ui.show(self.view, text, rect)
 
     def _set_action(self, name, on):
         a = self._actions.lookup_action(name)

@@ -96,9 +96,9 @@ def can_install() -> tuple[bool, str]:
     return True, ""
 
 
-def stale_install() -> bool:
+def stale_install(vd=None) -> bool:
     """A venv exists but was made for another Python version (after an OS upgrade)."""
-    vd = venv_dir()
+    vd = vd or venv_dir()
     return os.path.isdir(vd) and not os.path.isdir(site_packages(vd))
 
 
@@ -106,13 +106,19 @@ class Installer:
     """Runs venv + pip in a worker thread.
 
     on_progress(fraction_or_None, text) and on_done(error_or_None) are called
-    on the GTK main loop.  fraction None means "pulse"."""
+    on the GTK main loop.  fraction None means "pulse".  The keyword arguments
+    reuse it for another optional engine (preview.translate_install)."""
 
-    def __init__(self, on_progress, on_done):
+    def __init__(self, on_progress, on_done, vd=None, packages=None, activate_fn=None,
+                 label=None):
         self.on_progress = on_progress
         self.on_done = on_done
         self.proc = None
         self.cancelled = False
+        self.vd = vd
+        self.packages = packages or PACKAGES
+        self.activate_fn = activate_fn or activate
+        self.label = label
 
     def start(self):
         threading.Thread(target=self._run, daemon=True, name="ocr-install").start()
@@ -134,20 +140,20 @@ class Installer:
     def _finish(self, err):
         from gi.repository import GLib
         if err is None:
-            activate()
+            self.activate_fn()
         GLib.idle_add(lambda: (self.on_done(err), False)[1])
 
     def _run(self):
-        vd = venv_dir()
+        vd = self.vd or venv_dir()
         try:
-            if stale_install():
+            if stale_install(vd):
                 import shutil
                 shutil.rmtree(vd, ignore_errors=True)
             if not os.path.exists(_venv_python(vd)):
                 self._emit(0.02, _("Creating a private Python environment…"))
                 base = getattr(sys, "_base_executable", None) or sys.executable
                 self._call([base, "-m", "venv", "--system-site-packages", vd])
-            self._emit(0.05, _("Downloading the text recognition engine…"))
+            self._emit(0.05, self.label or _("Downloading the text recognition engine…"))
             self._pip(vd)
             if self.cancelled:
                 raise RuntimeError("Cancelled")
@@ -171,7 +177,7 @@ class Installer:
         env = dict(os.environ, PIP_DISABLE_PIP_VERSION_CHECK="1", PYTHONUNBUFFERED="1")
         env.pop("PYTHONPATH", None)
         argv = [_venv_python(vd), "-m", "pip", "install", "--progress-bar", "off",
-                "--upgrade-strategy", "only-if-needed", *PACKAGES]
+                "--upgrade-strategy", "only-if-needed", *self.packages]
         self.proc = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                      stdin=subprocess.DEVNULL, text=True, errors="replace",
                                      env=env, bufsize=1)
@@ -266,18 +272,20 @@ def offer(parent, on_installed=None):
     dlg.present(parent)
 
 
-def _progress_dialog(parent, on_installed):
+def _progress_dialog(parent, on_installed, title=None, done_text=None, fail_heading=None,
+                     make_installer=Installer):
     from gi.repository import Adw, Gtk
+    title = title or _("Installing Text Recognition")
     bar = Gtk.ProgressBar(show_text=False)
     label = Gtk.Label(label=_("Starting…"), wrap=True, xalign=0, css_classes=["dim-label"])
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin_top=18,
                   margin_bottom=18, margin_start=18, margin_end=18, width_request=360)
-    box.append(Gtk.Label(label=_("Installing Text Recognition"), css_classes=["title-3"], xalign=0))
+    box.append(Gtk.Label(label=title, css_classes=["title-3"], xalign=0))
     box.append(bar)
     box.append(label)
     cancel = Gtk.Button(label=_("Cancel"), halign=Gtk.Align.END)
     box.append(cancel)
-    dlg = Adw.Dialog(child=box, can_close=False, title=_("Installing Text Recognition"))
+    dlg = Adw.Dialog(child=box, can_close=False, title=title)
     state = {}
 
     def progress(frac, text):
@@ -295,15 +303,16 @@ def _progress_dialog(parent, on_installed):
         toast = getattr(root, "show_toast", None)
         if err is None:
             if toast:
-                toast(_("Text recognition installed"))
+                toast(done_text or _("Text recognition installed"))
             if on_installed:
                 on_installed()
         elif str(err) != "Cancelled":
-            a = Adw.AlertDialog(heading=_("Could Not Install Text Recognition"), body=str(err))
+            a = Adw.AlertDialog(heading=fail_heading or _("Could Not Install Text Recognition"),
+                                body=str(err))
             a.add_response("ok", _("OK"))
             a.present(parent)
 
-    inst = Installer(progress, done)
+    inst = make_installer(progress, done)
     cancel.connect("clicked", lambda *_a: (inst.cancel(), label.set_label(_("Cancelling…"))))
     dlg.present(parent)
     inst.start()

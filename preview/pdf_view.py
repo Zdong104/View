@@ -442,6 +442,7 @@ class PdfViewer(Viewer):
         view.append(_("Two Pages"), "pdf.view-mode::two")
         menu.append_submenu(_("View"), view)
         sec(None, (_("Find…"), "pdf.find"), (_("Go to Page…"), "pdf.goto"),
+            (_("Translate Page…"), "pdf.translate-page"),
             (_("Undo"), "pdf.undo"), (_("Redo"), "pdf.redo"))
         return menu
 
@@ -497,6 +498,8 @@ class PdfViewer(Viewer):
         add("undo", self.undo, "<Control>z")
         add("redo", self.redo, "<Control><Shift>z|<Control>y")
         add("copy", self.copy, "<Control>c")
+        add("translate", self._translate_selection)
+        add("translate-page", self._translate_page)
         add("cut", lambda: self.mk.cut_selected(), "<Control>x")
         add("paste", lambda: self.mk.paste(self.current), "<Control>v")
         add("select-all-text", self._select_all_text, "<Control>a")
@@ -1237,11 +1240,15 @@ class PdfViewer(Viewer):
             return
         hit = self.canvas.page_hit(x, y)
         self._ctx_point = hit
+        self._ctx_xy = (x, y)
         menu = Gio.Menu()
         if self.text_sel and self.text_sel["rects"]:
             menu.append(_("Copy"), "pdf.copy")
+            menu.append(_("Translate"), "pdf.translate")
             if not self.compact:
                 menu.append(_("Highlight"), "pdf.highlight-selection")
+        if hit is not None:
+            menu.append(_("Translate Page…"), "pdf.translate-page")
         if not self.compact and hit is not None:
             menu.append(_("Add Note Here"), "pdf.note-here")
             if _ocr_module() is not None and not self._page_has_text(self.pages[hit[0]]):
@@ -1360,6 +1367,50 @@ class PdfViewer(Viewer):
         if self.text_sel and self.text_sel["text"]:
             self.get_clipboard().set(self.text_sel["text"])
             self.toast(_("Copied text"))
+
+    # ========================================================= translation ====
+    def _translate_rect(self):
+        """Where a context-menu click was (else the popover's default spot)."""
+        xy = getattr(self, "_ctx_xy", None)
+        self._ctx_xy = None
+        if xy is None:
+            return None
+        from . import translate_ui
+        return translate_ui.rect(*xy)
+
+    def _translate_selection(self):
+        ts = self.text_sel
+        if ts and ts["text"].strip():
+            from . import translate_ui
+            translate_ui.show(self.canvas, ts["text"], self._translate_rect())
+
+    def _translate_page(self, pos=None, rect=None):
+        """The page's text (its OCR text on a scan, recognized first if needed)."""
+        if not self.pages:
+            return
+        hit = getattr(self, "_ctx_point", None)
+        rect = rect or self._translate_rect()
+        if pos is None:
+            pos = hit[0] if hit is not None and rect is not None else self.current
+        ref = self.pages[pos]
+        k = (ref.src, ref.index)
+        if self._page_has_text(ref):
+            text = self._ppage(ref).get_text() or ""
+        elif k in self.ocr_lines:
+            from . import ocr          # (pure Python; the engine is not needed here)
+            text = ocr.lines_to_text([ocr.OcrLine(list(poly), t, 1.0)
+                                      for poly, t in self.ocr_lines[k]])
+        elif _ocr_module() is not None or _ocr_offerable():
+            self.recognize_text([pos], announce=True,
+                                done=lambda: self._translate_page(pos, rect))
+            return
+        else:
+            text = ""
+        if not text.strip():
+            self.toast(_("No text found"))
+            return
+        from . import translate_ui
+        translate_ui.show(self.canvas, text, rect)
 
     def _markup_selection(self, kind):
         ts = self.text_sel

@@ -137,6 +137,25 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           "{0:N0} MB" -f ((Get-ChildItem dist/View/ocr -Recurse -File | Measure-Object Length -Sum).Sum / 1MB)
 
+      # Translation, likewise: view-translate.exe (ctranslate2 only publishes
+      # wheels for python.org's Python).  Language packs download on first use.
+      - name: Translation helper (python.org Python)
+        shell: pwsh
+        run: |
+          $py = "${{ steps.py.outputs.python-path }}"
+          & $py -m pip install --disable-pip-version-check -r requirements-translate.txt pyinstaller
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $py -m PyInstaller --noconfirm --clean --distpath build/translate-dist --workpath build/pyi-translate packaging/windows/view-translate.spec
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Move-Item build/translate-dist/view-translate dist/View/translate
+          $lic = "dist/View/licenses/translate-helper"
+          New-Item -ItemType Directory -Force $lic | Out-Null
+          & $py packaging/windows/collect-python-licenses.py $lic > "$lic/PYTHON-PACKAGES.txt"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./dist/View/translate/view-translate.exe --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "{0:N0} MB" -f ((Get-ChildItem dist/View/translate -Recurse -File | Measure-Object Length -Sum).Sum / 1MB)
+
       - name: OCR test image
         run: |
           python - <<'EOF'

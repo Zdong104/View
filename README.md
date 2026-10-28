@@ -29,6 +29,7 @@
 - **Screenshots**: Print Screen (Linux) or Snipping Tool / Win+Print Screen (Windows) opens the capture in View for quick markup; Done saves it back to Screenshots and copies it to the clipboard.
 - **Batch tools**: convert selected images, combine images into a PDF (also from the GNOME Files right-click menu).
 - **Live Text (OCR)**: select and copy text in images and scanned PDFs, export searchable PDFs (RapidOCR, CPU, English + Chinese).
+- **Translate**: translate selected text, a PDF page or a whole text file, including Live Text from images and scans; the language is detected automatically. Runs offline on your computer (Argos Translate language packs on CTranslate2, 30 languages including English, Spanish and Chinese); each language pack downloads the first time it is used.
 - **3D models**: STL / OBJ / PLY, orbit with the touchpad, dimensions / volume / area (10M triangles tested).
 - **Tables and text**: CSV / TSV viewer and editor (1M rows), text and code viewer with syntax highlighting.
 - **Video and audio**, with hardware (VA-API) decoding on Linux.

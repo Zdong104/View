@@ -345,17 +345,61 @@ def _build_chunks(scene, groups, cancel):
     scene.groups = sorted((g for g in groups if g.chunks), key=lambda g: KIND_ORDER[g.kind])
 
 
+class DxfReadError(Exception):
+    """A DXF file none of the loaders could make sense of."""
+    user_message = True             # the error page shows str(e), not the class name
+
+    def __init__(self, cause):
+        self.cause = cause
+        super().__init__(
+            _("This drawing could not be read. The file may be damaged, or written in a "
+              "way View does not understand.") + f"\n\n{type(cause).__name__}: {cause}")
+
+
+def read_document(path: str):
+    """ezdxf Drawing of the DXF file at `path`: the normal loader, then the
+    (slower) recover loader, then -- for loosely written files, see
+    dxf_repair -- the recover loader on a normalized copy of the tags."""
+    import ezdxf
+    from ezdxf import recover
+
+    from . import dxf_repair
+    doc = err = None
+    try:
+        doc = ezdxf.readfile(path)
+    except OSError as e:
+        if type(e) is not OSError:          # FileNotFoundError, PermissionError...
+            raise
+        err = e                             # ezdxf: "... is not a DXF file."
+    except Exception as e:  # noqa: BLE001 - ezdxf raises more than DXFStructureError
+        err = e
+    if err is not None:
+        try:
+            doc, _auditor = recover.readfile(path)
+        except OSError:
+            raise
+        except Exception:  # noqa: BLE001
+            doc = None
+    if doc is None or dxf_repair.misread(doc):
+        try:
+            fixed = dxf_repair.read_loose(path)
+        except OSError:
+            raise
+        except Exception:  # noqa: BLE001
+            fixed = None
+        if fixed is not None:
+            return fixed
+        if doc is None:
+            raise DxfReadError(err) from err
+    return doc
+
+
 def build_scene(path: str, cancel: threading.Event | None = None) -> Scene:
     """Parse a DXF file and flatten its model space (worker thread)."""
     cancel = cancel or threading.Event()
-    import ezdxf
-    from ezdxf import recover
     from ezdxf.addons.drawing import Frontend, RenderContext
     from ezdxf.addons.drawing.config import BackgroundPolicy, Configuration
-    try:
-        doc = ezdxf.readfile(path)
-    except ezdxf.DXFStructureError:
-        doc, _auditor = recover.readfile(path)       # slower, but repairs broken files
+    doc = read_document(path)
     if cancel.is_set():
         raise Cancelled()
     msp = doc.modelspace()
@@ -1001,6 +1045,7 @@ class DxfViewer(Viewer):
             show = getattr(self.window, "_show_error", None)       # not in Quick Look
             if show is not None:
                 show(err)
+                self.window.refresh_title()                 # drop "Loading…"
             else:
                 self.empty.set_label(_("Could not open this drawing"))
                 self.empty.set_visible(True)

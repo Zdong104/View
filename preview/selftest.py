@@ -140,7 +140,7 @@ def _versions():
 MODULES = ["app", "viewer_base", "image_view", "image_ops", "pdf_view", "pdf_ops",
            "pdf_render", "pdf_canvas", "markup", "signature", "stl_view", "mesh_io",
            "table_view", "table_data", "text_view", "syntax", "markdown_view", "dxf_view",
-           "video_view", "media_player",
+           "dxf_repair", "video_view", "media_player",
            "inspector", "convert", "ocr", "ocr_install", "preferences", "touchpad",
            "integration", "screenshot", "translate", "translate_install", "translate_ui",
            "translate_helper"]
@@ -267,6 +267,171 @@ def _dxf(paths, d):
         raise RuntimeError("empty SVG export")
     return (f"ezdxf {ezdxf.__version__}, {len(scene.groups)} styles, "
             f"{sum(len(g.chunks) for g in scene.groups)} path chunks")
+
+
+# What small DXF writers (CAD exports, scripts) produce: no $ACADVER (so R12),
+# no handles, and post-R12 entities without their subclass markers.
+LOOSE_DXF = """0
+SECTION
+2
+HEADER
+9
+$INSUNITS
+70
+4
+0
+ENDSEC
+0
+SECTION
+2
+TABLES
+0
+TABLE
+2
+LAYER
+70
+1
+0
+LAYER
+2
+CUT
+70
+0
+62
+1
+6
+CONTINUOUS
+0
+ENDTAB
+0
+ENDSEC
+0
+SECTION
+2
+ENTITIES
+0
+LWPOLYLINE
+8
+CUT
+90
+4
+70
+1
+10
+0.0
+20
+0.0
+10
+80.0
+20
+0.0
+10
+80.0
+20
+40.0
+10
+0.0
+20
+40.0
+0
+HATCH
+8
+CUT
+62
+5
+10
+0.0
+20
+0.0
+30
+0.0
+210
+0.0
+220
+0.0
+230
+1.0
+2
+SOLID
+70
+1
+71
+0
+91
+1
+92
+3
+72
+0
+73
+1
+93
+3
+10
+10.0
+20
+10.0
+10
+30.0
+20
+10.0
+10
+20.0
+20
+30.0
+97
+0
+75
+0
+76
+1
+98
+0
+0
+CIRCLE
+8
+CUT
+10
+60.0
+20
+20.0
+40
+10.0
+0
+ENDSEC
+0
+EOF
+"""
+
+
+def _dxf_loose(paths, d):
+    """A loosely written DXF (marker-less, handle-less LWPOLYLINE and HATCH)
+    must load, with its flags and layers intact."""
+    from . import dxf_repair, dxf_view
+    p = os.path.join(d, "loose.dxf")
+    with open(p, "w") as f:
+        f.write(LOOSE_DXF)
+    doc = dxf_view.read_document(p)
+    msp = doc.modelspace()
+    types = [e.dxftype() for e in msp]
+    if types != ["LWPOLYLINE", "HATCH", "CIRCLE"]:
+        raise RuntimeError(f"entities {types}")
+    lw, hatch = msp[0], msp[1]
+    if not (lw.closed and len(lw) == 4 and lw.dxf.layer == "CUT"):
+        raise RuntimeError(f"LWPOLYLINE closed={lw.closed} n={len(lw)} layer={lw.dxf.layer}")
+    if not (hatch.dxf.color == 5 and len(hatch.paths) == 1 and hatch.dxf.solid_fill):
+        raise RuntimeError("HATCH lost its color or boundary")
+    sample = os.path.join(d, "sample.dxf")              # well-formed, written by _dxf()
+    if os.path.exists(sample):
+        with open(sample, "rb") as f:
+            if dxf_repair.normalize(f.read()) is not None:
+                raise RuntimeError("a well-formed file would be rewritten")
+    scene = dxf_view.build_scene(p)
+    paths["dxf_loose"] = p
+    x0, y0, x1, y1 = scene.extents
+    if not (abs(x0) < 1e-6 and abs(y0) < 1e-6 and abs(x1 - 80) < 1e-6 and abs(y1 - 40) < 1e-6):
+        raise RuntimeError(f"extents {scene.extents}")
+    return f"{', '.join(types)} on {doc.dxfversion}"
 
 
 def _markdown(paths):
@@ -460,6 +625,8 @@ def _ui(paths, res, shots=None):
              ("model", [paths["stl"]])]
     if "dxf" in paths:
         cases.append(("cad", [paths["dxf"]]))
+    if "dxf_loose" in paths:
+        cases.append(("cad", [paths["dxf_loose"]]))
 
     def pump(seconds):
         end = time.monotonic() + seconds
@@ -472,7 +639,8 @@ def _ui(paths, res, shots=None):
         app.hold()
         try:
             for kind, files in cases:
-                label = "markdown" if files[0].endswith(".md") else kind
+                label = ("markdown" if files[0].endswith(".md") else
+                         "cad-loose" if files[0].endswith("loose.dxf") else kind)
                 name = f"ui: {label} viewer"
                 win = MainWindow(app)
                 win.set_default_size(900, 640)
@@ -485,8 +653,14 @@ def _ui(paths, res, shots=None):
                     if label == "markdown" and (win.viewer._md is None or win.viewer._md.view
                                                 .get_buffer().get_char_count() == 0):
                         raise RuntimeError("Markdown preview is empty")
-                    if kind == "cad" and win.viewer.canvas.raster is None:
-                        raise RuntimeError("drawing not rendered")
+                    if kind == "cad":
+                        # parsing and rasterizing run in worker threads: give a busy
+                        # machine some more time before calling it a failure
+                        end = time.monotonic() + 10
+                        while win.viewer.canvas.raster is None and time.monotonic() < end:
+                            pump(0.1)
+                        if win.viewer.canvas.raster is None:
+                            raise RuntimeError("drawing not rendered")
                     title = win.viewer.get_title()
                     gl_err = getattr(win.viewer, "_gl_failed", None)
                     if gl_err:
@@ -623,6 +797,7 @@ def main(argv=()):
         res.check("syntax highlighting", lambda: _code(paths))
         res.check("Markdown render (markdown-it-py)", lambda: _markdown(paths))
         res.check("DXF drawing (ezdxf)", lambda: _dxf(paths, d))
+        res.check("loosely written DXF (no subclass markers)", lambda: _dxf_loose(paths, d))
         res.check("combine images into PDF (img2pdf)", lambda: _combine(paths, d))
         res.check("screenshot editing", lambda: _screenshots(paths, d))
         res.check("video (GStreamer)", _gst)

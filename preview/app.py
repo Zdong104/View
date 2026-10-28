@@ -434,9 +434,11 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _show_error(self, e):
         self.viewer = None
+        # an error that explains itself (e.g. DxfReadError) is shown as is
+        text = str(e) if getattr(e, "user_message", False) else f"{type(e).__name__}: {e}"
         page = Adw.StatusPage(icon_name="dialog-error-symbolic",
                               title=_("Could not open this file"),
-                              description=f"{type(e).__name__}: {e}")
+                              description=GLib.markup_escape_text(text))
         btn = Gtk.Button(label=_("Open Another File…"), halign=Gtk.Align.CENTER,
                          css_classes=["pill"], action_name="win.open")
         page.set_child(btn)

@@ -8,7 +8,7 @@ DEB      := dist/view_$(VERSION)_all.deb
 IMAGE    ?= ubuntu:26.04
 ARGS     ?=
 
-.PHONY: help run selftest selftest-headless venv ocr deb docker-test install uninstall purge check clean i18n
+.PHONY: help run selftest selftest-headless venv ocr translate deb docker-test install uninstall purge check clean i18n
 
 help:
 	@echo "make run [ARGS='file.pdf']   run View from the working tree"
@@ -16,6 +16,7 @@ help:
 	@echo "make selftest-headless       same, without a display"
 	@echo "make i18n                    refresh and compile the UI translations (po/)"
 	@echo "make ocr                     add the optional OCR engine to $(VENV)"
+	@echo "make translate               add the optional translation engine to $(VENV)"
 	@echo "make deb                     build $(DEB)"
 	@echo "make docker-test [IMAGE=…]   apt-install the .deb in a clean container + selftest"
 	@echo "make install / uninstall     per-user \"View (Dev)\" install from this checkout (install.sh)"
@@ -41,6 +42,9 @@ selftest-headless: venv
 
 ocr: venv
 	$(VPY) -m pip install -r requirements-ocr.txt
+
+translate: venv
+	$(VPY) -m pip install -r requirements-translate.txt
 
 deb: $(DEB)
 

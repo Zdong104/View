@@ -225,8 +225,9 @@ class PageCanvas(Gtk.Widget, Gtk.Scrollable):
         cw, ch = self.content_w, self.content_h
         hval = max(0, min(hval, cw - self.view_w))
         vval = max(0, min(vval, ch - self.view_h))
-        self._hadj.configure(hval, 0, cw, 40, self.view_w * 0.9, self.view_w)
-        self._vadj.configure(vval, 0, ch, 40, self.view_h * 0.9, self.view_h)
+        # (upper >= page size: the layout can lag a resize by one allocation)
+        self._hadj.configure(hval, 0, max(cw, self.view_w), 40, self.view_w * 0.9, self.view_w)
+        self._vadj.configure(vval, 0, max(ch, self.view_h), 40, self.view_h * 0.9, self.view_h)
         self.queue_draw()
 
     def row_at(self, cy):

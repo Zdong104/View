@@ -79,6 +79,17 @@
     <keyword>STL</keyword>
   </keywords>
   <releases>
+    <release version="0.2.3" date="2026-10-29">
+      <description>
+        <p>Files open much faster, and a high-quality translation model.</p>
+        <ul>
+          <li>View keeps running in the system tray when its last window is closed, so the next file opens in about a second instead of starting View again. Quit from the tray or with Ctrl+Q; Preferences can turn this off.</li>
+          <li>Faster start in the Snap.</li>
+          <li>Translation: a high-quality model (Hy-MT2 1.8B) that runs on the GPU, downloaded on first use.</li>
+          <li>Windows: the high-quality model also starts on PCs with an old Visual C++ runtime.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.2" date="2026-10-28">
       <description>
         <p>A fix for translated Chinese, Japanese and Korean text on Windows.</p>

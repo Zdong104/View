@@ -9,6 +9,12 @@
 
 ![离线将 PDF 逐页对照翻译成中文](docs/screenshots/translate-pdf.png)
 
+## 0.2.3 新功能
+
+- **大约一秒打开文件。** 关闭最后一个窗口后，View 会留在系统托盘中继续运行，下次打开文件（图片、PDF、视频等）大约一秒就能显示，无需重新启动 View。可从托盘图标或按 Ctrl+Q 退出；如需关闭此功能，请在偏好设置中关闭“关闭所有窗口后让 View 在后台继续运行”。在 GNOME 上，托盘图标需要 AppIndicator 扩展（Ubuntu 默认已开启）；没有托盘时，View 会像以前一样在最后一个窗口关闭时退出。
+- **Snap 版启动更快**，首次打开也更快。
+- **高质量翻译**：Hy-MT2 1.8B 模型在 GPU 上运行（首次使用时下载），整段翻译成自然的中文，并保留名称、代码和网址不变。
+
 ## 0.2.0 新功能
 
 - **离线翻译。** 选中文字即可在浮动卡片中查看译文，也可以把整篇文档左右对照翻译：支持 PDF、Markdown、文本、代码和 CSV 文件。全部在本机运行，不会向外发送任何内容。
@@ -100,22 +106,22 @@
 
 ### Ubuntu / Debian（.deb）
 
-下载 [`view_0.2.2_all.deb`](https://github.com/Zdong104/View/releases/download/v0.2.2/view_0.2.2_all.deb)（也可以从 [Releases 页面](https://github.com/Zdong104/View/releases)获取），然后执行：
+下载 [`view_0.2.3_all.deb`](https://github.com/Zdong104/View/releases/download/v0.2.3/view_0.2.3_all.deb)（也可以从 [Releases 页面](https://github.com/Zdong104/View/releases)获取），然后执行：
 
 ```bash
-sudo apt install ./view_0.2.2_all.deb
+sudo apt install ./view_0.2.3_all.deb
 ```
 
 或者一条命令完成：
 
 ```bash
-wget https://github.com/Zdong104/View/releases/download/v0.2.2/view_0.2.2_all.deb && sudo apt install ./view_0.2.2_all.deb
+wget https://github.com/Zdong104/View/releases/download/v0.2.3/view_0.2.3_all.deb && sudo apt install ./view_0.2.3_all.deb
 ```
 
 推荐使用 `apt`，因为它会一并安装依赖。如果你更习惯用 `dpkg`：
 
 ```bash
-sudo dpkg -i view_0.2.2_all.deb && sudo apt -f install
+sudo dpkg -i view_0.2.3_all.deb && sudo apt -f install
 ```
 
 ### Snap（edge 通道）
@@ -136,9 +142,9 @@ sudo apt install python3-nautilus && mkdir -p ~/.local/share/nautilus-python/ext
 
 ### Windows（**实验性**）
 
-下载 [`View-Setup-0.2.2.exe`](https://github.com/Zdong104/View/releases/download/v0.2.2/View-Setup-0.2.2.exe)（安装程序）或 [`View-0.2.2-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.2.2/View-0.2.2-windows-portable.zip)（免安装）。目前已在真实的 Windows 11 笔记本上测试过，但仍非常欢迎你的反馈。触控板签名的用法和 Linux 上一样：按 **Space**（或 **Start**），然后用一根手指签名，无需点击。它需要精确式触控板（Precision Touchpad，2016 年以来的大多数笔记本都有）；否则请用鼠标或手写笔书写。
+下载 [`View-Setup-0.2.3.exe`](https://github.com/Zdong104/View/releases/download/v0.2.3/View-Setup-0.2.3.exe)（安装程序）或 [`View-0.2.3-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.2.3/View-0.2.3-windows-portable.zip)（免安装）。目前已在真实的 Windows 11 笔记本上测试过，但仍非常欢迎你的反馈。触控板签名的用法和 Linux 上一样：按 **Space**（或 **Start**），然后用一根手指签名，无需点击。它需要精确式触控板（Precision Touchpad，2016 年以来的大多数笔记本都有）；否则请用鼠标或手写笔书写。
 
-**从 0.1.6–0.1.9 升级：** 这些版本的后台截图监视进程会占用 View 的文件，导致安装程序可能在没有任何提示的情况下中止。0.2.0 的安装程序会自行结束该进程，即使升级是由旧版 View 发起的也同样有效。如果升级仍未成功，请在任务管理器中结束后台的 **View** 进程（或运行 `taskkill /F /IM View.exe`），然后重新运行 `View-Setup-0.2.2.exe`。
+**从 0.1.6–0.1.9 升级：** 这些版本的后台截图监视进程会占用 View 的文件，导致安装程序可能在没有任何提示的情况下中止。0.2.0 的安装程序会自行结束该进程，即使升级是由旧版 View 发起的也同样有效。如果升级仍未成功，请在任务管理器中结束后台的 **View** 进程（或运行 `taskkill /F /IM View.exe`），然后重新运行 `View-Setup-0.2.3.exe`。
 
 **安装后的首次启动**可能需要 20 秒甚至更久，因为 Windows 会逐个检查新文件（该版本尚未进行代码签名，见下文）。之后的启动大约只需一秒。
 
@@ -150,7 +156,7 @@ sudo apt install python3-nautilus && mkdir -p ~/.local/share/nautilus-python/ext
 
 View 也以扩展的形式支持 Chrome。
 
-1. 下载 [`view-chrome-0.2.2.zip`](https://github.com/Zdong104/View/releases/download/v0.2.2/view-chrome-0.2.2.zip) 并解压。
+1. 下载 [`view-chrome-0.2.3.zip`](https://github.com/Zdong104/View/releases/download/v0.2.3/view-chrome-0.2.3.zip) 并解压。
 2. 打开 `chrome://extensions`，开启 **开发者模式**，点击 **加载已解压的扩展程序**，然后选择解压出的文件夹。
 3. 如需打开本地文件，请点击 View 的 **详细信息**，并开启 **允许访问文件网址**。
 

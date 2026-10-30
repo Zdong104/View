@@ -196,6 +196,12 @@ def size() -> int:
     return total
 
 
+def stop():
+    """Stop llama-server (a resident View with no window open gives its memory
+    back); the next translation starts it again."""
+    _server.stop()
+
+
 def remove():
     """Stop the server and delete the model and llama.cpp."""
     _server.stop()

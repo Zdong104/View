@@ -785,6 +785,21 @@ class _Model:
         return [self.decode(r.hypotheses[0]) for r in res]
 
 
+def release():
+    """A resident View with no window open: unload the language models and end
+    the helper processes (unless a translation is running).  They load again
+    on the next use."""
+    if not _run_lock.acquire(blocking=False):
+        return
+    try:
+        with _models_lock:
+            _models.clear()
+        for h in list(_helpers.values()):
+            h.close()
+    finally:
+        _run_lock.release()
+
+
 def _model(d) -> _Model:
     with _models_lock:
         m = _models.pop(d, None)

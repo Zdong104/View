@@ -144,7 +144,7 @@ MODULES = ["app", "viewer_base", "image_view", "image_ops", "pdf_view", "pdf_ops
            "inspector", "convert", "ocr", "ocr_install", "preferences", "touchpad",
            "integration", "screenshot", "translate", "translate_install", "translate_ui",
            "translate_helper", "translate_view", "md_translate",
-           "code_translate", "translate_llm"]
+           "code_translate", "translate_llm", "instance", "tray"]
 LINUX_MODULES = ["quicklook", "quicklook_renderers"]
 
 
@@ -488,6 +488,38 @@ def _screenshots(paths, d):
             f"{'on' if screenshot.chosen() else 'off'}, {screenshot._mode()} autostart "
             f"{'set' if screenshot.autostart_on() else 'not set'}, "
             f"watcher {'running' if screenshot.running() else 'not running'}")
+
+
+def _instance(d):
+    """preview.instance: a launch's files reach the running View over its
+    socket / pipe, queued until the app is ready, and the reply says so."""
+    import threading
+    from . import instance
+    addr = (rf"\\.\pipe\{runtime.APP_ID}-selftest-{os.getpid()}" if runtime.IS_WINDOWS
+            else os.path.join(d, "instance.sock"))
+    srv = instance.Server(addr)
+    got, ready = [], threading.Event()
+    try:
+        old, instance.address = instance.address, lambda: addr
+        try:
+            req = instance._request(["a.png", "--new-signature"])
+            req["env"] = {"XDG_ACTIVATION_TOKEN": "tok"}
+            reply = instance._forward(req)                 # queued: no handler yet
+        finally:
+            instance.address = old
+        if not reply or not reply.get("ok") or reply.get("pid") != os.getpid():
+            raise RuntimeError(f"bad reply {reply!r}")
+        srv.set_handler(lambda r: (got.append(r), ready.set()))
+        if not ready.wait(3):
+            raise RuntimeError("request never handed to the app")
+        r = got[0]
+        if r.args != ["a.png", "--new-signature"] or r.token != "tok" or r.cwd != os.getcwd():
+            raise RuntimeError(f"request garbled: {r.args} {r.env} {r.cwd}")
+    finally:
+        srv.close()
+    if not runtime.IS_WINDOWS and os.path.exists(addr):
+        raise RuntimeError("socket left behind after close()")
+    return "round trip"
 
 
 def _gst():
@@ -1216,6 +1248,7 @@ def main(argv=()):
         res.check("loosely written DXF (no subclass markers)", lambda: _dxf_loose(paths, d))
         res.check("combine images into PDF (img2pdf)", lambda: _combine(paths, d))
         res.check("screenshot editing", lambda: _screenshots(paths, d))
+        res.check("single instance (forward a launch)", lambda: _instance(d))
         res.check("video (GStreamer)", _gst)
         res.check("OpenGL (PyOpenGL)", _gl)
         res.check("update check certificates", _certs,

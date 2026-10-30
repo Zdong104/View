@@ -1,7 +1,9 @@
 """Application shell: windows, file routing, drag & drop, menus."""
 import os
+import signal
 import sys
 import threading
+import time
 import traceback
 
 import gi
@@ -75,6 +77,37 @@ def _existing_files(uris, limit=10):
     return out
 
 
+def open_files_dialog(parent, on_files):
+    """The Open dialog; `on_files(list of Gio.File)` when files were chosen.
+    `parent` may be None (the tray icon's Open… with no window open)."""
+    fd = Gtk.FileDialog(title=_("Open"))
+    filters, default = _make_filters()
+    fd.set_filters(filters)
+    fd.set_default_filter(default)
+
+    def done(fd_, res):
+        try:
+            lst = fd_.open_multiple_finish(res)
+        except GLib.Error:
+            return
+        on_files([lst.get_item(i) for i in range(lst.get_n_items())])
+    fd.open_multiple(parent, None, done)
+
+
+def _stop_engines():
+    """Background mode: end llama-server, the OCR and translation helpers and
+    running recognitions, and unload their models (only those that were
+    used: nothing is imported here).  A thread: stopping a process waits."""
+    for mod, fn in (("preview.ocr", "release"), ("preview.translate_llm", "stop"),
+                    ("preview.translate", "release")):
+        m = sys.modules.get(mod)
+        if m is not None:
+            try:
+                getattr(m, fn)()
+            except Exception:  # noqa: BLE001
+                traceback.print_exc()
+
+
 def _suffixes(exts):
     return sorted(e.lstrip(".") for e in exts)
 
@@ -144,6 +177,13 @@ def _note_startup(widget, _clock):
     if runtime.startup_seconds is None:
         runtime.mark("first frame")
         runtime.startup_seconds = runtime.startup_marks[-1][1]
+        t0 = os.environ.get("VIEW_OPEN_T0")      # packaging/snap/open-latency.sh
+        if t0:
+            try:
+                print(f"View: first frame {time.time() - float(t0):.3f} s after VIEW_OPEN_T0 "
+                      "(new process)", file=sys.stderr, flush=True)
+            except ValueError:
+                pass
         if runtime.startup_trace:
             print(f"{APP_NAME} {runtime.VERSION} startup trace "
                   "(seconds since the process started):", flush=True)
@@ -224,6 +264,47 @@ def debug_info(window=None) -> str:
     except Exception as e:  # noqa: BLE001
         lines.append(f"Touchpad: unavailable ({e})")
     return "\n".join(lines) + "\n"
+
+
+def _to_front(win):
+    """Windows: present() activates a window, but a View that is not the
+    foreground app then only flashes its taskbar button.  A forwarded launch
+    (preview.instance: AllowSetForegroundWindow) or a click on the tray icon
+    gave us the right to come to the front: use it."""
+    if not runtime.IS_WINDOWS:
+        return
+    try:
+        import ctypes
+        surface = win.get_surface()
+        if surface is None:
+            return
+        api = ctypes.pythonapi
+        api.PyCapsule_GetPointer.restype = ctypes.c_void_p
+        api.PyCapsule_GetPointer.argtypes = [ctypes.py_object, ctypes.c_char_p]
+        ptr = api.PyCapsule_GetPointer(surface.__gpointer__, None)
+        k32 = ctypes.windll.kernel32
+        k32.GetModuleHandleW.restype = ctypes.c_void_p
+        for name in ("libgtk-4-1.dll", "gtk-4-1.dll", "gtk-4.dll"):     # MSYS2, gvsbuild
+            if k32.GetModuleHandleW(name):
+                get = ctypes.CDLL(name).gdk_win32_surface_get_handle
+                get.argtypes, get.restype = [ctypes.c_void_p], ctypes.c_void_p
+                hwnd = get(ptr)
+                if hwnd:
+                    user32 = ctypes.windll.user32
+                    user32.SetForegroundWindow.argtypes = [ctypes.c_void_p]
+                    user32.SetForegroundWindow(hwnd)
+                return
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _set_startup_id(win, token):
+    """Present `win` with a launch's activation token (Wayland xdg-activation,
+    X11 startup notification), so it is raised rather than flagged."""
+    try:
+        win.set_startup_id(token)
+    except Exception:  # noqa: BLE001
+        pass
 
 
 class MainWindow(Adw.ApplicationWindow):
@@ -507,18 +588,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.get_application().route_files(list(files), self)
 
     def open_dialog(self):
-        fd = Gtk.FileDialog(title=_("Open"))
-        filters, default = _make_filters()
-        fd.set_filters(filters)
-        fd.set_default_filter(default)
-
-        def done(fd_, res):
-            try:
-                lst = fd_.open_multiple_finish(res)
-            except GLib.Error:
-                return
-            self.open_files([lst.get_item(i) for i in range(lst.get_n_items())])
-        fd.open_multiple(self, None, done)
+        open_files_dialog(self, self.open_files)
 
     # ---- drag & drop --------------------------------------------------------------
     def _on_drag_enter(self, _dt, _x, _y):
@@ -568,6 +638,11 @@ class MainWindow(Adw.ApplicationWindow):
             dlg.set_default_response("cancel")
         dlg.set_close_response("cancel")
 
+        def kept():
+            app = self.get_application()
+            if app is not None:
+                app.cancel_quit()          # a Quit that was closing every window stops
+
         def response(_d, rid):
             if rid == "discard":
                 self._confirmed_close = True
@@ -577,7 +652,11 @@ class MainWindow(Adw.ApplicationWindow):
                     if ok:
                         self._confirmed_close = True
                         self.close()
+                    else:
+                        kept()
                 v.save_changes(after)
+            else:
+                kept()
         dlg.connect("response", response)
         dlg.present(self)
         return True
@@ -586,11 +665,11 @@ class MainWindow(Adw.ApplicationWindow):
 class PreviewApp(Adw.Application):
     def __init__(self):
         GLib.set_application_name(APP_NAME)
-        flags = Gio.ApplicationFlags.HANDLES_OPEN
-        if runtime.IN_SNAP:
-            # Owning our ID on the session bus needs a dbus slot, and the
-            # Snap Store holds every upload with one for manual review.
-            flags |= Gio.ApplicationFlags.NON_UNIQUE
+        # NON_UNIQUE everywhere: owning our ID on the session bus needs a dbus
+        # slot in the snap (the Snap Store holds every upload with one for
+        # manual review), so preview.instance hands launches to the running
+        # View instead, on every platform.
+        flags = Gio.ApplicationFlags.HANDLES_OPEN | Gio.ApplicationFlags.NON_UNIQUE
         super().__init__(application_id=APP_ID, flags=flags)
         self.recent_menu = Gio.Menu()
         self.recent_items = []          # [(uri, Gio.File)], found by _refresh_recent
@@ -599,20 +678,18 @@ class PreviewApp(Adw.Application):
         self._want_signature = False
         self.updater = None
         self._updater_started = False
+        self._server = None             # preview.instance.Server: this is the running View
+        self._background = False        # no window open, still running
+        self._quitting = False          # Quit is closing the windows: then exit
+        self._warming = False
         self.add_main_option("new-signature", 0, GLib.OptionFlags.NONE, GLib.OptionArg.NONE,
                              "Draw a new signature with the touchpad", None)
         self.connect("handle-local-options", self._on_local_options)
 
     # ---- command line ------------------------------------------------------------
     def _on_local_options(self, _app, options):
+        # (a running View gets --new-signature through preview.instance)
         if options.contains("new-signature"):
-            try:
-                self.register(None)
-            except GLib.Error:
-                return -1
-            if self.get_is_remote():
-                self.activate_action("new-signature", None)
-                return 0
             self._want_signature = True
         return -1
 
@@ -681,6 +758,17 @@ class PreviewApp(Adw.Application):
         self.set_accels_for_action("win.close", ["<Control>w"])
         self.set_accels_for_action("win.fullscreen", ["F11"])
         runtime.mark("menus and actions set up")
+        self._setup_resident()
+
+    def do_shutdown(self):
+        if self._server is not None:
+            self._server.close()
+            # Windows keeps a dead process's notification icon until the
+            # pointer passes over it: take ours away (Linux: it goes with us)
+            if runtime.IS_WINDOWS:
+                from . import tray
+                tray.hide()
+        Adw.Application.do_shutdown(self)
 
     # ---- recent files ------------------------------------------------------------
     def add_recent(self, gfile):
@@ -772,7 +860,7 @@ class PreviewApp(Adw.Application):
     def do_activate(self):
         wins = self.get_windows()
         if wins:
-            (self.get_active_window() or wins[0]).present()
+            self._present_any()
         else:
             win = MainWindow(self)
             runtime.mark("window built")
@@ -835,9 +923,12 @@ class PreviewApp(Adw.Application):
                 return w
         return None
 
-    def route_files(self, files, target=None):
+    def route_files(self, files, target=None, startup_id=""):
         """Open files: all images in one window, each PDF/model in its own.
-        An empty `target` (or empty active window) is reused for the first group."""
+        An empty `target` (or empty active window) is reused for the first group.
+        `startup_id`: the launch's activation token, so the first window comes
+        to the front (Wayland) instead of a "View is ready" notification.
+        Returns the first window shown."""
         images, pdfs, models, cads, tables, videos, texts, unknown = [], [], [], [], [], [], [], []
         files, empty = self._expand_folders(files)
         for f in files:
@@ -850,6 +941,14 @@ class PreviewApp(Adw.Application):
             if cand is not None and cand.is_empty():
                 spare = cand
         first = [None]
+        token = [startup_id]
+
+        def show(w):
+            if token[0]:
+                _set_startup_id(w, token[0])
+                token[0] = ""
+            w.present()
+            _to_front(w)
 
         def win():
             nonlocal spare
@@ -876,7 +975,7 @@ class PreviewApp(Adw.Application):
         for kind, fl in groups:
             w = win()
             w.load_files(kind, fl)
-            w.present()
+            show(w)
         if unknown:
             names = ", ".join(f.get_basename() or "?" for f in unknown[:3])
             msg = (_("Unsupported file: {names}").format(names=names) if len(unknown) == 1
@@ -884,13 +983,16 @@ class PreviewApp(Adw.Application):
                                  "{n} unsupported files: {names}…",
                                  len(unknown)).format(n=len(unknown), names=names))
             anchor = first[0] or target or self._active_main() or MainWindow(self)
-            anchor.present()
+            show(anchor)
             anchor.show_toast(msg)
+            first[0] = first[0] or anchor
         if empty:
             anchor = first[0] or target or self._active_main() or MainWindow(self)
-            anchor.present()
+            show(anchor)
             anchor.show_toast(_("No images in {folder}").format(
                 folder=empty[0].get_basename() or _("this folder")))
+            first[0] = first[0] or anchor
+        return first[0]
 
     @staticmethod
     def _expand_folders(files):
@@ -930,8 +1032,177 @@ class PreviewApp(Adw.Application):
         MainWindow(self).present()
 
     def _quit(self):
-        for w in list(self.get_windows()):
+        """Quit (menu, Ctrl+Q, tray icon): close every window (a document
+        with unsaved changes asks first, and Cancel stops the quit), then exit
+        even when View would otherwise stay in the background."""
+        self._quitting = True
+        wins = list(self.get_windows())
+        if not wins:
+            self._really_quit()
+            return
+        for w in wins:
             w.close()
+
+    def cancel_quit(self):
+        """A window asked about unsaved changes and the user kept it."""
+        self._quitting = False
+
+    def _present_any(self, startup_id=""):
+        """Bring View to the front: the active (or any) window, else a new one."""
+        wins = self.get_windows()
+        win = self.get_active_window() or (wins[0] if wins else None) or MainWindow(self)
+        if startup_id:
+            _set_startup_id(win, startup_id)
+        win.present()
+        _to_front(win)
+        return win
+
+    # ---- resident (background) mode -----------------------------------------------
+    def _setup_resident(self):
+        """The running View (preview.instance made this process the primary):
+        take other launches' files, and decide ourselves when to exit, so that
+        View can stay in the background once its last window closes."""
+        from . import instance
+        server = instance.server
+        if server is None or runtime.startup_trace or self.get_application_id() != APP_ID:
+            return
+        self._server = server
+        self.hold()                     # released only by quit(): see _after_window_removed
+        self.connect("window-added", self._on_window_added)
+        self.connect("window-removed", self._on_window_removed)
+        server.on_restart = lambda: GLib.idle_add(self._really_quit)
+        server.set_handler(lambda req: GLib.idle_add(self._on_remote, req))
+        if not runtime.IS_WINDOWS and hasattr(GLib, "unix_signal_add"):
+            # (default SIGTERM would leave llama-server and the socket behind;
+            # Windows: the tray window's WM_CLOSE / WM_ENDSESSION, see tray.py)
+            try:
+                GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signal.SIGTERM,
+                                     lambda: (self._really_quit(), GLib.SOURCE_REMOVE)[1])
+            except Exception:  # noqa: BLE001
+                traceback.print_exc()
+        try:
+            from . import tray
+            tray.start(activate=lambda: self._present_any(tray.take_token()),
+                       open_files=self._tray_open, new_window=self._new_window,
+                       quit=self._quit)
+        except Exception:  # noqa: BLE001
+            traceback.print_exc()
+
+    def background_wanted(self) -> bool:
+        """Stay running with no window open?  Preferences, or by default only
+        where a tray icon lets the user quit."""
+        from . import instance, tray
+        choice = instance.background_choice()
+        return tray.available() if choice is None else choice
+
+    def _on_remote(self, req):
+        """Another launch, handed over by preview.instance (main loop)."""
+        try:
+            args = [a for a in req.args if a != "--new-signature"]
+            files = [Gio.File.new_for_commandline_arg_and_cwd(a, req.cwd) if req.cwd
+                     else Gio.File.new_for_commandline_arg(a) for a in args]
+            if files:
+                win = self.route_files(files, None, startup_id=req.token)
+            else:
+                win = self._present_any(req.token)
+            if "--new-signature" in req.args:
+                self._new_signature()
+            if win is not None and "VIEW_OPEN_T0" in req.env:
+                win.add_tick_callback(lambda *_a: (req.report_shown(), GLib.SOURCE_REMOVE)[1])
+            else:
+                req.report_shown()
+        except Exception:  # noqa: BLE001
+            traceback.print_exc()
+            req.report_shown()
+        return GLib.SOURCE_REMOVE
+
+    def _tray_open(self):
+        open_files_dialog(self._active_main(), lambda files: self.route_files(files))
+
+    def _on_window_added(self, _app, _win):
+        if self._warming:
+            return
+        self._server.idle = False
+        if self._background:
+            self._background = False
+            from . import tray
+            tray.hide()
+
+    def _on_window_removed(self, _app, win):
+        if self._warming:
+            return
+        viewer = getattr(win, "viewer", None)
+        if viewer is not None and hasattr(viewer, "release"):
+            # signal closures keep a closed window (and its decoded document)
+            # alive through a GObject reference cycle: drop the content now
+            def free():
+                try:
+                    viewer.release()
+                except Exception:  # noqa: BLE001
+                    traceback.print_exc()
+                return GLib.SOURCE_REMOVE
+            GLib.idle_add(free)
+        GLib.idle_add(self._after_window_removed)
+
+    def _after_window_removed(self):
+        if self.get_windows():
+            return GLib.SOURCE_REMOVE
+        self._server.idle = True
+        if self._quitting or not self.background_wanted():
+            self._really_quit()
+        else:
+            self._enter_background()
+        return GLib.SOURCE_REMOVE
+
+    def background_changed(self):
+        """Preferences switched the background mode (it applies when the last
+        window closes; with none open, now)."""
+        if self._server is not None and not self.get_windows():
+            self._after_window_removed()
+
+    def _enter_background(self):
+        """The last window closed and View stays: show the tray icon, give back
+        what only open documents needed, then get ready to open the next file
+        fast."""
+        if self._background:
+            return
+        self._background = True
+        try:
+            from . import tray
+            tray.show()
+        except Exception:  # noqa: BLE001
+            traceback.print_exc()
+        threading.Thread(target=_stop_engines, daemon=True, name="view-release").start()
+        GLib.timeout_add(300, self._warm_up)
+
+    def _warm_up(self):
+        """Like the screenshot watcher: import the image viewer and set up a
+        renderer, CSS and icons with a window that is realized but never
+        shown, then hand freed memory back to the system."""
+        if self._background:
+            t0 = time.monotonic()
+            self._warming = True
+            try:
+                win = MainWindow(self)
+                win.ensure_viewer("image")
+                win.realize()
+                win.destroy()
+            except Exception:  # noqa: BLE001
+                traceback.print_exc()
+            finally:
+                self._warming = False
+            if os.environ.get("VIEW_DEBUG_BACKGROUND"):
+                print(f"View: in the background, warmed up in "
+                      f"{(time.monotonic() - t0) * 1000:.0f} ms", file=sys.stderr, flush=True)
+        GLib.timeout_add(500, runtime.give_back_memory)
+        return GLib.SOURCE_REMOVE
+
+    def _really_quit(self):
+        self._quitting = True
+        if self._server is not None:
+            self._server.close()        # the next launch starts a new View
+        self.quit()
+        return GLib.SOURCE_REMOVE
 
     def _any_window(self):
         return self.get_active_window() or self._active_main() or MainWindow(self)

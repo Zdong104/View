@@ -127,8 +127,16 @@ end;
 // watchers), else the files it has open stay behind ("Removed all? No").  Its
 // windows first, as if the user closed them (a document with unsaved changes
 // asks); what is left after a while is stopped.  Mode: close (close the windows
-// and wait), wait, or stop (force).  Returns how many View windows (close,
-// wait) or View processes (stop) are still running.
+// and wait), wait, stop (force), or resident (only a View in the background:
+// no window, just its tray icon).  Returns how many View processes with a
+// window open (close, wait) or View processes (stop) were left, or how many
+// were stopped (resident).
+// View is asked to quit with WM_CLOSE to the hidden window of its tray icon
+// (preview/tray.py: like Quit in its menu, a document with unsaved changes
+// asks).  Not with taskkill without /F: that closes only the front window of
+// a View with windows open (which then stays in the background), and reaches
+// the tray window only when no window is open.  A View with no window open has
+// nothing to ask, so it is not waited for long.
 function StopView(const Mode: String): Integer;
 var
   Script: String;
@@ -142,16 +150,41 @@ begin
     '  $_.ExecutablePath.StartsWith($dir, [StringComparison]::OrdinalIgnoreCase) -and $_.Name -notlike ''unins*'' } }' + #13#10 +
     'function Gui { All | Where-Object { $_.Name -in ''View.exe'', ''view-app.exe'' -and' + #13#10 +
     '  $_.CommandLine -notlike ''*--screenshot-watcher*'' } }' + #13#10 +
+    'function HasWindow($x) { $p = Get-Process -Id $x.ProcessId -ErrorAction SilentlyContinue' + #13#10 +
+    '  [bool]($p -and $p.MainWindowHandle -ne [IntPtr]::Zero) }' + #13#10 +
+    'function Shown { Gui | Where-Object { HasWindow $_ } }' + #13#10 +
+    'Add-Type -Namespace ViewSetup -Name User32 -MemberDefinition (''[DllImport("user32.dll", CharSet = CharSet.Unicode)] '' +' + #13#10 +
+    '  ''public static extern IntPtr FindWindowEx(IntPtr p, IntPtr a, string c, IntPtr t); '' +' + #13#10 +
+    '  ''[DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint p); '' +' + #13#10 +
+    '  ''[DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);'')' + #13#10 +
+    '# Quit (WM_CLOSE to the tray window); a View without one (an older version): taskkill' + #13#10 +
+    'function Ask($x) { $h = [IntPtr]::Zero; $sent = $false' + #13#10 +
+    '  while (($h = [ViewSetup.User32]::FindWindowEx([IntPtr]::Zero, $h, ''ViewTrayWindow'', [IntPtr]::Zero)) -ne [IntPtr]::Zero) {' + #13#10 +
+    '    $id = [uint32]0; [void][ViewSetup.User32]::GetWindowThreadProcessId($h, [ref]$id)' + #13#10 +
+    '    if ($id -eq $x.ProcessId) { $sent = [ViewSetup.User32]::PostMessage($h, 0x10, [IntPtr]::Zero, [IntPtr]::Zero) } }' + #13#10 +
+    '  if (-not $sent) { taskkill.exe /PID $x.ProcessId 2>&1 | Out-Null } }' + #13#10 +
+    'if ($Mode -eq ''resident'') {' + #13#10 +
+    '  $r = @(Gui | Where-Object { -not (HasWindow $_) })' + #13#10 +
+    '  $r | ForEach-Object { Ask $_ }' + #13#10 +
+    '  $r | ForEach-Object { Wait-Process -Id $_.ProcessId -Timeout 5 -ErrorAction SilentlyContinue }' + #13#10 +
+    '  $r | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }' + #13#10 +
+    '  exit $r.Count }' + #13#10 +
     'if ($Mode -eq ''stop'') {' + #13#10 +
     '  $p = @(All)' + #13#10 +
     '  $p | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }' + #13#10 +
     '  $p | ForEach-Object { Wait-Process -Id $_.ProcessId -Timeout 10 -ErrorAction SilentlyContinue }' + #13#10 +
     '  exit @(All).Count }' + #13#10 +
-    '# without /F taskkill closes the windows (WM_CLOSE), like the user would' + #13#10 +
-    'if ($Mode -eq ''close'') { Gui | ForEach-Object { taskkill.exe /PID $_.ProcessId | Out-Null } }' + #13#10 +
+    '# close the windows (and quit), like the user would' + #13#10 +
+    '$asked = @{}' + #13#10 +
+    'if ($Mode -eq ''close'') { Gui | ForEach-Object { $asked[$_.ProcessId] = 1; Ask $_ } }' + #13#10 +
     '$end = (Get-Date).AddSeconds(15)' + #13#10 +
-    'while (@(Gui).Count -and (Get-Date) -lt $end) { Start-Sleep -Milliseconds 300 }' + #13#10 +
-    'exit @(Gui).Count' + #13#10, False);
+    '$quiet = (Get-Date).AddSeconds(3)' + #13#10 +
+    'while (@(Gui).Count -and (Get-Date) -lt $end -and (@(Shown).Count -or (Get-Date) -lt $quiet)) {' + #13#10 +
+    '  # (wait: the user closed the windows, and View stayed in the background)' + #13#10 +
+    '  Gui | Where-Object { -not $asked[$_.ProcessId] -and -not (HasWindow $_) } | ForEach-Object {' + #13#10 +
+    '    $asked[$_.ProcessId] = 1; Ask $_ }' + #13#10 +
+    '  Start-Sleep -Milliseconds 300 }' + #13#10 +
+    'exit @(Shown).Count' + #13#10, False);
   if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
               '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + Script +
               '" -Dir "' + ExpandConstant('{app}') + '" -Mode ' + Mode, '', SW_HIDE,
@@ -181,6 +214,9 @@ end;
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   StopScreenshotWatchers;
+  // View in the background (tray icon only) has no window for Restart Manager
+  // to close; one with windows open is still left to Restart Manager
+  Log(Format('Stopped %d View(s) running in the background', [StopView('resident')]));
   Result := '';
 end;
 

@@ -51,7 +51,7 @@ EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 POLL_MS = 15             # re-check a new file this often until it is complete…
 POLL_FOR_S = 3           # …for this long (then only CHANGES_DONE_HINT opens it)
 WARM_UP_MS = 1500        # after startup: load the editor before it is needed
-_LOCK_AT = 4096          # Windows locks a byte range: past the PID text
+_LOCK_AT = 4096          # Windows locks a byte range: past the PID text (instance.LOCK_AT)
 
 
 _logfile = None
@@ -325,16 +325,9 @@ def _lock_path() -> str:
 def _lock():
     """Take the watcher lock: the open lock file, or None if a watcher has it.
     (A lock, not a D-Bus name: the snap may not own names.)"""
+    from . import instance
     f = open(_lock_path(), "a+b")
-    try:
-        if runtime.IS_WINDOWS:
-            import msvcrt
-            f.seek(_LOCK_AT)
-            msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
-        else:
-            import fcntl
-            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except OSError:
+    if not instance.try_lock(f, _LOCK_AT):
         f.close()
         return None
     return f
@@ -356,13 +349,8 @@ def _lock_owner() -> int | None:
     """PID of the running watcher, None if there is none."""
     if not running():
         return None
-    try:
-        # unbuffered: a buffered read asks Windows for 8 KiB, which reaches the
-        # byte the watcher has locked (_LOCK_AT) and fails as a whole
-        with open(_lock_path(), "rb", buffering=0) as f:
-            return int(f.read(32).split()[0])
-    except (OSError, ValueError, IndexError):
-        return None
+    from . import instance
+    return instance.read_pid(_lock_path())
 
 
 # ----------------------------------------------------------------- watcher ---
@@ -588,19 +576,6 @@ def _raise_windows(title):
     return False
 
 
-def _give_back_memory():
-    """After an editor closes: free its decoded images and hand the memory back
-    to the system (the watcher stays resident, so otherwise it would keep it)."""
-    import ctypes
-    import gc
-    gc.collect()
-    try:
-        ctypes.CDLL("libc.so.6").malloc_trim(0)
-    except (OSError, AttributeError):
-        pass
-    return False
-
-
 def _age_ms(path):
     """How long ago the file was last written (ms), to see monitor latency."""
     try:
@@ -762,7 +737,7 @@ def _editor_class():
             # resident watcher doesn't hold on to it
             def free():
                 self.viewer.release()
-                GLib.timeout_add(500, _give_back_memory)
+                GLib.timeout_add(500, runtime.give_back_memory)
                 return False
             GLib.idle_add(free)
             return False

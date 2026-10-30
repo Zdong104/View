@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: View\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-28 18:27-0400\n"
+"POT-Creation-Date: 2026-10-29 10:44-0400\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,6 +17,9 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+msgid "Open"
+msgstr ""
 
 msgid "All Supported Files"
 msgstr ""
@@ -208,9 +211,6 @@ msgid "Could not open this file"
 msgstr ""
 
 msgid "Open Another File…"
-msgstr ""
-
-msgid "Open"
 msgstr ""
 
 msgid "Discard Changes?"
@@ -1577,6 +1577,26 @@ msgid ""
 "saves it and copies it to the clipboard"
 msgstr ""
 
+msgid "Background"
+msgstr ""
+
+msgid ""
+"Files then open faster. Quit from View’s icon in the notification area or "
+"with Ctrl+Q"
+msgstr ""
+
+msgid ""
+"Files then open faster. Quit from View’s icon in the top bar or with Ctrl+Q"
+msgstr ""
+
+msgid ""
+"Off by default here: the desktop shows no tray icons (on GNOME, the "
+"AppIndicator extension adds them)"
+msgstr ""
+
+msgid "Keep View running in the background when windows are closed"
+msgstr ""
+
 msgid "System default"
 msgstr ""
 
@@ -2820,6 +2840,9 @@ msgid "Translation — {name}"
 msgstr ""
 
 msgid "Show Beside the Original"
+msgstr ""
+
+msgid "Running in the background"
 msgstr ""
 
 #, python-brace-format

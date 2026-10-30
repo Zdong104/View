@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: View\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-28 18:27-0400\n"
+"POT-Creation-Date: 2026-10-29 10:44-0400\n"
 "PO-Revision-Date: 2026-10-26 15:40-0400\n"
 "Last-Translator: View contributors\n"
 "Language-Team: Simplified Chinese\n"
@@ -14,6 +14,9 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Open"
+msgstr "打开"
 
 msgid "All Supported Files"
 msgstr "所有支持的文件"
@@ -206,9 +209,6 @@ msgstr "无法打开此文件"
 
 msgid "Open Another File…"
 msgstr "打开其他文件…"
-
-msgid "Open"
-msgstr "打开"
 
 msgid "Discard Changes?"
 msgstr "放弃更改？"
@@ -1566,6 +1566,26 @@ msgstr ""
 "按下 Print Screen 后，截图会在 View 中打开以便快速标记；点击“完成”即可保存并"
 "复制到剪贴板"
 
+msgid "Background"
+msgstr "后台运行"
+
+msgid ""
+"Files then open faster. Quit from View’s icon in the notification area or "
+"with Ctrl+Q"
+msgstr "之后打开文件会更快。可从通知区域中的 View 图标或按 Ctrl+Q 退出"
+
+msgid ""
+"Files then open faster. Quit from View’s icon in the top bar or with Ctrl+Q"
+msgstr "之后打开文件会更快。可从顶栏中的 View 图标或按 Ctrl+Q 退出"
+
+msgid ""
+"Off by default here: the desktop shows no tray icons (on GNOME, the "
+"AppIndicator extension adds them)"
+msgstr "此处默认关闭：桌面不显示托盘图标（在 GNOME 上可通过 AppIndicator 扩展添加）"
+
+msgid "Keep View running in the background when windows are closed"
+msgstr "关闭所有窗口后让 View 在后台继续运行"
+
 msgid "System default"
 msgstr "跟随系统"
 
@@ -1650,7 +1670,8 @@ msgstr "体积小，任何电脑都能用，质量较低（Argos，每个语言�
 
 msgid ""
 "Hy-MT2 1.8B, 1.2 GB, best with a GPU (23 languages; the others use Fast)"
-msgstr "Hy-MT2 1.8B，1.2 GB，最好配合 GPU 使用（23 种语言；其他语言使用快速模型）"
+msgstr ""
+"Hy-MT2 1.8B，1.2 GB，最好配合 GPU 使用（23 种语言；其他语言使用快速模型）"
 
 msgid "Model"
 msgstr "模型"
@@ -2578,7 +2599,9 @@ msgstr "这需要高质量翻译模型，只需下载一次（{size}）。"
 msgid ""
 "No GPU was found, so it runs on the processor: expect minutes per document. "
 "The Fast model in Preferences is quicker."
-msgstr "未找到 GPU，因此将在处理器上运行：每篇文档需要几分钟。偏好设置中的快速模型更快。"
+msgstr ""
+"未找到 GPU，因此将在处理器上运行：每篇文档需要几分钟。偏好设置中的快速模型更"
+"快。"
 
 #, python-brace-format
 msgid "This needs a language pack, downloaded once (70–300 MB): {names}."
@@ -2816,6 +2839,9 @@ msgstr "翻译 — {name}"
 
 msgid "Show Beside the Original"
 msgstr "显示在原文旁边"
+
+msgid "Running in the background"
+msgstr "正在后台运行"
 
 #, python-brace-format
 msgid "{APP_NAME} {version} is available"

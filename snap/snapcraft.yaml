@@ -49,8 +49,9 @@ platforms:
   amd64:
 
 # No dbus slot: the store holds uploads that declare one for human review.
-# Under the snap View runs NON_UNIQUE instead (see PreviewApp.__init__), so
-# it never needs to own io.github.zdong104.View on the session bus.
+# View runs NON_UNIQUE instead (see PreviewApp.__init__) and hands a second
+# launch to the running View over a socket in $XDG_RUNTIME_DIR (preview.instance),
+# so it never needs to own io.github.zdong104.View on the session bus.
 
 apps:
   view:
@@ -70,6 +71,10 @@ apps:
       - audio-playback
       - network             # update check (About / Check for Updates…)
       - raw-input           # touchpad signing (evdev); manual: snap connect view:raw-input
+      # the tray icon while View runs in the background (preview.tray): lets it
+      # call org.kde.StatusNotifierWatcher and the shell call our
+      # /StatusNotifierItem and /MenuBar (com.canonical.dbusmenu); auto-connected
+      - unity7
 
   # Screenshot quick edit: watches ~/Pictures/Screenshots (home plug) and opens
   # new captures for markup.  snapd's userd starts it at login when View has
@@ -137,7 +142,18 @@ parts:
       A=$TRIPLET
       # PyGObject/pycairo from the platform (the extension puts them on
       # PYTHONPATH); our package and staged pure-Python modules first.
-      export PYTHONPATH="\$SNAP/usr/lib/view-app:\$SNAP/usr/lib/python3/dist-packages:\$SNAP/gnome-platform/usr/lib/python3/dist-packages\${PYTHONPATH:+:\$PYTHONPATH}"
+      # Not the platform's standard library, which the extension puts first:
+      # it has no byte code (and PYTHONDONTWRITEBYTECODE=1), so every start
+      # compiled ~250 modules again (~0.4 s).  Without it the interpreter uses
+      # the core26 base's /usr/lib/python3.14, which is complete, ships its
+      # .pyc files and is where lib-dynload already came from.
+      PP=
+      IFS=:
+      for d in \${PYTHONPATH:-}; do
+          case "\$d" in "\$SNAP"/gnome-platform/usr/lib/python3.[0-9]*) ;; *) PP="\${PP:+\$PP:}\$d" ;; esac
+      done
+      unset IFS
+      export PYTHONPATH="\$SNAP/usr/lib/view-app:\$SNAP/usr/lib/python3/dist-packages:\$SNAP/gnome-platform/usr/lib/python3/dist-packages\${PP:+:\$PP}"
       export GI_TYPELIB_PATH="\$SNAP/usr/lib/\$A/girepository-1.0\${GI_TYPELIB_PATH:+:\$GI_TYPELIB_PATH}"
       export LD_LIBRARY_PATH="\${LD_LIBRARY_PATH:+\$LD_LIBRARY_PATH:}\$SNAP/usr/lib/\$A:\$SNAP/usr/lib/\$A/blas:\$SNAP/usr/lib/\$A/lapack"
       export GST_PLUGIN_SYSTEM_PATH="\$SNAP/usr/lib/\$A/gstreamer-1.0:\$SNAP/gnome-platform/usr/lib/\$A/gstreamer-1.0"

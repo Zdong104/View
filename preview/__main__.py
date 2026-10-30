@@ -12,17 +12,24 @@ Options handled here (before GTK starts, no display needed):
   --disable-files-integration    undo the above
   --print-files-extension        print the Files "Combine Images into PDF" extension
 Everything else (files, --new-signature, GApplication options) goes to the app.
+A plain open (files, nothing, --new-signature) is first offered to a View that
+is already running (preview.instance), before GLib or GTK are loaded.
 """
 import sys
 
 from . import i18n, runtime
 
-runtime.configure_gl_env()
-runtime.configure_frozen_env()
-if runtime.IS_WINDOWS and runtime.FROZEN:
-    from . import opengl_win
-    opengl_win.ensure()      # no OpenGL driver: bundled Mesa, before GTK loads opengl32.dll
-    runtime.mark("OpenGL chosen")
+
+def _prepare_gtk():
+    """Environment GTK (and PyOpenGL) must see before they load: every path
+    that may start GTK comes through here, after a forwarded launch has
+    already gone."""
+    runtime.configure_gl_env()
+    runtime.configure_frozen_env()
+    if runtime.IS_WINDOWS and runtime.FROZEN:
+        from . import opengl_win
+        opengl_win.ensure()      # no OpenGL driver: bundled Mesa, before GTK loads opengl32.dll
+        runtime.mark("OpenGL chosen")
 
 
 def _usage_extra():
@@ -51,7 +58,6 @@ def _safe_stdio():
 
 def main(argv=None):
     _safe_stdio()
-    i18n.setup()
     argv = list(sys.argv if argv is None else argv)
     args = argv[1:]
     first = args[0] if args else ""
@@ -59,6 +65,14 @@ def main(argv=None):
     if first in ("--version", "-v", "-V"):
         print(f"{runtime.APP_NAME} {runtime.VERSION}")
         return 0
+    from . import instance
+    if instance.wanted(args):
+        outcome = instance.claim(args)
+        runtime.mark(f"single instance: {outcome}")
+        if outcome == instance.FORWARDED:
+            return 0
+    _prepare_gtk()
+    i18n.setup()
     if first == "--selftest":
         from .selftest import main as selftest_main
         return selftest_main(args[1:])

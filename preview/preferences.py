@@ -32,6 +32,10 @@ class PreferencesDialog(Adw.PreferencesDialog):
         if screenshot.supported():
             page.add(self._screenshots_group())
 
+        from . import instance
+        if instance.supported():
+            page.add(self._background_group())
+
         page.add(self._updates_group())
         page.add(self._language_group())
 
@@ -93,6 +97,35 @@ class PreferencesDialog(Adw.PreferencesDialog):
                 screenshot.set_enabled(r.get_active())
             except OSError as e:
                 self.add_toast(Adw.Toast(title=_("Could not change the setting: {error}").format(error=e)))
+        row.connect("notify::active", toggled)
+        grp.add(row)
+        return grp
+
+    # ---- background ----
+    def _background_group(self):
+        from . import instance, tray
+        grp = Adw.PreferencesGroup(title=_("Background"))
+        choice = instance.background_choice()
+        if runtime.IS_WINDOWS:
+            sub = _("Files then open faster. Quit from View’s icon in the notification area "
+                    "or with Ctrl+Q")
+        else:
+            sub = _("Files then open faster. Quit from View’s icon in the top bar or with Ctrl+Q")
+        if choice is None and not tray.available():
+            sub += "\n" + _("Off by default here: the desktop shows no tray icons "
+                            "(on GNOME, the AppIndicator extension adds them)")
+        row = Adw.SwitchRow(title=_("Keep View running in the background when windows are closed"),
+                            subtitle=sub,
+                            active=tray.available() if choice is None else choice)
+
+        def toggled(r, _pspec):
+            try:
+                instance.set_background_choice(r.get_active())
+            except OSError as e:
+                self.add_toast(Adw.Toast(
+                    title=_("Could not change the setting: {error}").format(error=e)))
+                return
+            self.app.background_changed()
         row.connect("notify::active", toggled)
         grp.add(row)
         return grp

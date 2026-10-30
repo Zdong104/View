@@ -254,6 +254,22 @@ def loaded_modules() -> list[str]:
     return out
 
 
+def give_back_memory():
+    """Free what closed windows left (decoded images, textures) and hand the
+    memory back to the system: a resident process (the screenshot watcher, View
+    in the background) would otherwise keep it.  Returns False (a GLib source
+    callback)."""
+    import ctypes
+    import gc
+    gc.collect()
+    if IS_LINUX:
+        try:
+            ctypes.CDLL("libc.so.6").malloc_trim(0)
+        except (OSError, AttributeError):
+            pass
+    return False
+
+
 def package_root() -> str:
     """Directory that contains the ``preview`` package (for ``-m preview`` fallbacks)."""
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

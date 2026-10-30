@@ -22,6 +22,7 @@ Public API (kept stable, other viewers integrate it):
                                          callback(lines, error) on the GTK main loop
     lines_to_text(lines) -> str          reading order
     TextOverlay                          selectable-text layer for any host widget
+    release()                            stop running work, free the engine
 
 Paths / bytes are decoded with EXIF orientation applied (what a viewer shows);
 a PIL image is used exactly as given.
@@ -62,6 +63,9 @@ _engine = None
 _engine_lock = threading.Lock()
 _run_lock = threading.Lock()  # onnxruntime sessions are fine concurrently, but one at a time keeps latency predictable
 _unavailable_reason: str | None = None
+_gen = 0                      # +1 on release(): recognitions running then give up
+_starting = None              # the _Helper that _get_engine() is loading (release() ends it)
+_tls = threading.local()      # the _gen a recognition started under
 _LOCAL_ONLY = False  # set inside the helper process itself
 
 
@@ -142,10 +146,13 @@ class _Helper:
         return self._read()
 
     def request(self, header, payload=b""):
+        gen = _gen
         try:
             res = self._call(header, payload)
         except (OSError, ValueError, RuntimeError):
             self.close()
+            if gen != _gen:
+                raise RuntimeError("Cancelled") from None    # release() stopped it
             res = self._call(header, payload)        # one restart
         if "error" in res:
             raise RuntimeError(res["error"])
@@ -174,17 +181,24 @@ def _bundled_models_present() -> bool:
 
 
 def _get_engine():
-    global _engine
+    global _engine, _starting
     if _engine is not None:
         return _engine
     with _engine_lock:
         if _engine is not None:
             return _engine
+        gen = _gen
         exe = helper_path()
         if exe:
-            helper = _Helper(exe)
-            with _run_lock:
-                helper.request({"cmd": "load"})
+            helper = _starting = _Helper(exe)
+            try:
+                with _run_lock:
+                    helper.request({"cmd": "load"})
+            finally:
+                _starting = None
+            if gen != _gen:           # release() came while it loaded: don't keep it
+                helper.close()
+                raise RuntimeError("Cancelled")
             _engine = helper
             return _engine
         if not is_available():
@@ -204,8 +218,58 @@ def _get_engine():
         if not _bundled_models_present():
             os.makedirs(CACHE_DIR, exist_ok=True)
             params["Global.model_root_dir"] = CACHE_DIR
-        _engine = RapidOCR(params=params)
+        engine = RapidOCR(params=params)
+        _make_abortable()
+        if gen != _gen:               # release() came while it loaded: not kept
+            return engine
+        _engine = engine
         return _engine
+
+
+class _Released(RuntimeError):
+    pass
+
+
+def _make_abortable():
+    """Let release() stop a recognition that is running in this process: one
+    image can take RapidOCR many model calls (and 15-30 s of CPU); before each
+    one, give up if release() came since the recognition started."""
+    try:
+        from rapidocr.inference_engine.onnxruntime import main as ort
+        cls = ort.OrtInferSession
+        if getattr(cls, "_view_abortable", False):
+            return
+        run = cls.__call__
+
+        def call(self, *a, **kw):
+            gen = getattr(_tls, "gen", None)
+            if gen is not None and gen != _gen:
+                raise _Released("Cancelled")
+            return run(self, *a, **kw)
+        cls.__call__ = call
+        cls._view_abortable = True
+    except Exception:  # noqa: BLE001
+        pass            # another rapidocr layout: running work just finishes
+
+
+def release():
+    """A resident View with no window open: stop recognitions in progress (at
+    their next model call; a helper process is ended) and drop the engine so
+    its memory can go back to the system.  The next recognition loads it again."""
+    global _engine, _gen
+    _gen += 1
+    engine = _engine
+    if isinstance(engine, _Helper):
+        engine.close()
+    starting = _starting                         # one still loading: _get_engine drops it
+    if starting is not None:
+        starting.close()
+    if _engine_lock.acquire(blocking=False):     # (not while one is being created)
+        try:
+            if _engine is engine:
+                _engine = None
+        finally:
+            _engine_lock.release()
 
 
 def warm_up_async():
@@ -269,6 +333,7 @@ def recognize_raw(arr):
 
 def recognize(image) -> list[OcrLine]:
     """Run OCR on a PIL image / path / bytes. Blocking (1-3 s on a CPU)."""
+    _tls.gen = _gen
     im = _to_rgb_image(image)
     w, h = im.size
     if h < 8 or w < 8:

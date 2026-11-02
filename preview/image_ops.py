@@ -629,7 +629,12 @@ def _write_webp(fp, frames, loop, lossless, quality, exif=None, icc=None, step=N
     kmin, kmax = (9, 17) if lossless else (3, 5)
     for fr, dur in frames:
         if enc is None:
-            enc = _webp.WebPAnimEncoder(fr.size, 0, loop or 0, False, kmin, kmax, False, False)
+            # background, loop, minimize_size, kmin, kmax, allow_mixed, verbose
+            args = (0, loop or 0, False, kmin, kmax, False, False)
+            try:
+                enc = _webp.WebPAnimEncoder(fr.size, *args)         # Pillow 11.2+
+            except TypeError:
+                enc = _webp.WebPAnimEncoder(*fr.size, *args)        # Pillow ≤ 11.1 (Debian 13)
         frame = fr if not _opaque(fr) else fr.convert("RGB")
         enc.add(frame.getim(), round(ts), lossless, quality, 100, 0)
         ts += dur if dur > 0 else 100

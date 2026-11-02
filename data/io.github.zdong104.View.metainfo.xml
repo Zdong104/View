@@ -79,6 +79,17 @@
     <keyword>STL</keyword>
   </keywords>
   <releases>
+    <release version="0.2.4" date="2026-11-02">
+      <description>
+        <p>Crop images, and touchpad signing fixed on haptic touchpads.</p>
+        <ul>
+          <li>Image viewer: a Crop tool (Ctrl+K) with handles, aspect ratio presets and undo; animated GIF and WebP are cropped on every frame.</li>
+          <li>Markup and Sign sit side by side in the header of the image and PDF viewers, and Markup has its own highlighter icon.</li>
+          <li>New Signature: click the box or press Space to sign on the touchpad; the Start button is gone.</li>
+          <li>Touchpad signing works on the haptic touchpad of the ThinkPad P1 Gen 7 (Sensel), where every stroke used to end up as a dot in the top-left corner.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.3" date="2026-10-29">
       <description>
         <p>Files open much faster, and a high-quality translation model.</p>

@@ -106,6 +106,15 @@ def _pk(ref):
     return (ref.src, ref.index, ref.rotation, _forms_fp(ref.forms))
 
 
+def _stamp(path):
+    """What tells a rewrite of path apart from the file we have open."""
+    try:
+        st = os.stat(path)
+    except OSError:
+        return None
+    return st.st_ino, st.st_size, st.st_mtime_ns
+
+
 def _human(n):
     for u in ("bytes", "KB", "MB", "GB"):
         if n < 1000 or u == "GB":
@@ -138,6 +147,10 @@ class Doc:
         self.pages: list[PageRef] = []
         self.clean_key = ()
         self.expanded = True
+        self.monitor = None             # Gio.FileMonitor on path
+        self.stamp = None               # _stamp(path) of the file we have open
+        self.settle = 0                 # debounce timer after a change on disk
+        self.reloading = None           # token of the reload in flight
 
     def key(self):
         return tuple(r.key() for r in self.pages)
@@ -201,6 +214,8 @@ class PdfViewer(Viewer):
         self._build_actions()
 
     def _shutdown(self):
+        for d in self.docs:
+            self._unwatch(d)
         if self._translation is not None:
             from . import translate_view
             translate_view.shutdown_for(self)
@@ -584,7 +599,6 @@ class PdfViewer(Viewer):
 
     def _try_open(self, src, gfile, bad_password=False):
         """Open src in a thread; attach on the main loop (or ask a password)."""
-        gen = self._gen
 
         def work():
             try:
@@ -600,7 +614,7 @@ class PdfViewer(Viewer):
                 GLib.idle_add(done, None, None, e)
 
         def done(pdoc, sizes, err):
-            if self._released or gen != self._gen:
+            if self._released:
                 return False
             if err is not None:
                 if isinstance(err, GLib.Error) and _is_encrypted_error(err):
@@ -699,6 +713,7 @@ class PdfViewer(Viewer):
         d.pages = [PageRef(sid, i) for i in range(pdoc.get_n_pages())]
         d.clean_key = d.key()
         self.docs.append(d)
+        self._watch(d)
         first = len(self.docs) == 1
         self._loaded = bool(d.pages) or self._loaded
         self.stack.set_visible_child_name("doc")
@@ -767,6 +782,135 @@ class PdfViewer(Viewer):
         if r is None:
             r = self._readers[sid] = pdf_ops.open_reader(self.sources[sid])
         return r
+
+    # ======================================================== file on disk ====
+    _SETTLE_EVENTS = (Gio.FileMonitorEvent.CHANGES_DONE_HINT, Gio.FileMonitorEvent.CREATED,
+                      Gio.FileMonitorEvent.RENAMED, Gio.FileMonitorEvent.MOVED_IN)
+
+    def _watch(self, d):
+        """Follow d's file like Document Viewer does: LibreOffice re-exporting a
+        PDF rewrites it in place, and our open Poppler docs then lose its pages."""
+        self._unwatch(d)
+        if not d.path or self.sources[d.src].data is not None:
+            return
+        d.stamp = _stamp(d.path)
+        try:
+            d.monitor = Gio.File.new_for_path(d.path).monitor_file(
+                Gio.FileMonitorFlags.WATCH_MOVES, None)
+        except GLib.Error:
+            return
+        d.monitor.connect("changed", self._on_disk_event, d)
+
+    def _unwatch(self, d):
+        if d.monitor is not None:
+            d.monitor.cancel()
+            d.monitor = None
+        if d.settle:
+            GLib.source_remove(d.settle)
+            d.settle = 0
+        d.reloading = None
+
+    def _on_disk_event(self, _m, _f, _other, ev, d):
+        # writers take a while (LibreOffice ~10 s): wait until it's been quiet
+        if ev in self._SETTLE_EVENTS or (ev == Gio.FileMonitorEvent.CHANGED and d.settle):
+            if d.settle:
+                GLib.source_remove(d.settle)
+            d.settle = GLib.timeout_add(500, self._on_disk_settled, d)
+
+    def _on_disk_settled(self, d):
+        if self._busy:                  # our own save is writing: look after it
+            return True
+        d.settle = 0
+        st = _stamp(d.path) if d.path else None
+        if self._released or d not in self.docs or st is None or st == d.stamp \
+                or self.sources[d.src].data is not None:
+            return False
+        if d.dirty() or (self.mk.pad is not None and d is self.doc):
+            self._offer_reload(d)
+        else:
+            self._reload(d)
+        return False
+
+    def _offer_reload(self, d):
+        self.toast(_("“{name}” changed on disk").format(name=d.name), _("Reload"),
+                   lambda: self._reload(d, discard=True))
+
+    def _reload(self, d, discard=False):
+        """Reopen d's file in a thread. A file still being written doesn't open
+        (or has no %%EOF yet): keep the current view, the next event retries."""
+        if self._released or d not in self.docs or not d.path:
+            return
+        src = Source(d.name, path=d.path, password=self.sources[d.src].password)
+        token = d.reloading = object()
+
+        def work():
+            try:
+                st = _stamp(src.path)   # before opening: a later write differs
+                with open(src.path, "rb") as fh:
+                    fh.seek(max(0, st[1] - 1024))
+                    if b"%%EOF" not in fh.read():
+                        return
+                pdoc = poppler_open(src)
+                sizes = [pdoc.get_page(i).get_size() for i in range(pdoc.get_n_pages())]
+            except Exception:  # noqa: BLE001
+                return
+            if sizes:
+                GLib.idle_add(done, pdoc, sizes, st)
+
+        def done(pdoc, sizes, st):
+            if self._released or d.reloading is not token or d not in self.docs \
+                    or d.path != src.path:
+                return False
+            d.reloading = None
+            if d.dirty() and not discard:   # edited while it opened
+                self._offer_reload(d)
+            else:
+                self._swap_in(d, src, pdoc, sizes, st)
+            return False
+
+        threading.Thread(target=work, name="pdf-reload", daemon=True).start()
+
+    def _swap_in(self, d, src, pdoc, sizes, stamp):
+        """d's file was rewritten: show the new one under a new source id (so
+        nothing keyed by the old one can leak in), keeping the current page."""
+        old = d.src
+        same = [self._base.get((old, i)) for i in range(len(d.pages))] == sizes
+        sid = self._add_source(src, pdoc)
+        for i, sz in enumerate(sizes):
+            self._base[(sid, i)] = sz
+        d.src, d.stamp = sid, stamp
+        d.pages = [PageRef(sid, i) for i in range(len(sizes))]
+        d.clean_key = d.key()
+        # undo can't bring back the pages of a file that is gone
+        di = self.docs.index(d)
+        for pages, _a in self._undo + self._redo:
+            if di < len(pages):
+                pages[di] = [r.copy() for r in d.pages]
+        if not any(r.src == old for o in self.docs for r in o.pages) and not any(
+                r.src == old for pages, _a in self._undo + self._redo for p in pages for r in p):
+            self._forget_source(old)
+        self._gen += 1                  # render threads drop their stale Poppler docs
+        self.worker.reset(self.sources, self._gen)
+        self.tworker.reset(self.sources, self._gen)
+        if d is self.doc:
+            self.mk.select(None)
+        self._changed()
+        if d is self.doc:
+            if not same:
+                self.canvas.scroll_to_page(self.current)
+            self._refresh_side_lists()
+
+    def _forget_source(self, sid):
+        """Drop everything derived from a source no page uses any more."""
+        self._pdocs.pop(sid, None)
+        fh = getattr(self._readers.pop(sid, None), "_preview_fh", None)
+        if fh is not None:
+            fh.close()
+        for m in (self._base, self._fields, self._has_text, self.ocr_lines):
+            for k in [k for k in m if k[0] == sid]:
+                del m[k]
+        self.cache.drop_src(sid)
+        self.thumbs.drop_src(sid)
 
     # ===================================================== viewer contract ====
     def get_title(self) -> str:
@@ -1969,6 +2113,9 @@ class PdfViewer(Viewer):
         keep = [d for d in self.docs if d.pages]
         if keep and len(keep) != len(self.docs):
             act = self.docs[self.active]
+            for d in self.docs:
+                if d not in keep:
+                    self._unwatch(d)
             self.docs = keep
             self.active = keep.index(act) if act in keep else 0
 
@@ -2325,6 +2472,7 @@ class PdfViewer(Viewer):
             d.gfile = Gio.File.new_for_path(path)
             d.pages = [PageRef(sid, i) for i in range(pdoc.get_n_pages())]
             d.clean_key = d.key()
+            self._watch(d)              # after our own write: its stamp is the new one
             self._undo.clear()
             self._redo.clear()
             if di == self.active:

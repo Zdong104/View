@@ -130,9 +130,19 @@ class RenderWorker:
 
     def _render(self, st, job, sources):
         doc = st.docs.get(job.src)
-        if doc is None:
+        fresh = doc is None
+        if fresh:
             doc = st.docs[job.src] = pdf_ops.poppler_open(sources[job.src])
         page = doc.get_page(job.index)
+        if page is None and not fresh:
+            # the file was rewritten under our doc (same inode, new xref): reopen once
+            doc = st.docs[job.src] = pdf_ops.poppler_open(sources[job.src])
+            for d in (st.applied, st.orig):
+                for k in [k for k in d if k[0] == job.src]:
+                    del d[k]
+            page = doc.get_page(job.index)
+        if page is None:
+            raise IndexError(f"no page {job.index} in source {job.src}")
         pid = (job.src, job.index)
         if job.forms or st.applied.get(pid):
             if st.applied.get(pid) != job.forms:
@@ -220,6 +230,13 @@ class TexCache:
             if best is None or t.get_width() > best.get_width():
                 best = t
         return best
+
+    def drop_src(self, src):
+        for pk in [pk for pk in self.by_page if pk[0] == src]:
+            for k in self.by_page.pop(pk):
+                v = self.d.pop(k, None)
+                if v is not None:
+                    self.size -= v[1]
 
     def clear(self):
         self.d.clear()

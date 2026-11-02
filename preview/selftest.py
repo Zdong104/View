@@ -199,6 +199,84 @@ def _png(paths):
     return f"Pillow + GdkPixbuf ({len(fmts)} loaders)"
 
 
+def _image_crop(d):
+    """The Crop op on a still image (saved as PNG and JPEG) and on animated
+    GIF / WebP: every frame is cropped and keeps its timing."""
+    from PIL import Image
+    from .image_ops import anim_probe, apply_ops, iter_frames, save_animated, save_any
+    box = ("crop", 10, 5, 30, 25)
+    im = Image.new("RGB", (40, 30), (255, 0, 0))
+    im.paste((0, 0, 255), box[1:])
+    out = apply_ops(im, [box])
+    if out.size != (20, 20) or out.getextrema() != ((0, 0), (0, 0), (255, 255)):
+        raise RuntimeError(f"still crop: {out.size} {out.getextrema()}")
+    for ext in (".png", ".jpg"):
+        dest = os.path.join(d, "crop" + ext)
+        save_any(out, None, None, dest)
+        with Image.open(dest) as back:
+            if back.size != (20, 20):
+                raise RuntimeError(f"{ext} saved as {back.size}")
+    colors, durs = [(255, 0, 0), (0, 255, 0), (0, 0, 255)], [80, 120, 200]
+    frames = [Image.new("RGB", (40, 30), c) for c in colors]
+    done = []
+    for ext in (".gif", ".webp"):
+        src, dest = os.path.join(d, "anim" + ext), os.path.join(d, "anim-crop" + ext)
+        frames[0].save(src, save_all=True, append_images=frames[1:], duration=durs, loop=0)
+        if anim_probe(src) is None:
+            continue                     # no animated WebP in this Pillow
+        save_animated(src, [box], dest)
+        got = list(iter_frames(dest))
+        if [f.size for f, _ in got] != [(20, 20)] * 3:
+            raise RuntimeError(f"{ext}: frames {[f.size for f, _ in got]}")
+        if [t for _, t in got] != durs:
+            raise RuntimeError(f"{ext}: timing {[t for _, t in got]} != {durs}")
+        if any(abs(a - b) > 12 for (f, _), c in zip(got, colors)    # WebP may be lossy
+               for a, b in zip(f.getpixel((10, 10)), c)):
+            raise RuntimeError(f"{ext}: frame colours changed")
+        done.append(ext[1:].upper())
+    return "PNG, JPEG, animated " + " + ".join(done)
+
+
+def _ui_crop(v, pump):
+    """Crop tool in the image viewer: enter it, lock 1:1, apply with Enter's
+    action, check the image and a markup item moved with it, undo."""
+    from .markup import Item
+    it = v.current
+    end = time.monotonic() + 15
+    while (it is None or it.rendered is None) and time.monotonic() < end:
+        pump(0.1)
+        it = v.current
+    w, h = it.rendered.size
+    it.markup.append(Item("rect", x=w / 2, y=10, w=8, h=8))
+    v.action_group.activate_action("crop", None)
+    pump(0.1)
+    if v.canvas.tool != "crop" or v.canvas.crop_box() != (0, 0, w, h):
+        raise RuntimeError(f"crop tool: {v.canvas.tool} {v.canvas.crop_box()}")
+    v.ratio_dd.set_selected([r[0] for r in v._ratios].index("1:1"))
+    s = min(w, h)
+    want = ((w - s) // 2, (h - s) // 2, (w - s) // 2 + s, (h - s) // 2 + s)
+    if v.canvas.crop_box() != want:
+        raise RuntimeError(f"1:1 box {v.canvas.crop_box()} != {want}")
+    v.action_group.activate_action("crop-apply", None)
+    end = time.monotonic() + 15
+    while it.rendered.size != (s, s) and time.monotonic() < end:
+        pump(0.1)
+    if it.rendered.size != (s, s) or v.canvas.tool != "pan":
+        raise RuntimeError(f"cropped to {it.rendered.size}, tool {v.canvas.tool}")
+    if (it.markup[0].x, it.markup[0].y) != (w / 2 - want[0], 10 - want[1]):
+        raise RuntimeError("markup did not move with the crop")
+    v._undo()
+    end = time.monotonic() + 15
+    while it.rendered.size != (w, h) and time.monotonic() < end:
+        pump(0.1)
+    if it.rendered.size != (w, h) or it.markup[0].x != w / 2:
+        raise RuntimeError("undo did not restore the image")
+    v.ratio_dd.set_selected(0)
+    v._revert()
+    pump(0.2)
+    return f"{w}×{h} → {s}×{s}, undo"
+
+
 def _stl(paths):
     from . import mesh_io
     m = mesh_io.load_mesh(paths["stl"])
@@ -979,6 +1057,11 @@ def _ui(paths, res, shots=None):
                             pump(0.1)
                         if win.viewer.canvas.raster is None:
                             raise RuntimeError("drawing not rendered")
+                    if kind == "image":
+                        try:
+                            res.ok("ui: image crop tool", _ui_crop(win.viewer, pump))
+                        except Exception as e:  # noqa: BLE001
+                            res.fail("ui: image crop tool", f"{type(e).__name__}: {e}")
                     dead = _unreachable_actions(win, pump)
                     if dead:
                         raise RuntimeError("header bar can't reach " + ", ".join(dead))
@@ -1240,6 +1323,7 @@ def main(argv=()):
         res.check("imports", _import_all)
         res.check("pdf render (Poppler + pypdf)", lambda: _pdf(paths))
         res.check("image decode (PNG/JPEG)", lambda: _png(paths))
+        res.check("image crop (still + animated)", lambda: _image_crop(d))
         res.check("3D model parse (STL)", lambda: _stl(paths))
         res.check("CSV parse", lambda: _csv(paths))
         res.check("syntax highlighting", lambda: _code(paths))

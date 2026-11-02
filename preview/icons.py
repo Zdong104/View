@@ -56,10 +56,13 @@ _ICONS = {
         '<path fill="#000" opacity="0.45" d="M8 1 14.5 4.5 8 8 1.5 4.5z"/>'
         '<path fill="#000" d="M1.5 5.4 7.5 8.8V15L1.5 11.6z"/>'
         '<path fill="#000" opacity="0.75" d="M14.5 5.4 8.5 8.8V15l6-3.4z"/>',
-    # not in Adwaita: the PDF Markup Toolbar button and the notes sidebar tab
+    # not in Adwaita: the PDF and image Markup Toolbar buttons and the notes sidebar tab
     "marker-symbolic":
         '<path fill="#000" d="M10.6 1.2a1 1 0 0 1 1.4 0l2.8 2.8a1 1 0 0 1 0 1.4L7.5 12.7 3.3 8.5z'
         'M2.6 9.3l4.1 4.1-1.4 1.1H1.5v-2.1z"/>',
+    # not in Adwaita: the image viewer's Crop tool (two crop marks)
+    "crop-symbolic":
+        '<path fill="#000" d="M3.25 1h1.5v10.25H15v1.5H3.25zM1 3.25h11.75V15h-1.5V4.75H1z"/>',
     "chat-symbolic":
         '<path fill="#000" d="M3 2h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H7.5L4 15v-3H3a2 2 0 0 1-2-2V4'
         'a2 2 0 0 1 2-2z"/>',

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: View\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-29 10:44-0400\n"
+"POT-Creation-Date: 2026-11-01 18:44-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -168,7 +168,7 @@ msgstr ""
 msgid "Remove from List"
 msgstr ""
 
-msgid "Crop to Selection"
+msgid "Crop"
 msgstr ""
 
 msgid "Adjust Color"
@@ -460,7 +460,13 @@ msgstr ""
 msgid "Tolerance"
 msgstr ""
 
-msgid "Crop"
+msgid "Free"
+msgstr ""
+
+msgid "Original Ratio"
+msgstr ""
+
+msgid "Aspect Ratio"
 msgstr ""
 
 msgid "Done"
@@ -518,6 +524,9 @@ msgid "Rotate Left (Ctrl+L)"
 msgstr ""
 
 msgid "Rotate Right (Ctrl+R)"
+msgstr ""
+
+msgid "Crop (Ctrl+K)"
 msgstr ""
 
 msgid "Move and Zoom"
@@ -640,10 +649,10 @@ msgstr ""
 msgid "Drag to select an ellipse · Ctrl+K crops"
 msgstr ""
 
-msgid "Click a colour to make it transparent"
+msgid "Drag the edges or corners · Enter crops, Esc cancels"
 msgstr ""
 
-msgid "Select an area first (Tools ▸ Rectangular Selection)"
+msgid "Click a colour to make it transparent"
 msgstr ""
 
 msgid "Drag to move, drag the corner to resize. Backspace removes it."
@@ -1819,7 +1828,7 @@ msgstr ""
 msgid "Sign here with your mouse, pen or finger"
 msgstr ""
 
-msgid "Press Space or click Start, then sign on the touchpad"
+msgid "Click here or press Space, then sign on the touchpad"
 msgstr ""
 
 msgid "New Signature"
@@ -1829,9 +1838,6 @@ msgid "Undo stroke (Backspace)"
 msgstr ""
 
 msgid "Clear (Delete)"
-msgstr ""
-
-msgid "Start"
 msgstr ""
 
 msgid "Touchpad"
@@ -1857,9 +1863,6 @@ msgstr ""
 msgid "Touchpad {w:.0f} × {h:.0f} mm — the whole pad maps onto the box."
 msgstr ""
 
-msgid "Sign Again"
-msgstr ""
-
 msgid "Lift your finger to begin…"
 msgstr ""
 
@@ -1868,16 +1871,17 @@ msgid ""
 "Backspace undoes · Esc cancels"
 msgstr ""
 
-msgid "Looks good? Click Save. Or Sign Again to add more strokes."
+msgid "Looks good? Click Save. Or click the box to add more strokes."
 msgstr ""
 
-msgid "Press Space or click Start, then sign on the touchpad."
+msgid "Click the box or press Space, then sign on the touchpad."
 msgstr ""
 
 msgid "⚠ Lost the touchpad device."
 msgstr ""
 
-msgid "Stopped after 45 s without touch. Press Space to continue."
+msgid ""
+"Stopped after 45 s without touch. Click the box or press Space to continue."
 msgstr ""
 
 msgid "Place this signature"

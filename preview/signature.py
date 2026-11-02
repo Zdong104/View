@@ -257,7 +257,7 @@ class SignaturePad(Gtk.DrawingArea):
             cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
             cr.set_font_size(15)
             msg = (_("Sign here with your mouse, pen or finger") if self.draw_mode
-                   else _("Press Space or click Start, then sign on the touchpad"))
+                   else _("Click here or press Space, then sign on the touchpad"))
             ext = cr.text_extents(msg)
             cr.move_to(x + (pw - ext.width) / 2, y + ph * 0.42)
             cr.show_text(msg)
@@ -314,6 +314,10 @@ class SignatureCaptureWindow(Adw.Window):
         drag.connect("drag-update", self._on_drag_update)
         drag.connect("drag-end", self._on_drag_end)
         self.canvas.add_controller(drag)
+        # touchpad mode: clicking the box starts signing (like Space)
+        click = Gtk.GestureClick(button=Gdk.BUTTON_PRIMARY)
+        click.connect("released", lambda *_: self._start())
+        self.canvas.add_controller(click)
 
         header = Adw.HeaderBar()
         cancel = Gtk.Button(label=_("Cancel"))
@@ -356,10 +360,6 @@ class SignatureCaptureWindow(Adw.Window):
         self.undo_btn.connect("clicked", lambda *_: self._undo())
         self.clear_btn = Gtk.Button(icon_name="edit-clear-all-symbolic", tooltip_text=_("Clear (Delete)"))
         self.clear_btn.connect("clicked", lambda *_: self._clear())
-        self.start_btn = Gtk.Button(label=_("Start"), sensitive=self.pad is not None)
-        self.start_btn.add_css_class("pill")
-        self.start_btn.add_css_class("suggested-action")
-        self.start_btn.connect("clicked", lambda *_: self._toggle())
         # input source: touchpad (absolute) or mouse / pen / touch
         self.src_box = Gtk.Box(css_classes=["linked"], visible=self.pad is not None)
         self.src_pad = Gtk.ToggleButton(label=_("Touchpad"), tooltip_text=_("Sign on the touchpad"))
@@ -371,7 +371,6 @@ class SignatureCaptureWindow(Adw.Window):
         tools.append(self.src_box)
         tools.append(self.undo_btn)
         tools.append(self.clear_btn)
-        tools.append(self.start_btn)
 
         body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12,
                        margin_top=12, margin_bottom=18, margin_start=18, margin_end=18)
@@ -401,7 +400,7 @@ class SignatureCaptureWindow(Adw.Window):
         if self.canvas.live:
             self._stop()
         self.canvas.draw_mode = on
-        self.start_btn.set_visible(not on)
+        self.canvas.set_cursor_from_name(None if on else "pointer")
         if on:
             hint = _("Sign in the box with your mouse, a pen or a finger. Backspace undoes.")
             if self.touchpad_error:
@@ -464,14 +463,7 @@ class SignatureCaptureWindow(Adw.Window):
         self.save_btn.set_sensitive(has and not live)
         self.undo_btn.set_sensitive(has)
         self.clear_btn.set_sensitive(has)
-        self.start_btn.set_label(_("Done") if live else (_("Sign Again") if has else _("Start")))
         self.canvas.queue_draw()
-
-    def _toggle(self):
-        if self.canvas.live:
-            self._stop()
-        else:
-            self._start()
 
     def _start(self):
         if not self.pad or self.canvas.live or self.canvas.draw_mode:
@@ -497,9 +489,9 @@ class SignatureCaptureWindow(Adw.Window):
         self.canvas.finger = None
         self.active_id = None
         if self.canvas.strokes:
-            self._set_status(_("Looks good? Click Save. Or Sign Again to add more strokes."))
+            self._set_status(_("Looks good? Click Save. Or click the box to add more strokes."))
         elif not self.canvas.draw_mode:
-            self._set_status(_("Press Space or click Start, then sign on the touchpad."))
+            self._set_status(_("Click the box or press Space, then sign on the touchpad."))
         self._sync()
 
     def _undo(self):
@@ -562,7 +554,7 @@ class SignatureCaptureWindow(Adw.Window):
     def _check_idle(self):
         if self.canvas.live and time.monotonic() - self.last_touch > 45:
             self._stop()
-            self._set_status(_("Stopped after 45 s without touch. Press Space to continue."))
+            self._set_status(_("Stopped after 45 s without touch. Click the box or press Space to continue."))
         return GLib.SOURCE_CONTINUE
 
     MODIFIERS = {Gdk.KEY_Shift_L, Gdk.KEY_Shift_R, Gdk.KEY_Control_L, Gdk.KEY_Control_R,

@@ -19,7 +19,8 @@ gi.require_version("Adw", "1")
 gi.require_version("Gdk", "4.0")
 gi.require_version("Gsk", "4.0")
 gi.require_version("Graphene", "1.0")
-from gi.repository import Adw, Gdk, Gio, GLib, GObject, Graphene, Gsk, Gtk
+gi.require_version("PangoCairo", "1.0")
+from gi.repository import Adw, Gdk, Gio, GLib, GObject, Graphene, Gsk, Gtk, PangoCairo
 
 import cairo
 from PIL import Image
@@ -161,6 +162,7 @@ class ImageCanvas(Gtk.Widget):
         "view-changed": (GObject.SignalFlags.RUN_LAST, None, ()),
         "selection-changed": (GObject.SignalFlags.RUN_LAST, None, ()),
         "alpha-click": (GObject.SignalFlags.RUN_LAST, None, (float, float)),
+        "crop-activate": (GObject.SignalFlags.RUN_LAST, None, ()),     # double-click in the crop box
         # visible region (x0, y0, x1, y1 in image px) + wanted device px per image px
         "need-detail": (GObject.SignalFlags.RUN_LAST, None,
                         (float, float, float, float, float)),
@@ -175,8 +177,9 @@ class ImageCanvas(Gtk.Widget):
         self.zoom = 1.0           # logical pixels per image pixel
         self.ox = self.oy = 0.0   # image-centre offset from view centre (logical px)
         self.overlay = None
-        self.tool = "pan"         # pan | rect | ellipse | alpha
+        self.tool = "pan"         # pan | rect | ellipse | crop | alpha
         self.sel = None           # [x0, y0, x1, y1] image coords
+        self.crop_ratio = None    # width / height the crop box keeps (None: free, 0: the image's)
         self._ptr = None
         self._drag = None
         self.detail = None        # (texture, x0, y0, x1, y1, scale)
@@ -227,6 +230,8 @@ class ImageCanvas(Gtk.Widget):
             self.fit = True
             self.ox = self.oy = 0.0
             self.sel = None
+        if self.tool == "crop" and self.sel is None and iw and ih:
+            self.reset_crop()
         self.queue_draw()
         self.emit("view-changed")
         self._schedule_detail()
@@ -241,11 +246,92 @@ class ImageCanvas(Gtk.Widget):
 
     def set_tool(self, tool):
         self.tool = tool
-        if tool not in ("rect", "ellipse"):
+        if tool not in ("rect", "ellipse", "crop"):
             self.sel = None
             self.emit("selection-changed")
+        elif tool == "crop":
+            self.reset_crop(keep=True)
         self.set_cursor_from_name("crosshair" if tool != "pan" else None)
         self.queue_draw()
+
+    # ---- crop box ------------------------------------------------------
+    def reset_crop(self, keep=False):
+        """Crop box over the whole image (or the current selection), fitted to
+        the aspect ratio."""
+        if not (self.iw and self.ih):
+            return
+        box = list(self.sel) if keep and self.sel else [0.0, 0.0, float(self.iw), float(self.ih)]
+        self.sel = self._fit_ratio(box)
+        self.emit("selection-changed")
+        self.queue_draw()
+
+    def set_crop_ratio(self, ratio):
+        self.crop_ratio = ratio
+        if self.tool == "crop":
+            self.reset_crop(keep=True)
+
+    def _ratio(self):
+        if self.crop_ratio == 0:
+            return self.iw / self.ih if self.iw and self.ih else None
+        return self.crop_ratio
+
+    def _fit_ratio(self, box):
+        """The largest box of the crop ratio centred in `box`."""
+        k = self._ratio()
+        x0, y0, x1, y1 = box
+        if not k or x1 <= x0 or y1 <= y0:
+            return box
+        w, h = x1 - x0, y1 - y0
+        if w / h > k:
+            w = h * k
+        else:
+            h = w / k
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+        return [cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2]
+
+    def _ratio_drag(self, h, r, ddx, ddy):
+        """Resize box `r` by dragging handle `h` while keeping the crop ratio:
+        corners pivot on the opposite corner, edges grow the other side evenly."""
+        k = self._ratio()
+        x0, y0, x1, y1 = r
+        iw, ih = float(self.iw), float(self.ih)
+        if len(h) == 2:
+            ax, ay = (x1 if "w" in h else x0), (y1 if "n" in h else y0)
+            px, py = (x0 if "w" in h else x1) + ddx, (y0 if "n" in h else y1) + ddy
+            sx, sy = (1 if px >= ax else -1), (1 if py >= ay else -1)
+            w, hh = abs(px - ax), abs(py - ay)
+            if w < hh * k:
+                w = hh * k
+            else:
+                hh = w / k
+            f = min(1.0, ((iw - ax) if sx > 0 else ax) / max(w, 1e-9),
+                    ((ih - ay) if sy > 0 else ay) / max(hh, 1e-9))
+            w, hh = w * f, hh * f
+            nx0, nx1 = sorted((ax, ax + sx * w))
+            ny0, ny1 = sorted((ay, ay + sy * hh))
+            return [nx0, ny0, nx1, ny1]
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+        if h in ("e", "w"):
+            ax = x0 if h == "e" else x1
+            px = (x1 if h == "e" else x0) + ddx
+            sx = 1 if px >= ax else -1
+            w = min(abs(px - ax), (iw - ax) if sx > 0 else ax, 2 * min(cy, ih - cy) * k)
+            nx0, nx1 = sorted((ax, ax + sx * w))
+            return [nx0, cy - w / k / 2, nx1, cy + w / k / 2]
+        ay = y0 if h == "s" else y1
+        py = (y1 if h == "s" else y0) + ddy
+        sy = 1 if py >= ay else -1
+        hh = min(abs(py - ay), (ih - ay) if sy > 0 else ay, 2 * min(cx, iw - cx) / k)
+        ny0, ny1 = sorted((ay, ay + sy * hh))
+        return [cx - hh * k / 2, ny0, cx + hh * k / 2, ny1]
+
+    def crop_box(self):
+        """The crop box in whole image pixels, or None."""
+        if not self.sel:
+            return None
+        x0, y0 = max(0, int(round(self.sel[0]))), max(0, int(round(self.sel[1])))
+        x1, y1 = min(self.iw, int(round(self.sel[2]))), min(self.ih, int(round(self.sel[3])))
+        return (x0, y0, x1, y1) if x1 > x0 and y1 > y0 else None
 
     # ---- geometry ------------------------------------------------------
     def _sf(self):
@@ -362,8 +448,9 @@ class ImageCanvas(Gtk.Widget):
     def _hit_sel(self, x, y):
         if not self.sel:
             return None
+        tol = 14 if self.tool == "crop" else 10
         for name, (hx, hy) in self._sel_handles().items():
-            if abs(x - hx) <= 10 and abs(y - hy) <= 10:
+            if abs(x - hx) <= tol and abs(y - hy) <= tol:
                 return name
         x0, y0 = self.to_widget(self.sel[0], self.sel[1])
         x1, y1 = self.to_widget(self.sel[2], self.sel[3])
@@ -388,7 +475,7 @@ class ImageCanvas(Gtk.Widget):
         self._ptr = (x, y)
         if self._drag is not None:
             return
-        if self.markup is not None:
+        if self.markup is not None and self.tool != "crop":
             cur = self.markup.cursor_at(x, y)
             if cur:
                 self.set_cursor_from_name(cur)
@@ -403,7 +490,7 @@ class ImageCanvas(Gtk.Widget):
         if hit:
             self.set_cursor_from_name("nwse-resize" if hit == "resize" else "move")
             return
-        if self.tool in ("rect", "ellipse"):
+        if self.tool in ("rect", "ellipse", "crop"):
             h = self._hit_sel(x, y)
             self.set_cursor_from_name(self._CURSORS.get(h, "crosshair"))
         elif self.tool == "alpha":
@@ -414,7 +501,7 @@ class ImageCanvas(Gtk.Widget):
     def _drag_begin(self, g, x, y):
         self.grab_focus()
         self._moved = False
-        if self.markup is not None and self.texture and self.markup.on_press(
+        if self.markup is not None and self.texture and self.tool != "crop" and self.markup.on_press(
                 x, y, 1, g.get_current_event_state()):
             self._drag = ("markup", x, y)
             if self.text is not None:
@@ -423,14 +510,14 @@ class ImageCanvas(Gtk.Widget):
         hit = self._hit_overlay(x, y)
         if hit:
             self._drag = ("ov-" + hit, dict(self.overlay))
-        elif self.tool in ("rect", "ellipse") and self.texture:
+        elif self.tool in ("rect", "ellipse", "crop") and self.texture:
             h = self._hit_sel(x, y)
             if h:
-                self._drag = ("sel", h, list(self.sel))
+                self._drag = ("sel", h, list(self.sel), list(self.sel))
             else:
                 p = self._clamp_img(self.to_img(x, y))
-                self.sel = [p[0], p[1], p[0], p[1]]
-                self._drag = ("sel", "se", list(self.sel))
+                prev, self.sel = self.sel, [p[0], p[1], p[0], p[1]]
+                self._drag = ("sel", "se", list(self.sel), prev)
                 self.emit("selection-changed")
         elif self._text_hit(x, y):
             self._drag = ("text", x, y, False)     # selection starts once it moves
@@ -468,10 +555,12 @@ class ImageCanvas(Gtk.Widget):
             self._clamp()
             self._schedule_detail()
         elif mode == "sel":
-            _m, h, r = self._drag
+            _m, h, r, _prev = self._drag
             ddx, ddy = dx / s, dy / s
             x0, y0, x1, y1 = r
-            if h == "move":
+            if h != "move" and self.tool == "crop" and self._ratio():
+                self.sel = self._ratio_drag(h, r, ddx, ddy)
+            elif h == "move":
                 w, hh = x1 - x0, y1 - y0
                 nx0 = min(max(x0 + ddx, 0), self.iw - w)
                 ny0 = min(max(y0 + ddy, 0), self.ih - hh)
@@ -523,9 +612,10 @@ class ImageCanvas(Gtk.Widget):
         if self._drag and self._drag[0] == "sel" and self.sel:
             x0, y0, x1, y1 = self.sel
             if (x1 - x0) * self._scale() < 4 or (y1 - y0) * self._scale() < 4:
-                self.sel = None
+                # a click (or a box squeezed flat) keeps the crop box it started from
+                self.sel = self._drag[3] if self.tool == "crop" else None
                 self.emit("selection-changed")
-                self.queue_draw()
+            self.queue_draw()           # drop the size label / thirds grid
         self._drag = None
         if self.tool == "pan":
             self.set_cursor_from_name(None)
@@ -541,6 +631,9 @@ class ImageCanvas(Gtk.Widget):
             (self.text.select_word_at if n_press == 2 else self.text.select_line_at)(
                 *self._text_pt(x, y))
             self.queue_draw()
+            return
+        if n_press == 2 and self.tool == "crop" and self._hit_sel(x, y) == "move":
+            self.emit("crop-activate")
             return
         if n_press == 2 and self.tool == "pan" and not self._hit_overlay(x, y):
             if self.fit and self.fit_zoom() < 1:
@@ -750,7 +843,9 @@ class ImageCanvas(Gtk.Widget):
             cr.stroke()
             cr.rectangle(x1 - 5, y1 - 5, 10, 10)
             cr.fill()
-        if self.sel:
+        if self.sel and self.tool == "crop":
+            self._draw_crop(cr)
+        elif self.sel:
             x0, y0 = self.to_widget(self.sel[0], self.sel[1])
             x1, y1 = self.to_widget(self.sel[2], self.sel[3])
             ix0, iy0 = self.to_widget(0, 0)
@@ -784,6 +879,65 @@ class ImageCanvas(Gtk.Widget):
                 cr.fill_preserve()
                 cr.set_source_rgb(0.21, 0.52, 0.89)
                 cr.stroke()
+
+    def _draw_crop(self, cr):
+        """Crop box: the rest of the image dimmed, corner and edge grips, and
+        while dragging a rule-of-thirds grid and the size in pixels."""
+        x0, y0 = self.to_widget(self.sel[0], self.sel[1])
+        x1, y1 = self.to_widget(self.sel[2], self.sel[3])
+        ix0, iy0 = self.to_widget(0, 0)
+        ix1, iy1 = self.to_widget(self.iw, self.ih)
+        dragging = self._drag is not None and self._drag[0] == "sel"
+        cr.set_fill_rule(cairo.FILL_RULE_EVEN_ODD)
+        cr.rectangle(ix0, iy0, ix1 - ix0, iy1 - iy0)
+        cr.rectangle(x0, y0, x1 - x0, y1 - y0)
+        cr.set_source_rgba(0, 0, 0, 0.55)
+        cr.fill()
+        cr.set_fill_rule(cairo.FILL_RULE_WINDING)
+        if dragging:
+            cr.set_line_width(1.0)
+            cr.set_source_rgba(1, 1, 1, 0.5)
+            for t in (1 / 3, 2 / 3):
+                cr.move_to(x0 + (x1 - x0) * t, y0)
+                cr.line_to(x0 + (x1 - x0) * t, y1)
+                cr.move_to(x0, y0 + (y1 - y0) * t)
+                cr.line_to(x1, y0 + (y1 - y0) * t)
+            cr.stroke()
+        cr.set_source_rgba(1, 1, 1, 0.9)
+        cr.set_line_width(1.0)
+        cr.rectangle(x0 + 0.5, y0 + 0.5, x1 - x0 - 1, y1 - y0 - 1)
+        cr.stroke()
+        # grips sit just inside the box so they stay visible at the view's edge
+        cr.set_source_rgb(1, 1, 1)
+        L, t = min(18.0, (x1 - x0) / 3, (y1 - y0) / 3), 3.0
+        for cx, cy, sx, sy in ((x0, y0, 1, 1), (x1, y0, -1, 1), (x1, y1, -1, -1), (x0, y1, 1, -1)):
+            cr.rectangle(cx, cy, sx * L, sy * t)
+            cr.rectangle(cx, cy, sx * t, sy * L)
+        mx, my = (x0 + x1) / 2, (y0 + y1) / 2
+        if x1 - x0 > 3 * L:
+            cr.rectangle(mx - L / 2, y0, L, t)
+            cr.rectangle(mx - L / 2, y1 - t, L, t)
+        if y1 - y0 > 3 * L:
+            cr.rectangle(x0, my - L / 2, t, L)
+            cr.rectangle(x1 - t, my - L / 2, t, L)
+        cr.fill()
+        box = self.crop_box()
+        if dragging and box:
+            layout = self.create_pango_layout(f"{box[2] - box[0]} × {box[3] - box[1]}")
+            tw, th = layout.get_pixel_size()
+            pad = 6
+            bx = min(max(mx - tw / 2 - pad, 4), self.get_width() - tw - 2 * pad - 4)
+            by = y1 + 8 if y1 + th + 2 * pad + 12 < self.get_height() else y1 - th - 2 * pad - 8
+            cr.set_source_rgba(0, 0, 0, 0.7)
+            r_ = (th + 2 * pad) / 2
+            cr.new_sub_path()
+            cr.arc(bx + r_, by + r_, r_, math.pi / 2, 3 * math.pi / 2)
+            cr.arc(bx + tw + 2 * pad - r_, by + r_, r_, -math.pi / 2, math.pi / 2)
+            cr.close_path()
+            cr.fill()
+            cr.set_source_rgb(1, 1, 1)
+            cr.move_to(bx + pad, by + pad)
+            PangoCairo.show_layout(cr, layout)
 
 
 # --------------------------------------------------------------- viewer ---
@@ -844,6 +998,7 @@ class ImageViewer(Viewer):
         self.canvas.add_css_class("view")
         self.canvas.connect("view-changed", self._on_view_changed)
         self.canvas.connect("alpha-click", self._on_alpha_click)
+        self.canvas.connect("crop-activate", lambda *_: self._crop())
         self.canvas.connect("selection-changed", lambda *_: self._update_actions())
         self.canvas.connect("need-detail", self._on_need_detail)
         ctx = Gtk.GestureClick(button=Gdk.BUTTON_SECONDARY)
@@ -888,12 +1043,21 @@ class ImageViewer(Viewer):
         self.tol_scale.set_size_request(140, -1)
         self.tol_scale.set_tooltip_text(_("Tolerance"))
         tb.append(self.tol_scale)
+        # crop box aspect ratios: (label, width / height; 0 = the image's own)
+        self._ratios = [(_("Free"), None), (_("Original Ratio"), 0), ("1:1", 1.0), ("4:3", 4 / 3),
+                        ("3:4", 3 / 4), ("16:9", 16 / 9), ("9:16", 9 / 16)]
+        self.ratio_dd = Gtk.DropDown.new_from_strings([r[0] for r in self._ratios])
+        self.ratio_dd.set_tooltip_text(_("Aspect Ratio"))
+        self.ratio_dd.set_focus_on_click(False)
+        self.ratio_dd.add_css_class("flat")
+        self.ratio_dd.connect("notify::selected", lambda *_: self._apply_ratio())
+        tb.append(self.ratio_dd)
         self.crop_btn = Gtk.Button(label=_("Crop"), action_name="img.crop", css_classes=["flat"],
                                    focus_on_click=False)
         tb.append(self.crop_btn)
-        done = Gtk.Button(label=_("Done"), css_classes=["flat"], focus_on_click=False)
-        done.connect("clicked", lambda *_: self._set_tool("pan"))
-        tb.append(done)
+        self.tool_done = Gtk.Button(label=_("Done"), css_classes=["flat"], focus_on_click=False)
+        self.tool_done.connect("clicked", lambda *_: self._set_tool("pan"))
+        tb.append(self.tool_done)
         self.tool_bar.set_child(tb)
         overlay.add_overlay(self.tool_bar)
         self.canvas_overlay = overlay
@@ -1082,6 +1246,7 @@ class ImageViewer(Viewer):
         ("<Control>r", "rotate-right"), ("<Control>a", "select-all"), ("F9", "toggle-sidebar"),
         ("Delete|KP_Delete", "delete"), ("Left", "prev"), ("Right", "next"),
         ("Escape", "cancel"), ("BackSpace", "discard-overlay"), ("<Control>k", "crop"),
+        ("Return|KP_Enter", "crop-apply"),
         ("<Control><Shift>c", "adjust-color"), ("<Control>z", "undo"),
         ("<Control><Shift>z|<Control>y", "redo"), ("<Control>p", "print"),
         ("F5", "slideshow"), ("<Control><Shift>a", "markup"),
@@ -1115,6 +1280,7 @@ class ImageViewer(Viewer):
         add("adjust-size", self._adjust_size)
         add("adjust-color", self._color_open)
         add("crop", self._crop)
+        add("crop-apply", self._crop)
         add("undo", self._undo)
         add("redo", self._redo)
         add("revert", self._revert)
@@ -1138,7 +1304,9 @@ class ImageViewer(Viewer):
         add("show-text", self._toggle_text_boxes)
         tool = Gio.SimpleAction.new_stateful("tool", GLib.VariantType.new("s"),
                                              GLib.Variant("s", "pan"))
-        tool.connect("change-state", lambda a, v: self._set_tool(v.get_string()))
+        # the Crop button toggles: choosing Crop again leaves it
+        tool.connect("change-state", lambda a, v: self._set_tool(
+            "pan" if v.get_string() == "crop" == a.get_state().get_string() else v.get_string()))
         grp.add_action(tool)
         self._acts["tool"] = tool
         self.action_group = grp
@@ -1179,6 +1347,7 @@ class ImageViewer(Viewer):
 
     EDIT_ACTIONS = ("rotate-left", "rotate-right", "flip", "save", "save-as", "export-as",
                     "export-pdf", "export-selected", "adjust-size", "adjust-color", "crop",
+                    "crop-apply",
                     "undo", "redo", "revert", "remove", "delete", "add", "discard-overlay",
                     "wallpaper", "tool", "print", "slideshow", "select-all", "toggle-sidebar",
                     "markup")
@@ -1194,7 +1363,8 @@ class ImageViewer(Viewer):
             "save-as": ready, "export-as": ready, "copy": ready, "print": ready,
             "wallpaper": ready, "adjust-size": ready, "adjust-color": ready,
             "rotate-left": ready, "rotate-right": ready, "flip": ready,
-            "crop": ready and self.canvas.sel is not None,
+            "crop": ready,
+            "crop-apply": ready and self.canvas.tool == "crop" and self.canvas.sel is not None,
             "undo": bool(it and (it.history or it.overlay)),
             "redo": bool(it and it.future),
             "revert": bool(it and (it.ops or it.overlay or it.markup) and it.path),
@@ -1283,6 +1453,9 @@ class ImageViewer(Viewer):
                                 N_("Rotate Right (Ctrl+R)"))):
             header.pack_start(Gtk.Button(icon_name=icon, action_name=f"img.{act}",
                                          tooltip_text=_(tip), focus_on_click=False))
+        header.pack_start(Gtk.ToggleButton(icon_name="crop-symbolic", action_name="img.tool",
+                                           action_target=GLib.Variant("s", "crop"),
+                                           tooltip_text=_("Crop (Ctrl+K)"), focus_on_click=False))
 
         tools = Gio.Menu()
         sel = Gio.Menu()
@@ -1292,7 +1465,7 @@ class ImageViewer(Viewer):
         sel.append(_("Instant Alpha"), "img.tool::alpha")
         tools.append_section(None, sel)
         t2 = Gio.Menu()
-        t2.append(_("Crop to Selection"), "img.crop")
+        t2.append(_("Crop"), "img.crop")
         t2.append(_("Adjust Color…"), "img.adjust-color")
         t2.append(_("Adjust Size…"), "img.adjust-size")
         t2.append(_("Flip Horizontal"), "img.flip")
@@ -1337,21 +1510,20 @@ class ImageViewer(Viewer):
         header.pack_end(Gtk.Button(icon_name="x-office-document-symbolic",
                                    action_name="img.export-pdf", focus_on_click=False,
                                    tooltip_text=_("Export as PDF…")))
-        self.markup_btn = Gtk.ToggleButton(icon_name="document-edit-symbolic",
+        # Sign sits in the header next to Markup (as in the PDF viewer), not
+        # inside the markup toolbar
+        try:
+            from .signature import SignatureButton
+            header.pack_end(SignatureButton(self.window, self._place_signature))
+        except Exception:  # noqa: BLE001 - signature module missing/broken
+            pass
+        self.markup_btn = Gtk.ToggleButton(icon_name="marker-symbolic",
                                            tooltip_text=_("Markup (Ctrl+Shift+A)"),
                                            focus_on_click=False)
         self.markup_rev.bind_property("reveal-child", self.markup_btn, "active",
                                       GObject.BindingFlags.SYNC_CREATE)
         self.markup_btn.connect("clicked", lambda b: self._toggle_markup(b.get_active()))
         header.pack_end(self.markup_btn)
-        try:
-            import importlib.util
-            if importlib.util.find_spec("preview.markup") is None:
-                # no markup toolbar: offer signatures from the header instead
-                from .signature import SignatureButton
-                header.pack_end(SignatureButton(self.window, self._place_signature))
-        except Exception:  # noqa: BLE001 - signature module missing/broken
-            pass
         self._update_sidebar_ui()
 
     # ---- loading -------------------------------------------------------------
@@ -1916,6 +2088,8 @@ class ImageViewer(Viewer):
         it.update_dirty()
         if it is self.current:
             self.canvas.sel = None
+            if self.canvas.tool == "crop":
+                self.canvas.reset_crop()
             if render:
                 self._clear_text()
                 if it.base is not None:
@@ -1926,22 +2100,24 @@ class ImageViewer(Viewer):
         self.refresh_title()
         self._update_actions()
 
-    def _commit_overlay(self, it):
+    def _commit_overlay(self, it, markup=True):
         """Flatten the live signature overlay and markup into the op list
         (before edits that change geometry or pixels)."""
-        if it is None or not (it.overlay or it.markup):
+        markup = markup and bool(it is not None and it.markup)
+        if it is None or not (it.overlay or markup):
             return
         extra = []
         if it.overlay:
             extra.append(_sig_op(it.overlay))
-        if it.markup:
+        if markup:
             extra.append(("markup", [m.to_dict() for m in it.markup]))
         snap = self._snap(it)
         it.overlay = None
         self.canvas.overlay = None
-        it.markup.clear()
-        if self.canvas.markup is not None:
-            self.canvas.markup.select(None)
+        if markup:
+            it.markup.clear()
+            if self.canvas.markup is not None:
+                self.canvas.markup.select(None)
         it.history.append(snap)
         it.future = []
         it.ops = it.ops + extra
@@ -2003,31 +2179,62 @@ class ImageViewer(Viewer):
         self.canvas.set_tool(tool)
         hints = {"rect": _("Drag to select an area · Ctrl+K crops"),
                  "ellipse": _("Drag to select an ellipse · Ctrl+K crops"),
+                 "crop": _("Drag the edges or corners · Enter crops, Esc cancels"),
                  "alpha": _("Click a colour to make it transparent")}
         self.tool_label.set_text(hints.get(tool, ""))
         self.tol_scale.set_visible(tool == "alpha")
-        self.crop_btn.set_visible(tool in ("rect", "ellipse"))
+        self.ratio_dd.set_visible(tool == "crop")
+        self.crop_btn.set_visible(tool in ("rect", "ellipse", "crop"))
+        self.crop_btn.set_css_classes(["suggested-action", "pill"] if tool == "crop" else ["flat"])
+        self.tool_done.set_label(_("Cancel") if tool == "crop" else _("Done"))
+        if tool == "crop":
+            if self.markup_rev.get_reveal_child():
+                self._toggle_markup(False)
+            self.canvas.zoom_fit()          # every grip on screen
         self.tool_bar.set_reveal_child(tool != "pan")
         if tool != "pan":
             self.canvas.grab_focus()
         self._update_actions()
 
+    def _apply_ratio(self):
+        self.canvas.set_crop_ratio(self._ratios[self.ratio_dd.get_selected()][1])
+
     def _crop(self):
-        it, sel = self.current, self.canvas.sel
+        """Ctrl+K / Enter / Crop: crop to the crop box or the selection; with
+        neither, start the Crop tool."""
+        it, box = self.current, self.canvas.crop_box()
         if it is None or it.rendered is None:
             return
-        if not sel:
-            self.toast(_("Select an area first (Tools ▸ Rectangular Selection)"))
+        tool = self.canvas.tool
+        if tool not in ("rect", "ellipse", "crop") or box is None:
+            self._set_tool("crop")
             return
-        self._commit_overlay(it)
-        w, h = it.rendered.size
-        x0, y0 = max(0, int(round(sel[0]))), max(0, int(round(sel[1])))
-        x1, y1 = min(w, int(round(sel[2]))), min(h, int(round(sel[3])))
-        if x1 - x0 < 1 or y1 - y0 < 1:
-            return
-        kind = "ellipse" if self.canvas.tool == "ellipse" else "crop"
-        self.canvas.sel = None
-        self._edit(it, it.ops + [(kind, x0, y0, x1, y1)])
+        if tool == "ellipse":
+            self._commit_overlay(it)
+            self.canvas.sel = None
+            self._edit(it, it.ops + [("ellipse",) + box])
+        elif box != (0, 0) + it.rendered.size:
+            # the signature is placed into the image first; markup stays editable
+            # and moves with the image (whatever lies wholly outside is dropped)
+            self._commit_overlay(it, markup=False)
+            x0, y0, x1, y1 = box
+            snap = self._snap(it)
+            if it.markup:
+                from .markup import bbox, translate
+                keep = []
+                for m in it.markup:
+                    bx, by, bw, bh = bbox(m)
+                    if bx + bw >= x0 and by + bh >= y0 and bx <= x1 and by <= y1:
+                        translate(m, -x0, -y0)
+                        keep.append(m)
+                it.markup[:] = keep
+                if self.canvas.markup is not None:
+                    self.canvas.markup.select(None)
+            self.canvas.sel = None
+            it.history.append(snap)
+            it.future = []
+            it.ops = it.ops + [("crop",) + box]
+            self._after_edit(it)
         self._set_tool("pan")
 
     def _on_alpha_click(self, _c, x, y):
@@ -2051,6 +2258,8 @@ class ImageViewer(Viewer):
             self._stop_slideshow()
         elif self._color is not None:
             self._color_close(apply=False)
+        elif self.canvas.tool == "crop":
+            self._set_tool("pan")
         elif self.canvas.sel:
             self.canvas.sel = None
             self.canvas.queue_draw()
@@ -2103,13 +2312,7 @@ class ImageViewer(Viewer):
             self.toast(_("Markup is unavailable: {e}").format(e=e))
             return False
         self.mk = MarkupController(self)
-        extra = ()
-        try:
-            from .signature import SignatureButton
-            extra = (SignatureButton(self.window, self._place_signature),)
-        except Exception:  # noqa: BLE001
-            pass
-        self.mk_bar = MarkupToolbar(self.mk, extra=extra, text_tools=False)
+        self.mk_bar = MarkupToolbar(self.mk, text_tools=False)
         if hasattr(self.mk_bar, "pad_btn"):
             self.mk_bar.pad_btn.connect("toggled", self._on_pad_toggled)
         self.markup_rev.set_child(self.mk_bar)

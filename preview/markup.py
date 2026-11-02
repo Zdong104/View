@@ -1310,10 +1310,10 @@ def _gdk_rgba(t):
 
 
 class MarkupToolbar(Gtk.Box):
-    """The Markup toolbar row. `extra` widgets (e.g. a SignatureButton) are
-    appended after the tools."""
+    """The Markup toolbar row. Sign is not part of it: viewers put their
+    SignatureButton in the header, next to the Markup button."""
 
-    def __init__(self, ctrl: MarkupController, extra=(), text_tools=True):
+    def __init__(self, ctrl: MarkupController, text_tools=True):
         super().__init__(spacing=2, css_classes=["toolbar"], margin_start=6, margin_end=6)
         self.ctrl = ctrl
         self.buttons = {}
@@ -1359,8 +1359,6 @@ class MarkupToolbar(Gtk.Box):
             b = _tool_button(k, tip, sel, icon)
             self.buttons[k] = b
             self.append(b)
-        for w in extra:
-            self.append(w)
         self.append(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL, margin_start=4,
                                   margin_end=4))
         # style controls

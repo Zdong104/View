@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: View\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-29 10:44-0400\n"
+"POT-Creation-Date: 2026-11-01 18:44-0500\n"
 "PO-Revision-Date: 2026-10-26 15:40-0400\n"
 "Last-Translator: View contributors\n"
 "Language-Team: Simplified Chinese\n"
@@ -165,8 +165,8 @@ msgstr "下一张图片"
 msgid "Remove from List"
 msgstr "从列表中移除"
 
-msgid "Crop to Selection"
-msgstr "裁剪到选区"
+msgid "Crop"
+msgstr "裁剪"
 
 msgid "Adjust Color"
 msgstr "调整颜色"
@@ -453,8 +453,14 @@ msgstr "切换适应窗口 / 实际大小"
 msgid "Tolerance"
 msgstr "容差"
 
-msgid "Crop"
-msgstr "裁剪"
+msgid "Free"
+msgstr "自由"
+
+msgid "Original Ratio"
+msgstr "原始比例"
+
+msgid "Aspect Ratio"
+msgstr "宽高比"
 
 msgid "Done"
 msgstr "完成"
@@ -512,6 +518,9 @@ msgstr "向左旋转（Ctrl+L）"
 
 msgid "Rotate Right (Ctrl+R)"
 msgstr "向右旋转（Ctrl+R）"
+
+msgid "Crop (Ctrl+K)"
+msgstr "裁剪（Ctrl+K）"
 
 msgid "Move and Zoom"
 msgstr "移动和缩放"
@@ -632,11 +641,11 @@ msgstr "拖动以选择区域 · Ctrl+K 裁剪"
 msgid "Drag to select an ellipse · Ctrl+K crops"
 msgstr "拖动以选择椭圆区域 · Ctrl+K 裁剪"
 
+msgid "Drag the edges or corners · Enter crops, Esc cancels"
+msgstr "拖动边缘或角落 · 按 Enter 裁剪，按 Esc 取消"
+
 msgid "Click a colour to make it transparent"
 msgstr "点击一种颜色使其透明"
-
-msgid "Select an area first (Tools ▸ Rectangular Selection)"
-msgstr "请先选择一个区域（工具 ▸ 矩形选区）"
 
 msgid "Drag to move, drag the corner to resize. Backspace removes it."
 msgstr "拖动以移动，拖动角点以调整大小。按 Backspace 删除。"
@@ -1581,7 +1590,8 @@ msgstr "之后打开文件会更快。可从顶栏中的 View 图标或按 Ctrl+
 msgid ""
 "Off by default here: the desktop shows no tray icons (on GNOME, the "
 "AppIndicator extension adds them)"
-msgstr "此处默认关闭：桌面不显示托盘图标（在 GNOME 上可通过 AppIndicator 扩展添加）"
+msgstr ""
+"此处默认关闭：桌面不显示托盘图标（在 GNOME 上可通过 AppIndicator 扩展添加）"
 
 msgid "Keep View running in the background when windows are closed"
 msgstr "关闭所有窗口后让 View 在后台继续运行"
@@ -1811,8 +1821,8 @@ msgstr "粗"
 msgid "Sign here with your mouse, pen or finger"
 msgstr "请用鼠标、手写笔或手指在此签名"
 
-msgid "Press Space or click Start, then sign on the touchpad"
-msgstr "按空格键或点击“开始”，然后在触摸板上签名"
+msgid "Click here or press Space, then sign on the touchpad"
+msgstr "点击此处或按空格键，然后在触摸板上签名"
 
 msgid "New Signature"
 msgstr "新建签名"
@@ -1822,9 +1832,6 @@ msgstr "撤销一笔（Backspace）"
 
 msgid "Clear (Delete)"
 msgstr "清除（Delete）"
-
-msgid "Start"
-msgstr "开始"
 
 msgid "Touchpad"
 msgstr "触摸板"
@@ -1849,9 +1856,6 @@ msgstr "触摸板签名不可用（{error}）{hint}"
 msgid "Touchpad {w:.0f} × {h:.0f} mm — the whole pad maps onto the box."
 msgstr "触摸板 {w:.0f} × {h:.0f} 毫米 — 整个触摸板对应方框区域。"
 
-msgid "Sign Again"
-msgstr "重新签名"
-
 msgid "Lift your finger to begin…"
 msgstr "抬起手指以开始…"
 
@@ -1860,17 +1864,18 @@ msgid ""
 "Backspace undoes · Esc cancels"
 msgstr "用一根手指在触摸板上签名。完成后按任意键 · Backspace 撤销 · Esc 取消"
 
-msgid "Looks good? Click Save. Or Sign Again to add more strokes."
-msgstr "满意吗？点击“保存”，或点击“重新签名”继续添加笔画。"
+msgid "Looks good? Click Save. Or click the box to add more strokes."
+msgstr "满意吗？点击“保存”，或点击签名框继续添加笔画。"
 
-msgid "Press Space or click Start, then sign on the touchpad."
-msgstr "按空格键或点击“开始”，然后在触摸板上签名。"
+msgid "Click the box or press Space, then sign on the touchpad."
+msgstr "点击签名框或按空格键，然后在触摸板上签名。"
 
 msgid "⚠ Lost the touchpad device."
 msgstr "⚠ 触摸板设备已断开。"
 
-msgid "Stopped after 45 s without touch. Press Space to continue."
-msgstr "45 秒内没有触摸，已停止。按空格键继续。"
+msgid ""
+"Stopped after 45 s without touch. Click the box or press Space to continue."
+msgstr "45 秒内没有触摸，已停止。点击签名框或按空格键继续。"
 
 msgid "Place this signature"
 msgstr "放置此签名"
@@ -2961,6 +2966,18 @@ msgstr "将当前帧保存为 PNG"
 
 msgid "Could not save the frame"
 msgstr "无法保存当前帧"
+
+#~ msgid "Crop to Selection"
+#~ msgstr "裁剪到选区"
+
+#~ msgid "Select an area first (Tools ▸ Rectangular Selection)"
+#~ msgstr "请先选择一个区域（工具 ▸ 矩形选区）"
+
+#~ msgid "Start"
+#~ msgstr "开始"
+
+#~ msgid "Sign Again"
+#~ msgstr "重新签名"
 
 #~ msgid "Translate Page…"
 #~ msgstr "翻译页面…"

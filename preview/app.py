@@ -164,7 +164,7 @@ SHORTCUT_SECTIONS = [
                      (N_("Select All Thumbnails"), "<Control>a"), (N_("Previous Image"), "Left"),
                      (N_("Next Image"), "Right"), (N_("Remove from List"), "Delete"),
                      (N_("Undo"), "<Control>z"), (N_("Redo"), "<Control><Shift>z"),
-                     (N_("Crop to Selection"), "<Control>k"), (N_("Adjust Color"), "<Control><Shift>c"),
+                     (N_("Crop"), "<Control>k"), (N_("Adjust Color"), "<Control><Shift>c"),
                      (N_("Print"), "<Control>p"), (N_("Slideshow"), "F5"),
                      (N_("Markup Toolbar"), "<Control><Shift>a"),
                      (N_("Copy All Recognized Text"), "<Control><Shift>t"),

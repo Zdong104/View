@@ -644,6 +644,41 @@ def _touchpad():
         pad.close()
 
 
+def _touchpad_events():
+    """preview.touchpad turns evdev events into finger positions.  Replays the
+    Sensel haptic touchpad of a ThinkPad P1 Gen 7 (issue #9): each touch also
+    opens a contact that never reports a position, which must not count as a
+    second finger at (0, 0)."""
+    if not runtime.IS_LINUX:
+        return "Linux only"
+    from . import touchpad as tp
+    pad = tp.Touchpad.__new__(tp.Touchpad)
+    pad.x = (0, 0, 4112, 0, 0, 31)          # value, min, max, fuzz, flat, resolution
+    pad.y = (0, 0, 2490, 0, 0, 31)
+    pad.num_slots, pad.slot, pad.slots, pad._dropped = 5, 0, {}, False
+    frames = []
+    pad.on_frame = lambda contacts, t: frames.append(contacts)
+    S, A = tp.EV_SYN, tp.EV_ABS
+    events = [
+        (A, tp.ABS_MT_TRACKING_ID, 15218), (S, tp.SYN_REPORT, 0),       # no position
+        (A, tp.ABS_MT_SLOT, 1), (A, tp.ABS_MT_TRACKING_ID, 15219),
+        (A, tp.ABS_MT_POSITION_X, 2543), (A, tp.ABS_MT_POSITION_Y, 890), (S, tp.SYN_REPORT, 0),
+        (A, tp.ABS_MT_POSITION_X, 2466), (S, tp.SYN_REPORT, 0),          # y unchanged
+        (A, tp.ABS_MT_TRACKING_ID, -1), (S, tp.SYN_REPORT, 0),
+        (A, tp.ABS_MT_SLOT, 0), (A, tp.ABS_MT_TRACKING_ID, -1), (S, tp.SYN_REPORT, 0),
+        # a new touch in slot 1 on the old y: the kernel sends no y event
+        (A, tp.ABS_MT_SLOT, 1), (A, tp.ABS_MT_TRACKING_ID, 15220),
+        (A, tp.ABS_MT_POSITION_X, 1000), (S, tp.SYN_REPORT, 0),
+    ]
+    for etype, code, value in events:
+        pad._handle(etype, code, value, 0.0)
+    want = [[], [(15219, 2543 / 31, 890 / 31)], [(15219, 2466 / 31, 890 / 31)], [], [],
+            [(15220, 1000 / 31, 890 / 31)]]
+    if frames != want:
+        raise RuntimeError(f"frames {frames}, expected {want}")
+    return f"{len(frames)} frames, a position-less contact ignored"
+
+
 def _ocr():
     from . import ocr
     helper = ocr.helper_path()
@@ -1337,6 +1372,7 @@ def main(argv=()):
         res.check("OpenGL (PyOpenGL)", _gl)
         res.check("update check certificates", _certs,
                   required=runtime.IS_WINDOWS and runtime.FROZEN)
+        res.check("touchpad events (contacts, positions)", _touchpad_events)
         res.check("touchpad (for signing)", _touchpad, required=False)
         ocr_ok = res.check("text recognition (OCR)", _ocr, required=runtime.OCR_BUNDLED)
         if ocr_ok and run_ocr:

@@ -40,6 +40,11 @@ EVIOCGNAME_256 = 0x81004506         # _IOR('E', 0x06, char[256])
 EVIOCGPROP_8 = 0x80084509           # _IOR('E', 0x09, char[8])
 EVIOCGBIT_ABS_8 = 0x80084523        # _IOR('E', 0x20 + EV_ABS, char[8]); ABS_MAX = 0x3f
 
+
+def EVIOCGMTSLOTS(size):            # _IOR('E', 0x0a, struct input_mt_request_layout of size bytes)
+    return (2 << 30) | (size << 16) | (ord("E") << 8) | 0x0A
+
+
 EVENT = struct.Struct("llHHi")      # struct input_event on 64-bit
 
 
@@ -130,6 +135,12 @@ class Touchpad:
     on_frame(contacts, t) is called once per hardware frame while grabbed;
     contacts is a list of (tracking_id, x_mm, y_mm) for real fingers (palms
     excluded), t is the event time in seconds.
+
+    A contact counts only once it has reported a position.  Some pads (the
+    Sensel haptic touchpad of the ThinkPad P1 Gen 7, "SNSL002D:00 2C2F:002D")
+    open an extra contact with every touch that never sends a position; taken
+    as a finger it sat at (0, 0) and turned every stroke into a two-finger
+    touch, so only a dot in the top-left corner was drawn.
     """
 
     def __init__(self, on_frame=None, on_lost=None):
@@ -164,6 +175,10 @@ class Touchpad:
         self.y = self._absinfo(ABS_MT_POSITION_Y)
         self.width_mm = self._span(self.x)
         self.height_mm = self._span(self.y)
+        try:
+            self.num_slots = max(1, self._absinfo(ABS_MT_SLOT)[2] + 1)
+        except OSError:
+            self.num_slots = 1
         self.grabbed = False
         self._watch = None
         self._pending_grab = None
@@ -204,8 +219,7 @@ class Touchpad:
             self._drain()
             fcntl.ioctl(self.fd, EVIOCGRAB, 1)
             self.grabbed = True
-            self.slot = self._absinfo(ABS_MT_SLOT)[0]
-            self.slots = {}
+            self._sync_slots()
             self._watch = GLib.unix_fd_add_full(
                 GLib.PRIORITY_HIGH, self.fd,
                 GLib.IOCondition.IN | GLib.IOCondition.HUP | GLib.IOCondition.ERR,
@@ -238,6 +252,31 @@ class Touchpad:
             self.fd = None
 
     # --- event parsing ----------------------------------------------------
+    def _mt_values(self, code):
+        buf = array.array("i", [code] + [0] * self.num_slots)
+        fcntl.ioctl(self.fd, EVIOCGMTSLOTS(buf.itemsize * len(buf)), buf)
+        return list(buf[1:])
+
+    def _sync_slots(self):
+        """Take the slot state from the kernel (on grab and after dropped
+        events).  The kernel only sends a value that changed, so a new
+        contact at the same x or y as the slot's last one sends no event for
+        that axis: the stored value is the right one."""
+        old, self.slots = self.slots, {}
+        try:
+            self.slot = self._absinfo(ABS_MT_SLOT)[0]
+            ids = self._mt_values(ABS_MT_TRACKING_ID)
+            xs = self._mt_values(ABS_MT_POSITION_X)
+            ys = self._mt_values(ABS_MT_POSITION_Y)
+            tools = self._mt_values(ABS_MT_TOOL_TYPE)
+        except OSError:
+            return
+        for i in range(self.num_slots):
+            prev = old.get(i)
+            self.slots[i] = {"id": ids[i], "x": xs[i], "y": ys[i], "tool": tools[i],
+                             # a contact we already saw move stays a finger
+                             "moved": bool(prev and prev["id"] == ids[i] >= 0 and prev["moved"])}
+
     def _drain(self):
         try:
             while os.read(self.fd, EVENT.size * 64):
@@ -273,14 +312,14 @@ class Touchpad:
             elif code == SYN_REPORT:
                 if self._dropped:       # state unknown until the next clean frame
                     self._dropped = False
-                    self.slots = {}
+                    self._sync_slots()
                     if self.on_frame:
                         self.on_frame([], t)
                     return
                 contacts = [
                     (s["id"], self._mm(self.x, s["x"]), self._mm(self.y, s["y"]))
                     for s in self.slots.values()
-                    if s["id"] >= 0 and s["tool"] != MT_TOOL_PALM
+                    if s["id"] >= 0 and s["moved"] and s["tool"] != MT_TOOL_PALM
                 ]
                 if self.on_frame:
                     self.on_frame(contacts, t)
@@ -290,15 +329,17 @@ class Touchpad:
         if code == ABS_MT_SLOT:
             self.slot = value
             return
-        s = self.slots.setdefault(self.slot, {"id": -1, "x": 0, "y": 0, "tool": 0})
+        s = self.slots.setdefault(self.slot, {"id": -1, "x": 0, "y": 0, "tool": 0, "moved": False})
         if code == ABS_MT_TRACKING_ID:
+            if value != s["id"]:
+                s["moved"] = False      # x / y / tool keep the slot's last values, like the kernel's
             s["id"] = value
-            if value < 0:
-                s["tool"] = 0
         elif code == ABS_MT_POSITION_X:
             s["x"] = value
+            s["moved"] = True
         elif code == ABS_MT_POSITION_Y:
             s["y"] = value
+            s["moved"] = True
         elif code == ABS_MT_TOOL_TYPE:
             s["tool"] = value
 

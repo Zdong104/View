@@ -79,6 +79,14 @@
     <keyword>STL</keyword>
   </keywords>
   <releases>
+    <release version="0.2.6" date="2026-11-08">
+      <description>
+        <p>The Snap Store package is updated again.</p>
+        <ul>
+          <li>The 0.2.5 snap didn't build, so this release brings 0.2.5's tabs, in-place PDF form filling and PDF reload to the Snap Store. Nothing else changes.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.5" date="2026-11-08">
       <description>
         <p>Files open as tabs, and PDF forms can be filled in place.</p>

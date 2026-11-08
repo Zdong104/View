@@ -2967,6 +2967,45 @@ msgstr "将当前帧保存为 PNG"
 msgid "Could not save the frame"
 msgstr "无法保存当前帧"
 
+msgid "Move to New Window"
+msgstr "移到新窗口"
+
+msgid "Close Other Tabs"
+msgstr "关闭其他标签页"
+
+msgid "Close Tab"
+msgstr "关闭标签页"
+
+msgid "New Tab"
+msgstr "新建标签页"
+
+msgid "Tabs"
+msgstr "标签页"
+
+msgid "Next Tab"
+msgstr "下一个标签页"
+
+msgid "Previous Tab"
+msgstr "上一个标签页"
+
+msgid "Move Tab Left"
+msgstr "向左移动标签页"
+
+msgid "Move Tab Right"
+msgstr "向右移动标签页"
+
+msgid "Go to Tab"
+msgstr "转到标签页"
+
+msgid "Windows"
+msgstr "窗口"
+
+msgid "Open files in new tabs"
+msgstr "在新标签页中打开文件"
+
+msgid "Otherwise each file opens in a window of its own. Right-click a tab to move it to a new window"
+msgstr "关闭后每个文件在单独的窗口中打开。右键单击标签页可将其移到新窗口"
+
 #~ msgid "Crop to Selection"
 #~ msgstr "裁剪到选区"
 

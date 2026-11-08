@@ -31,8 +31,8 @@ from .image_ops import (ALPHA_FORMATS, ANIM_EXTS, COLOR_DEFAULTS, PIXBUF_SAVE, W
                         adjust_color, anim_dest_ok, anim_probe, iter_frames, save_animated,
                         apply_ops, color_is_neutral, fit_size, image_info_sections, load_base,
                         load_thumb, ops_need_alpha, oriented_size, quick_preview, save_any)
-from .viewer_base import (IMAGE_EXTS, Viewer, device_scale, file_info_section, kind_of,
-                          surface_origin)
+from .viewer_base import (IMAGE_EXTS, Viewer, device_scale, file_info_section, is_shell,
+                          kind_of, surface_origin)
 
 MAX_ZOOM = 32.0
 THUMB_PX = 208            # sidebar rows are 104 logical px tall (2x displays)
@@ -982,7 +982,7 @@ class ImageViewer(Viewer):
 
     # ---- host helpers (window may be a minimal stub) ---------------------
     def _host(self):
-        return self.window if (isinstance(self.window, Gtk.Window) and not self.compact) else self
+        return self.window if (is_shell(self.window) and not self.compact) else self
 
     def _root(self):
         r = self.get_root()
@@ -2268,7 +2268,7 @@ class ImageViewer(Viewer):
             self._discard_overlay()
         elif self.canvas.tool != "pan":
             self._set_tool("pan")
-        elif isinstance(self.window, Gtk.Window) and self.window.is_fullscreen():
+        elif is_shell(self.window) and self.window.is_fullscreen():
             self.window.unfullscreen()
         else:
             return False
@@ -3246,7 +3246,7 @@ class ImageViewer(Viewer):
         if self.store.get_n_items() < 2 and len(self._siblings) < 2:
             self.toast(_("Open several images for a slideshow"))
             return
-        win = self.window if isinstance(self.window, Gtk.Window) else None
+        win = self.window if is_shell(self.window) else None
         self._slideshow_state = {
             "sidebar": self.split.get_show_sidebar(),
             "fullscreen": bool(win and win.is_fullscreen()),
@@ -3276,7 +3276,7 @@ class ImageViewer(Viewer):
         st = self._slideshow_state or {}
         self.split.set_show_sidebar(st.get("sidebar", False) and not self.compact)
         self.osd.set_visible(True)
-        win = self.window if isinstance(self.window, Gtk.Window) else None
+        win = self.window if is_shell(self.window) else None
         if win is not None:
             if not st.get("fullscreen"):
                 win.unfullscreen()

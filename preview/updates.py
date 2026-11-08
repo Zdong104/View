@@ -438,9 +438,9 @@ class Updater:
     def _unsaved(self, parent) -> bool:
         """True (and says so) if a window has unsaved changes."""
         for w in self.app.get_windows():
-            v = getattr(w, "viewer", None)
+            vs = w.all_viewers() if hasattr(w, "all_viewers") else [getattr(w, "viewer", None)]
             try:
-                if v is not None and v.has_unsaved_changes():
+                if any(v is not None and v.has_unsaved_changes() for v in vs):
                     _message(parent, _("Unsaved Changes"),
                              _("Save or close the documents with unsaved changes, then try "
                                "again. The update has to close {APP_NAME}.").format(

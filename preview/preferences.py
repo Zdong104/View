@@ -32,6 +32,8 @@ class PreferencesDialog(Adw.PreferencesDialog):
         if screenshot.supported():
             page.add(self._screenshots_group())
 
+        page.add(self._windows_group())
+
         from . import instance
         if instance.supported():
             page.add(self._background_group())
@@ -97,6 +99,25 @@ class PreferencesDialog(Adw.PreferencesDialog):
                 screenshot.set_enabled(r.get_active())
             except OSError as e:
                 self.add_toast(Adw.Toast(title=_("Could not change the setting: {error}").format(error=e)))
+        row.connect("notify::active", toggled)
+        grp.add(row)
+        return grp
+
+    # ---- windows and tabs ----
+    def _windows_group(self):
+        from . import tabs
+        grp = Adw.PreferencesGroup(title=_("Windows"))
+        row = Adw.SwitchRow(title=_("Open files in new tabs"),
+                            subtitle=_("Otherwise each file opens in a window of its own. "
+                                       "Right-click a tab to move it to a new window"),
+                            active=tabs.tabs_enabled())
+
+        def toggled(r, _pspec):
+            try:
+                tabs.set_tabs_enabled(r.get_active())
+            except OSError as e:
+                self.add_toast(Adw.Toast(
+                    title=_("Could not change the setting: {error}").format(error=e)))
         row.connect("notify::active", toggled)
         grp.add(row)
         return grp

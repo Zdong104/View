@@ -687,4 +687,8 @@ class SignatureButton(Gtk.MenuButton):
             self._rebuild()
             self.on_chosen(sig)
 
-        SignatureCaptureWindow(self.window, saved).present()
+        # (a viewer passes its tab, not the window: the transient parent is
+        # whichever window this button is in now)
+        parent = self.window if isinstance(self.window, Gtk.Window) else self.get_root()
+        SignatureCaptureWindow(parent if isinstance(parent, Gtk.Window) else None,
+                               saved).present()

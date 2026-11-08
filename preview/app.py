@@ -143,9 +143,15 @@ def _make_filters():
 
 SHORTCUT_SECTIONS = [
     (N_("General"), ((N_("Open…"), "<Control>o"), (N_("New Window"), "<Control>n"),
+                     (N_("New Tab"), "<Control>t"),
                      (N_("New from Clipboard"), "<Control>v"), (N_("Show Inspector"), "<Control>i"),
-                     (N_("Full Screen"), "F11"), (N_("Close Window"), "<Control>w"),
+                     (N_("Full Screen"), "F11"), (N_("Close Tab"), "<Control>w"),
                      (N_("Quit"), "<Control>q"), (N_("Keyboard Shortcuts"), "<Control>question"))),
+    (N_("Tabs"), ((N_("Next Tab"), "<Control>Tab <Control>Page_Down"),
+                  (N_("Previous Tab"), "<Control><Shift>Tab <Control>Page_Up"),
+                  (N_("Move Tab Left"), "<Control><Shift>Page_Up"),
+                  (N_("Move Tab Right"), "<Control><Shift>Page_Down"),
+                  (N_("Go to Tab"), "<Alt>1...9"))),
     (N_("Video and Audio"), ((N_("Play / Pause"), "space"), (N_("Back 5 Seconds"), "Left"),
                      (N_("Forward 5 Seconds"), "Right"), (N_("Volume Up"), "Up"),
                      (N_("Volume Down"), "Down"), (N_("Mute"), "m"), (N_("Full Screen"), "f"),
@@ -308,60 +314,66 @@ def _set_startup_id(win, token):
 
 
 class MainWindow(Adw.ApplicationWindow):
-    def __init__(self, app):
+    """A window of tabs (Adw.TabView of preview.tabs.TabHost).  The tab bar
+    shows only with two tabs or more, so one document looks as it always
+    did.  `viewer`, `header`, load_files() and friends are the selected
+    tab's."""
+
+    def __init__(self, app, empty_tab=True):
         super().__init__(application=app, default_width=1040, default_height=740,
                          title=APP_NAME)
-        self.viewer = None
         self._confirmed_close = False
-        self._viewer_groups = set()     # action groups a viewer put on this window
-        self._viewer_chrome = []        # and the buttons it packed into the header
-
-        self.toast_overlay = Adw.ToastOverlay()
-        self.bin = Adw.Bin()
-        self.toast_overlay.set_child(self.bin)
-        self.highlight = Gtk.Box(css_classes=["drop-highlight"], visible=False,
-                                 can_target=False)
-        content = Gtk.Overlay(child=self.toast_overlay)
-        self.card_overlay = content     # floating cards (translate_ui) go here
-        content.add_overlay(self.highlight)
-
-        self.header = Adw.HeaderBar()
-        self.win_title = Adw.WindowTitle(title=APP_NAME, subtitle="")
-        self.header.set_title_widget(self.win_title)
-        open_btn = Gtk.Button(icon_name="document-open-symbolic", tooltip_text=_("Open… (Ctrl+O)"),
-                              action_name="win.open")
-        self.header.pack_start(open_btn)
-        menu_btn = Gtk.MenuButton(icon_name="open-menu-symbolic", primary=True,
-                                  tooltip_text=_("Main Menu"), menu_model=app.primary_menu)
-        self.header.pack_end(menu_btn)
-        self._header_boxes = (open_btn.get_parent(), menu_btn.get_parent())
-        self.header.pack_end(Gtk.Button(icon_name="dialog-information-symbolic",
-                                        tooltip_text=_("Inspector (Ctrl+I)"),
-                                        action_name="win.inspector"))
+        self._menu_page = None          # the tab whose context menu is open
+        self._ask_queue = []            # unsaved-changes prompts, one at a time
+        self._asking = False
         self.inspector = None
 
-        self.toolbar = Adw.ToolbarView()
-        self.toolbar.add_top_bar(self.header)
-        self.toolbar.set_content(content)
+        self.tab_view = Adw.TabView()
+        try:
+            # Ctrl+(Shift+)Home/End are the PDF viewer's first/last page and text
+            # selection: leave them to the document
+            S = Adw.TabViewShortcuts
+            off = (S.CONTROL_HOME | S.CONTROL_END | S.CONTROL_SHIFT_HOME | S.CONTROL_SHIFT_END)
+            self.tab_view.set_shortcuts(S(int(S.ALL_SHORTCUTS) & ~int(off)))
+        except (AttributeError, TypeError):
+            pass
+        menu = Gio.Menu()
+        sec = Gio.Menu()
+        sec.append(_("Move to New Window"), "win.tab-move")
+        menu.append_section(None, sec)
+        sec = Gio.Menu()
+        sec.append(_("Close Other Tabs"), "win.tab-close-others")
+        sec.append(_("Close Tab"), "win.tab-close")
+        menu.append_section(None, sec)
+        self.tab_view.set_menu_model(menu)
+        self.tab_view.connect("notify::selected-page", lambda *_: self._on_selected())
+        self.tab_view.connect("page-attached", self._on_page_attached)
+        self.tab_view.connect("page-detached", self._on_page_detached)
+        self.tab_view.connect("close-page", self._on_close_page)
+        self.tab_view.connect("create-window", self._on_create_window)
+        self.tab_view.connect("setup-menu", self._on_setup_menu)
+
+        self.tab_bar = Adw.TabBar(view=self.tab_view, autohide=True)
+        self.toolbar = Adw.ToolbarView(content=self.tab_view)
+        # the empty part of the tab bar moves the window, like a header bar
+        self.toolbar.add_top_bar(Gtk.WindowHandle(child=self.tab_bar))
         self.set_content(self.toolbar)
 
-        self.bin.set_child(self._build_empty())
+        for name, cb in (("open", self._open_action),
+                         ("inspector", self.toggle_inspector),
+                         ("close", self.close),
+                         ("close-tab", self.close_tab),
+                         ("new-tab", lambda: self.add_tab()),
+                         ("fullscreen", lambda: self.unfullscreen() if self.is_fullscreen()
+                          else self.fullscreen()),
+                         ("tab-move", lambda: self.move_to_new_window(self._menu_target())),
+                         ("tab-close", lambda: self._close_page(self._menu_target())),
+                         ("tab-close-others", self._close_others)):
+            act = Gio.SimpleAction.new(name, None)
+            act.connect("activate", lambda _a, _p, cb=cb: cb())
+            self.add_action(act)
 
-        act = Gio.SimpleAction.new("open", None)
-        act.connect("activate", lambda *_: self.open_dialog())
-        self.add_action(act)
-        act = Gio.SimpleAction.new("inspector", None)
-        act.connect("activate", lambda *_: self.toggle_inspector())
-        self.add_action(act)
-        act = Gio.SimpleAction.new("close", None)
-        act.connect("activate", lambda *_: self.close())
-        self.add_action(act)
-        act = Gio.SimpleAction.new("fullscreen", None)
-        act.connect("activate", lambda *_: self.unfullscreen() if self.is_fullscreen()
-                    else self.fullscreen())
-        self.add_action(act)
-
-        # Ctrl+V on an empty or image window: paste the clipboard as a new image.
+        # Ctrl+V on an empty or image tab: paste the clipboard as a new image.
         # Other viewers keep Ctrl+V (the callback declines so the event propagates).
         paste = Gtk.ShortcutController()
         paste.add_shortcut(Gtk.Shortcut.new(
@@ -369,60 +381,234 @@ class MainWindow(Adw.ApplicationWindow):
             Gtk.CallbackAction.new(self._paste_shortcut)))
         self.add_controller(paste)
 
-        # Full screen: hide the header bar, reveal it when the pointer nears the top.
+        # Full screen: hide the bars, reveal them when the pointer nears the top.
         self._chrome_hidden = False
         self.connect("notify::fullscreened", lambda *_: self._sync_chrome())
         motion = Gtk.EventControllerMotion()
         motion.connect("motion", self._on_motion)
         self.toolbar.add_controller(motion)
 
-        dt = Gtk.DropTarget.new(Gdk.FileList, Gdk.DragAction.COPY)
-        dt.connect("enter", self._on_drag_enter)
-        dt.connect("leave", lambda *_: self.highlight.set_visible(False))
-        dt.connect("drop", self._on_drop)
-        self.toolbar.add_controller(dt)
-
         self.connect("close-request", self._on_close_request)
+        self.connect("unrealize", self._on_unrealize)
         if runtime.startup_seconds is None:
             self.add_tick_callback(_note_startup)
+        if empty_tab:
+            self.add_tab()
+        self._update_tab_actions()
 
-    # ---- empty state -------------------------------------------------------
-    def _build_empty(self):
-        page = Adw.StatusPage(icon_name="document-open-symbolic",
-                              title=_("Drop a PDF, image, video, text file or spreadsheet here"),
-                              description=_("Or open a file to get started."))
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18, halign=Gtk.Align.CENTER)
-        box.append(Gtk.Button(label=_("Open…"), halign=Gtk.Align.CENTER,
-                              css_classes=["pill", "suggested-action"], action_name="win.open"))
-        self._recent_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
-        box.append(self._recent_box)
-        self.show_recents(self.get_application().recent_items)
-        page.set_child(box)
+    # ---- tabs ----------------------------------------------------------------------
+    def hosts(self):
+        tv = self.tab_view
+        return [tv.get_nth_page(i).get_child() for i in range(tv.get_n_pages())]
+
+    def current_host(self):
+        page = self.tab_view.get_selected_page()
+        return page.get_child() if page is not None else None
+
+    def all_viewers(self):
+        return [h.viewer for h in self.hosts() if h.viewer is not None]
+
+    def add_tab(self, select=True):
+        """A new empty tab (the Recent page), selected unless `select` is False."""
+        from .tabs import TabHost
+        host = TabHost(self.get_application())
+        page = self.tab_view.append(host)
+        host.refresh_title()
+        if select:
+            self.tab_view.set_selected_page(page)
+        return host
+
+    def select_host(self, host):
+        page = self.tab_view.get_page(host)
+        if page is not None:
+            self.tab_view.set_selected_page(page)
+
+    def _pages(self):
+        tv = self.tab_view
+        return [tv.get_nth_page(i) for i in range(tv.get_n_pages())]
+
+    def _menu_target(self):
+        page, self._menu_page = self._menu_page, None
+        if page is None or page not in self._pages():
+            page = self.tab_view.get_selected_page()
         return page
 
-    def show_recents(self, items):
-        """Fill the empty page's Recent list (the app finds the files in the
-        background and calls this again when it has them)."""
-        box = getattr(self, "_recent_box", None)
-        if box is None:
+    def _on_setup_menu(self, _view, page):
+        if page is not None:
+            self._menu_page = page
+        self._update_tab_actions()
+
+    def _update_tab_actions(self):
+        several = self.tab_view.get_n_pages() > 1
+        for name in ("tab-move", "tab-close-others"):
+            act = self.lookup_action(name)
+            if act is not None:
+                act.set_enabled(several)
+
+    def _on_selected(self):
+        cur = self.current_host()
+        for h in self.hosts():
+            h.set_active(h is cur)
+        self.sync_title()
+
+    def _on_page_attached(self, _view, page, _pos):
+        host = page.get_child()
+        host.set_active(page is self.tab_view.get_selected_page())
+        host.refresh_title()
+        self._sync_chrome()
+        self._update_tab_actions()
+
+    def _on_page_detached(self, _view, _page, _pos):
+        self._update_tab_actions()
+        if self.tab_view.get_n_pages() == 0:
+            # the last tab closed or moved to another window
+            GLib.idle_add(self._close_if_empty)
+
+    def _close_if_empty(self):
+        if self.get_application() is not None and self.tab_view.get_n_pages() == 0:
+            self._confirmed_close = True
+            self.close()
+        return GLib.SOURCE_REMOVE
+
+    def _on_create_window(self, _view):
+        """A tab dragged out of the tab bar: it gets a window of its own."""
+        win = MainWindow(self.get_application(), empty_tab=False)
+        win.set_default_size(self.get_width() or 1040, self.get_height() or 740)
+        win.present()
+        return win.tab_view
+
+    def move_to_new_window(self, page):
+        if page is None or self.tab_view.get_n_pages() < 2:
+            return None
+        win = MainWindow(self.get_application(), empty_tab=False)
+        win.set_default_size(self.get_width() or 1040, self.get_height() or 740)
+        self.tab_view.transfer_page(page, win.tab_view, 0)
+        win.tab_view.set_selected_page(page)
+        win.present()
+        return win
+
+    def close_tab(self):
+        """Ctrl+W: close the tab (the window with its last one)."""
+        page = self.tab_view.get_selected_page()
+        if page is None:
+            self.close()
+        else:
+            self._close_page(page)
+
+    def _close_page(self, page):
+        if page is not None:
+            self.tab_view.close_page(page)
+
+    def _close_others(self):
+        page = self._menu_target()
+        if page is not None:
+            self.tab_view.close_other_pages(page)
+
+    def _on_close_page(self, view, page):
+        host = page.get_child()
+
+        def finish(ok):
+            view.close_page_finish(page, bool(ok))
+            if ok:
+                GLib.idle_add(lambda: (host.release(), GLib.SOURCE_REMOVE)[1])
+        if host.confirmed_close or not host.is_dirty():
+            finish(True)
+        else:
+            self._ask(host, finish)
+        return True
+
+    def _ask(self, host, done):
+        """Ask about one tab's unsaved changes at a time (Close Other Tabs, a
+        window closing)."""
+        self._ask_queue.append((host, done))
+        self._ask_next()
+
+    def _ask_next(self):
+        if self._asking or not self._ask_queue:
             return
-        while (child := box.get_first_child()) is not None:
-            box.remove(child)
-        recents = items[:5]
-        if recents:
-            box.append(Gtk.Label(label=_("Recent"), css_classes=["heading"], halign=Gtk.Align.START))
-            lb = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=["boxed-list"],
-                             width_request=380)
-            for uri, f in recents:
-                parent = f.get_parent()
-                row = Adw.ActionRow(title=GLib.markup_escape_text(f.get_basename() or uri),
-                                    subtitle=GLib.markup_escape_text(
-                                        (parent.get_path() if parent else "") or ""),
-                                    activatable=True, subtitle_lines=1)
-                row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
-                row.connect("activated", lambda _r, f=f: self.open_files([f]))
-                lb.append(row)
-            box.append(lb)
+        host, done = self._ask_queue.pop(0)
+        if host.get_root() is not self:            # moved away meanwhile
+            done(False)
+            self._ask_next()
+            return
+        self._asking = True
+        self.select_host(host)
+
+        def answered(ok):
+            self._asking = False
+            done(ok)
+            self._ask_next()
+        host.ask_discard(answered)
+
+    # ---- facade: the selected tab ------------------------------------------------
+    @property
+    def viewer(self):
+        h = self.current_host()
+        return h.viewer if h is not None else None
+
+    @property
+    def header(self):
+        h = self.current_host()
+        return h.header if h is not None else None
+
+    @property
+    def card_overlay(self):
+        """Where translate_ui's floating cards go: the selected tab's overlay."""
+        h = self.current_host()
+        return h.card_overlay if h is not None else None
+
+    def is_empty(self):
+        h = self.current_host()
+        return h is None or h.is_empty()
+
+    def show_recents(self, items):
+        for h in self.hosts():
+            if h.is_empty():
+                h.show_recents(items)
+
+    def show_toast(self, message, button_label=None, on_button=None):
+        h = self.current_host() or self.add_tab()
+        h.show_toast(message, button_label, on_button)
+
+    def refresh_title(self):
+        h = self.current_host()
+        if h is not None:
+            h.refresh_title()          # (calls sync_title)
+        else:
+            self.sync_title()
+
+    def sync_title(self):
+        """Window title and Inspector follow the selected tab."""
+        if self.inspector is not None:
+            self.inspector.refresh()
+        h = self.current_host()
+        if h is None or h.viewer is None:
+            self.set_title(APP_NAME)
+            return
+        title, _sub = h.titles()
+        self.set_title(f"{title} — {APP_NAME}")
+
+    def ensure_viewer(self, kind):
+        return (self.current_host() or self.add_tab()).ensure_viewer(kind)
+
+    def load_files(self, kind, files):
+        (self.current_host() or self.add_tab()).load_files(kind, files)
+
+    def show_clipboard_image(self, pil_image):
+        (self.current_host() or self.add_tab()).show_clipboard_image(pil_image)
+
+    def open_files(self, files):
+        self.get_application().route_files(list(files), self)
+
+    def open_dialog(self):
+        open_files_dialog(self, self.open_files)
+
+    def _open_action(self):
+        h = self.current_host()
+        if h is not None:
+            h.open_dialog()
+        else:
+            self.open_dialog()
 
     def _paste_shortcut(self, *_):
         if self.viewer is not None and not hasattr(self.viewer, "add_untitled"):
@@ -430,20 +616,26 @@ class MainWindow(Adw.ApplicationWindow):
         self.get_application().new_from_clipboard(self)
         return True
 
+    # ---- full screen -------------------------------------------------------------------
     def set_chrome_visible(self, visible):
-        """Hide/show the header bar (slideshow)."""
+        """Hide/show the tab bar and header bars (slideshow)."""
         self._chrome_hidden = not visible
         self._sync_chrome()
 
+    def _reveal_bars(self, reveal):
+        self.toolbar.set_reveal_top_bars(reveal)
+        for h in self.hosts():
+            h.toolbar.set_reveal_top_bars(reveal)
+
     def _sync_chrome(self):
-        self.toolbar.set_reveal_top_bars(not (self._chrome_hidden or self.is_fullscreen()))
+        self._reveal_bars(not (self._chrome_hidden or self.is_fullscreen()))
 
     def _on_motion(self, _c, _x, y):
         if self.is_fullscreen() and not self._chrome_hidden:
             if y < 6 and not self.toolbar.get_reveal_top_bars():
-                self.toolbar.set_reveal_top_bars(True)
+                self._reveal_bars(True)
             elif y > 90 and self.toolbar.get_reveal_top_bars():
-                self.toolbar.set_reveal_top_bars(False)
+                self._reveal_bars(False)
 
     def show_inspector(self):
         from .inspector import Inspector
@@ -462,203 +654,43 @@ class MainWindow(Adw.ApplicationWindow):
         else:
             self.inspector.present()
 
-    def is_empty(self):
-        return self.viewer is None
-
-    def insert_action_group(self, name, group):
-        # viewers put their actions here, where the header bar finds them:
-        # remember which, so the next viewer in this window starts clean
-        if group is None:
-            self._viewer_groups.discard(name)
-        else:
-            self._viewer_groups.add(name)
-        super().insert_action_group(name, group)
-
-    def _header_children(self):
-        out = []
-        for box in self._header_boxes:
-            child = box.get_first_child()
-            while child is not None:
-                out.append(child)
-                child = child.get_next_sibling()
-        return out
-
-    def _drop_viewer_chrome(self):
-        """Remove the previous (failed) viewer's header buttons and actions."""
-        for w in self._viewer_chrome:
-            self.header.remove(w)
-        self._viewer_chrome = []
-        for name in list(self._viewer_groups):
-            self.insert_action_group(name, None)
-
-    # ---- toast / title -------------------------------------------------------
-    def show_toast(self, message, button_label=None, on_button=None):
-        toast = Adw.Toast(title=message, timeout=6 if button_label else 4)
-        try:
-            toast.set_use_markup(False)
-        except AttributeError:
-            pass
-        if button_label:
-            toast.set_button_label(button_label)
-            if on_button:
-                toast.connect("button-clicked", lambda *_: on_button())
-        self.toast_overlay.add_toast(toast)
-
-    def refresh_title(self):
-        if self.inspector is not None:
-            self.inspector.refresh()
-        if self.viewer is None:
-            self.win_title.set_title(APP_NAME)
-            self.win_title.set_subtitle("")
-            self.set_title(APP_NAME)
-            return
-        title = self.viewer.get_title() or APP_NAME
-        self.win_title.set_title(title)
-        self.win_title.set_subtitle(self.viewer.get_subtitle() or "")
-        self.set_title(f"{title} — {APP_NAME}")
-
-    # ---- loading ---------------------------------------------------------------
-    def ensure_viewer(self, kind):
-        """Create and install the viewer for `kind` in this (empty) window."""
-        if kind == "image":
-            from .image_view import ImageViewer as cls
-        elif kind == "pdf":
-            from .pdf_view import PdfViewer as cls
-        elif kind == "model":
-            from .stl_view import ModelViewer as cls
-        elif kind == "cad":
-            from .dxf_view import DxfViewer as cls
-        elif kind == "table":
-            from .table_view import TableViewer as cls
-        elif kind == "video":
-            from .video_view import VideoViewer as cls
-        elif kind == "text":
-            from .text_view import TextViewer as cls
-        else:
-            raise ValueError(f"Unsupported file type: {kind}")
-        runtime.mark(f"{kind} viewer imported")
-        self._drop_viewer_chrome()
-        viewer = cls(self)
-        self.viewer = viewer
-        self.bin.set_child(viewer)
-        before = set(self._header_children())
-        viewer.build_header(self.header)
-        self._viewer_chrome = [w for w in self._header_children() if w not in before]
-        return viewer
-
-    def _show_error(self, e):
-        self.viewer = None
-        self._drop_viewer_chrome()
-        # an error that explains itself (e.g. DxfReadError) is shown as is
-        text = str(e) if getattr(e, "user_message", False) else f"{type(e).__name__}: {e}"
-        page = Adw.StatusPage(icon_name="dialog-error-symbolic",
-                              title=_("Could not open this file"),
-                              description=GLib.markup_escape_text(text))
-        btn = Gtk.Button(label=_("Open Another File…"), halign=Gtk.Align.CENTER,
-                         css_classes=["pill"], action_name="win.open")
-        page.set_child(btn)
-        self.bin.set_child(page)
-
-    def load_files(self, kind, files):
-        """Create the viewer for `kind` and load files into this (empty) window."""
-        try:
-            viewer = self.ensure_viewer(kind)
-            viewer.load(files)
-            runtime.mark(f"{kind} loaded")
-            app = self.get_application()
-            for f in files[:10]:          # don't flood Recent when opening a whole folder
-                app.add_recent(f)
-        except Exception as e:  # noqa: BLE001
-            traceback.print_exc()
-            self._show_error(e)
-        self.refresh_title()
-
-    def show_clipboard_image(self, pil_image):
-        """Show a pasted image (as a new untitled image) in this window."""
-        try:
-            if self.viewer is None:
-                self.ensure_viewer("image")
-            self.viewer.add_untitled(pil_image)
-        except Exception as e:  # noqa: BLE001
-            traceback.print_exc()
-            self._show_error(e)
-        self.refresh_title()
-
-    def open_files(self, files):
-        self.get_application().route_files(list(files), self)
-
-    def open_dialog(self):
-        open_files_dialog(self, self.open_files)
-
-    # ---- drag & drop --------------------------------------------------------------
-    def _on_drag_enter(self, _dt, _x, _y):
-        self.highlight.set_visible(True)
-        return Gdk.DragAction.COPY
-
-    def _on_drop(self, _dt, value, _x, _y):
-        self.highlight.set_visible(False)
-        files = value.get_files() if value is not None else []
-        if not files:
-            return False
-        if self.viewer is not None:
-            try:
-                if self.viewer.accepts_drop(files):
-                    self.viewer.add_dropped(files)
-                    for f in files:
-                        self.get_application().add_recent(f)
-                    return True
-            except Exception:  # noqa: BLE001
-                traceback.print_exc()
-        self.open_files(files)
-        return True
-
     # ---- closing ---------------------------------------------------------------------
+    def _on_unrealize(self, *_):
+        # the window is being destroyed: a separate translation window of one
+        # of its documents goes too (its tabs are still here)
+        tv = sys.modules.get("preview.translate_view")
+        if tv is not None:
+            for v in self.all_viewers():
+                try:
+                    tv.shutdown_for(v)
+                except Exception:  # noqa: BLE001
+                    traceback.print_exc()
+
     def _on_close_request(self, *_a):
-        v = self.viewer
-        if self._confirmed_close or v is None:
+        """Every tab with unsaved changes asks first, one after the other; a
+        Cancel keeps the window (and stops a Quit)."""
+        if self._confirmed_close:
             return False
-        try:
-            dirty = v.has_unsaved_changes()
-        except Exception:  # noqa: BLE001
-            dirty = False
+        dirty = [h for h in self.hosts() if not h.confirmed_close and h.is_dirty()]
         if not dirty:
             return False
-        can_save = hasattr(v, "save_changes")
-        dlg = Adw.AlertDialog(heading=_("Discard Changes?"),
-                              body=_("This document has unsaved changes that will be lost "
-                                     "if you close it."))
-        dlg.add_response("cancel", _("Cancel"))
-        dlg.add_response("discard", _("Discard"))
-        dlg.set_response_appearance("discard", Adw.ResponseAppearance.DESTRUCTIVE)
-        if can_save:
-            dlg.add_response("save", _("Save"))
-            dlg.set_response_appearance("save", Adw.ResponseAppearance.SUGGESTED)
-            dlg.set_default_response("save")
-        else:
-            dlg.set_default_response("cancel")
-        dlg.set_close_response("cancel")
+        if self._asking or self._ask_queue:
+            return True
+        host = dirty[0]
 
-        def kept():
-            app = self.get_application()
-            if app is not None:
-                app.cancel_quit()          # a Quit that was closing every window stops
-
-        def response(_d, rid):
-            if rid == "discard":
-                self._confirmed_close = True
-                self.close()
-            elif rid == "save":
-                def after(ok):
-                    if ok:
-                        self._confirmed_close = True
-                        self.close()
-                    else:
-                        kept()
-                v.save_changes(after)
+        def decided(ok):
+            if ok:
+                host.confirmed_close = True
+                # the next one, or close (once the dialog has gone: a window
+                # with a dialog open only closes the dialog)
+                GLib.idle_add(lambda: (self.close(), GLib.SOURCE_REMOVE)[1])
             else:
-                kept()
-        dlg.connect("response", response)
-        dlg.present(self)
+                for h in self.hosts():
+                    h.confirmed_close = False
+                app = self.get_application()
+                if app is not None:
+                    app.cancel_quit()      # a Quit that was closing every window stops
+        self._ask(host, decided)
         return True
 
 
@@ -697,6 +729,7 @@ class PreviewApp(Adw.Application):
         m = Gio.Menu()
         s1 = Gio.Menu()
         s1.append(_("New Window"), "app.new-window")
+        s1.append(_("New Tab"), "win.new-tab")
         s1.append(_("Open…"), "win.open")
         s1.append_submenu(_("Open Recent"), self.recent_menu)
         s1.append(_("New from Clipboard"), "app.new-from-clipboard")
@@ -755,7 +788,8 @@ class PreviewApp(Adw.Application):
         self.set_accels_for_action("win.open", ["<Control>o"])
         self.set_accels_for_action("win.inspector", ["<Control>i"])
         self.set_accels_for_action("app.new-from-clipboard", ["<Control><Shift>n"])
-        self.set_accels_for_action("win.close", ["<Control>w"])
+        self.set_accels_for_action("win.close-tab", ["<Control>w"])
+        self.set_accels_for_action("win.new-tab", ["<Control>t"])
         self.set_accels_for_action("win.fullscreen", ["F11"])
         runtime.mark("menus and actions set up")
         self._setup_resident()
@@ -793,8 +827,8 @@ class PreviewApp(Adw.Application):
                     self.recent_items = items
                     self._rebuild_recent()
                     for w in self.get_windows():
-                        if isinstance(w, MainWindow) and w.is_empty():
-                            w.show_recents(items)
+                        if isinstance(w, MainWindow):
+                            w.show_recents(items)          # (its empty tabs)
                 return GLib.SOURCE_REMOVE
             GLib.idle_add(done)
         threading.Thread(target=work, daemon=True, name="view-recent").start()
@@ -829,18 +863,25 @@ class PreviewApp(Adw.Application):
         self.new_from_clipboard(None)
 
     def new_from_clipboard(self, win=None):
-        """Paste the clipboard image as a new untitled image (into `win` if it
-        is empty or an image window, else a new window)."""
+        """Paste the clipboard image as a new untitled image (into `win`'s tab
+        if it is empty or an image tab, else a new tab or window)."""
         from PIL import Image
         import io
+        from .tabs import tabs_enabled
         win = win or self._active_main()
-        if win is not None and win.viewer is not None and not hasattr(win.viewer, "add_untitled"):
-            win = None
-        if win is None:
+        host = None
+        if win is not None:
+            cur = win.current_host()
+            if cur is not None and (cur.viewer is None or hasattr(cur.viewer, "add_untitled")):
+                host = cur
+            elif tabs_enabled():
+                host = win.add_tab()
+        if host is None:
             cand = next((w for w in self.get_windows()
                          if isinstance(w, MainWindow) and w.is_empty()), None)
-            win = cand or MainWindow(self)
-        win.present()
+            host = (cand or MainWindow(self)).current_host()
+        host.present()
+        win = host
         clip = win.get_clipboard()
 
         def done(c, res):
@@ -924,41 +965,69 @@ class PreviewApp(Adw.Application):
         return None
 
     def route_files(self, files, target=None, startup_id=""):
-        """Open files: all images in one window, each PDF/model in its own.
-        An empty `target` (or empty active window) is reused for the first group.
-        `startup_id`: the launch's activation token, so the first window comes
-        to the front (Wayland) instead of a "View is ready" notification.
+        """Open files: all images in one tab, each PDF/model in its own (PDFs
+        share one when the viewer can show several).  With "Open files in new
+        tabs" (Preferences, on by default) they are new tabs of `target` (a
+        MainWindow or one of its tabs; else the active or most recently used
+        window), otherwise new windows.  An empty `target` tab (or empty
+        selected tab of the active window) is reused for the first group.
+        `startup_id`: the launch's activation token, so the window comes to
+        the front (Wayland) instead of a "View is ready" notification.
         Returns the first window shown."""
+        from .tabs import TabHost, tabs_enabled
         images, pdfs, models, cads, tables, videos, texts, unknown = [], [], [], [], [], [], [], []
         files, empty = self._expand_folders(files)
         for f in files:
             k = kind_of(f, sniff=True)
             {"image": images, "pdf": pdfs, "model": models, "cad": cads, "table": tables,
              "video": videos, "text": texts}.get(k, unknown).append(f)
-        spare = target if (target is not None and target.is_empty()) else None
-        if spare is None and target is None:
+        tabbed = tabs_enabled()
+        target_host = target if isinstance(target, TabHost) else None
+        target_win = target_host.get_root() if target_host is not None else target
+        if not isinstance(target_win, MainWindow):
+            target_win = None
+        if target_host is not None:
+            spare = target_host if target_host.is_empty() else None
+        elif target_win is not None:
+            spare = target_win.current_host() if target_win.is_empty() else None
+        else:
             cand = self._active_main()
-            if cand is not None and cand.is_empty():
-                spare = cand
-        first = [None]
+            spare = cand.current_host() if cand is not None and cand.is_empty() else None
+        dest = [target_win]             # where new tabs go
+        first = [None]                  # the first tab filled
         token = [startup_id]
 
-        def show(w):
+        def show(where):
+            """Select the tab `where` (or take the window) and present its window."""
+            if isinstance(where, TabHost):
+                w = where.get_root()
+                if isinstance(w, MainWindow):
+                    w.select_host(where)
+            else:
+                w = where
             if token[0]:
                 _set_startup_id(w, token[0])
                 token[0] = ""
             w.present()
             _to_front(w)
 
-        def win():
+        def host():
             nonlocal spare
             if spare is not None:
-                w, spare = spare, None
+                h, spare = spare, None
+                if tabbed:
+                    dest[0] = h.get_root()
+            elif tabbed:
+                w = dest[0]
+                if not isinstance(w, MainWindow) or w.get_application() is None:
+                    w = self._active_main() if target is None else None
+                    w = dest[0] = w or MainWindow(self, empty_tab=False)
+                h = w.add_tab(select=False)
             else:
-                w = MainWindow(self)
+                h = MainWindow(self).current_host()
             if first[0] is None:
-                first[0] = w
-            return w
+                first[0] = h
+            return h
 
         groups = []
         if images:
@@ -973,26 +1042,30 @@ class PreviewApp(Adw.Application):
         groups += [("video", [f]) for f in videos]
         groups += [("text", [f]) for f in texts]
         for kind, fl in groups:
-            w = win()
-            w.load_files(kind, fl)
-            show(w)
+            h = host()
+            h.load_files(kind, fl)
+            if not tabbed:
+                show(h)
+        if tabbed and first[0] is not None:
+            show(first[0])
+
+        def anchor():
+            a = first[0] or target_host or target_win or self._active_main() or MainWindow(self)
+            show(a)
+            first[0] = first[0] or a
+            return a
         if unknown:
             names = ", ".join(f.get_basename() or "?" for f in unknown[:3])
             msg = (_("Unsupported file: {names}").format(names=names) if len(unknown) == 1
                    else ngettext("{n} unsupported file: {names}…",
                                  "{n} unsupported files: {names}…",
                                  len(unknown)).format(n=len(unknown), names=names))
-            anchor = first[0] or target or self._active_main() or MainWindow(self)
-            show(anchor)
-            anchor.show_toast(msg)
-            first[0] = first[0] or anchor
+            anchor().show_toast(msg)
         if empty:
-            anchor = first[0] or target or self._active_main() or MainWindow(self)
-            show(anchor)
-            anchor.show_toast(_("No images in {folder}").format(
+            anchor().show_toast(_("No images in {folder}").format(
                 folder=empty[0].get_basename() or _("this folder")))
-            first[0] = first[0] or anchor
-        return first[0]
+        w = first[0]
+        return w.get_root() if isinstance(w, TabHost) else w
 
     @staticmethod
     def _expand_folders(files):
@@ -1131,15 +1204,21 @@ class PreviewApp(Adw.Application):
     def _on_window_removed(self, _app, win):
         if self._warming:
             return
-        viewer = getattr(win, "viewer", None)
-        if viewer is not None and hasattr(viewer, "release"):
-            # signal closures keep a closed window (and its decoded document)
-            # alive through a GObject reference cycle: drop the content now
+        # signal closures keep a closed window (and its decoded documents)
+        # alive through a GObject reference cycle: drop the content now.
+        # (A tab that moved to another window is no longer in this one.)
+        if isinstance(win, MainWindow):
+            frees = [h.release for h in win.hosts()]
+        else:
+            viewer = getattr(win, "viewer", None)
+            frees = [viewer.release] if viewer is not None and hasattr(viewer, "release") else []
+        if frees:
             def free():
-                try:
-                    viewer.release()
-                except Exception:  # noqa: BLE001
-                    traceback.print_exc()
+                for fn in frees:
+                    try:
+                        fn()
+                    except Exception:  # noqa: BLE001
+                        traceback.print_exc()
                 return GLib.SOURCE_REMOVE
             GLib.idle_add(free)
         GLib.idle_add(self._after_window_removed)

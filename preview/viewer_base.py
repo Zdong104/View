@@ -186,12 +186,19 @@ def surface_origin(widget):
     return p.x + nx, p.y + ny
 
 
+def is_shell(host) -> bool:
+    """Is `host` (a viewer's `window`) View's real shell: a Gtk.Window, or a
+    tab of one (preview.tabs.TabHost, which forwards fullscreen and the like
+    to the window it is in)?  Quick Look's stand-in is neither."""
+    return isinstance(host, Gtk.Window) or bool(getattr(host, "is_tab_host", False))
+
+
 class Viewer(Gtk.Box):
     """Base class. Subclasses override load() and build_header()."""
 
     def __init__(self, window):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
-        self.window = window  # the Adw.ApplicationWindow hosting this viewer
+        self.window = window  # its tab (preview.tabs.TabHost), or a stand-in
         self.set_hexpand(True)
         self.set_vexpand(True)
 

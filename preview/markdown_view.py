@@ -72,6 +72,24 @@ def saved_mode() -> str:
 
 
 def save_mode(mode: str):
+    _save("markdown_view", mode)
+
+
+# ---- Split: scroll the source and the preview together (⋮ > Sync Scrolling) --
+def saved_sync() -> bool:
+    try:
+        with open(i18n.settings_path(), encoding="utf-8") as f:
+            on = json.load(f).get("markdown_sync")
+    except (OSError, ValueError, AttributeError):
+        on = None
+    return on if isinstance(on, bool) else True
+
+
+def save_sync(on: bool):
+    _save("markdown_sync", bool(on))
+
+
+def _save(key, value):
     path = i18n.settings_path()
     try:
         with open(path, encoding="utf-8") as f:
@@ -80,7 +98,7 @@ def save_mode(mode: str):
             data = {}
     except (OSError, ValueError):
         data = {}
-    data["markdown_view"] = mode
+    data[key] = value
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         tmp = path + ".tmp"

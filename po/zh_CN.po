@@ -2388,6 +2388,9 @@ msgstr "已导出“{v}”"
 msgid "Find in file"
 msgstr "在文件中查找"
 
+msgid "Sync Scrolling"
+msgstr "同步滚动"
+
 msgid "Wrap Lines"
 msgstr "自动换行"
 
@@ -2969,6 +2972,12 @@ msgstr "无法保存当前帧"
 
 msgid "Move to New Window"
 msgstr "移到新窗口"
+
+msgid "Open in Split View"
+msgstr "在分屏视图中打开"
+
+msgid "Move to Other Side"
+msgstr "移到另一侧"
 
 msgid "Close Other Tabs"
 msgstr "关闭其他标签页"

@@ -9,36 +9,20 @@
 
 ![A PDF translated side by side into Chinese, offline](docs/screenshots/translate-pdf.png)
 
-## What's new in 0.2.6
+## Coming in the next release
 
-- **Snap update.** The 0.2.5 snap didn't build, so this release brings 0.2.5's tabs, in-place PDF form filling and PDF reload to the Snap Store. Nothing else changes.
+- **Two files side by side.** Right-click a tab and choose **Open in Split View**: the tab moves into a pane on the right, next to the one you were reading, each side with its own tabs and toolbar. **Move to Other Side** moves a tab across; when one side runs out of tabs the window goes back to a single pane.
+- **Sync Scrolling for Markdown Split view**, in the ⋮ menu. When ticked, scrolling the source or the preview keeps the other side on the same heading or paragraph; untick it to scroll each side on its own. On by default, and your choice is remembered.
 
 ## What's new in 0.2.5
+
+0.2.6 brings the same to the Snap Store (the 0.2.5 snap didn't build).
 
 - **Files open as tabs.** Opening files adds a tab to the current window instead of a new window each time; the tab bar appears only with two or more tabs. Right-click a tab for **Move to New Window**, Close Tab and Close Other Tabs, or drag a tab out of the window. Ctrl+W closes the tab, Ctrl+T opens a new one, Ctrl+Tab switches. To go back to a window per file, turn off **Open files in new tabs** in Preferences.
 - **Fill in PDF forms in place.** Text fields are typed into right on the page; Tab / Shift+Tab move to the next / previous field.
 - **PDFs reload when the file changes on disk.**
 
-## What's new in 0.2.4
-
-- **Crop images.** A Crop tool (Ctrl+K) in the image viewer, with handles, aspect ratio presets and undo. Animated GIF and WebP are cropped on every frame.
-- **Markup and Sign side by side** in the header of the image and PDF viewers; Markup has its own highlighter icon.
-- **Signing on the touchpad:** click the box or press **Space** to start. It now also works on the haptic touchpad of the ThinkPad P1 Gen 7, where strokes used to end up as a dot in the top-left corner.
-
-## What's new in 0.2.3
-
-- **Files open in about a second.** Closing the last window keeps View running in the system tray, so the next file you open (images, PDFs, videos…) appears in about a second instead of starting View again. Quit from the tray icon or with Ctrl+Q; to turn this off, turn off **Keep View running in the background when windows are closed** in Preferences. On GNOME the tray icon needs the AppIndicator extension, which Ubuntu turns on by default; without a tray, View quits when its last window closes, as before.
-- **Faster start in the Snap**, even the first time.
-- **High-quality translation**: Hy-MT2 1.8B runs on your GPU (downloaded on first use) and translates whole paragraphs into natural Chinese, keeping names, code and URLs as they are.
-
-## What's new in 0.2.0
-
-- **Offline translation.** Translate a selection in a floating card, or a whole document side by side: PDFs, Markdown, text, code and CSV files. Runs on your computer; nothing is sent anywhere.
-- **DXF drawings (2D CAD)** with a layers panel, zoom and pan, dark mode and export to PDF, SVG or PNG.
-- **Markdown preview** with a Source / Split / Preview switch, updated live while you edit.
-- **Faster start**: images open without loading the heavy libraries, and the update check waits until the window is shown.
-- **Windows: updating from 0.1.6–0.1.9 is fixed.** Setup could stop silently because the background screenshot watcher kept View's files open; see [Windows](#windows-experimental) if an update still doesn't go through.
-- Smaller fixes, for example YAML files are highlighted again instead of failing on some token types, and turning off Screenshots in Preferences now really stops the background watcher on Windows.
+Earlier changes are listed on the [Releases](https://github.com/Zdong104/View/releases) page.
 
 ## Screenshots
 
@@ -69,15 +53,16 @@
 
 ### Documents
 
-- **PDF**: fast on huge files (1,000-page and 600 MB scanned PDFs tested), thumbnails, search, text selection, form filling, print, Get Info.
+- **PDF**: fast on huge files (1,000-page and 600 MB scanned PDFs tested), thumbnails, search, text selection, print, Get Info. Reloads when the file changes on disk.
+- **Forms**: type into text fields right on the page; Tab / Shift+Tab move between fields.
 - **Page editing**: select thumbnails and press Delete, reorder, rotate, insert, merge several PDFs, drag pages out. Ctrl+S with pages selected saves just those pages as a new PDF.
 - **Export and protect**: export pages to images, password-encrypt, reduce file size.
-- **Sign with the touchpad**: your touchpad becomes a 1:1 drawing surface, like macOS Preview. Signatures are stored as vectors. Mouse and pen work too.
+- **Sign with the touchpad**: your touchpad becomes a 1:1 drawing surface, like macOS Preview; click the box or press Space to start. Signatures are stored as vectors. Mouse and pen work too.
 - **Markup** on PDFs and images: sketch, shapes, arrows, text boxes, notes, highlight / underline / strikethrough.
 
 ### Images
 
-- **Images**: zoom, pan, pinch, rotate, flip, crop, adjust colour, instant alpha, resize, EXIF/GPS info. Animated GIF / WebP / APNG keep their animation when edited.
+- **Images**: zoom, pan, pinch, rotate, flip, crop (Ctrl+K, with aspect ratio presets), adjust colour, instant alpha, resize, EXIF/GPS info. Animated GIF / WebP / APNG keep their animation when edited.
 - **Screenshots**: Print Screen (Linux) or Snipping Tool / Win+Print Screen (Windows) opens the capture in View for quick markup; Done saves it back to Screenshots and copies it to the clipboard.
 - **Batch tools**: convert selected images, combine images into a PDF (also from the GNOME Files right-click menu).
 
@@ -88,7 +73,7 @@
 
 ### Text, code and tables
 
-- **Markdown**: rendered preview with a Source / Split / Preview switch (Preview by default, your choice is remembered), updated while you edit. Headings, tables, task lists, block quotes, highlighted code blocks, local images and clickable links (web, relative files, `#heading` anchors). No web engine needed, so it works the same on Windows.
+- **Markdown**: rendered preview with a Source / Split / Preview switch (Preview by default, your choice is remembered), updated while you edit. In Split view the two sides scroll together; turn **Sync Scrolling** off in the ⋮ menu to scroll them separately. Headings, tables, task lists, block quotes, highlighted code blocks, local images and clickable links (web, relative files, `#heading` anchors). No web engine needed, so it works the same on Windows.
 - **Text and code** viewer and editor with syntax highlighting.
 - **Tables**: CSV / TSV viewer and editor (1M rows).
 
@@ -114,6 +99,8 @@
 
 ### System integration
 
+- **Tabs**: files open as tabs of one window (or a window per file, in Preferences). Right-click a tab to move it to a new window or to **Open in Split View**, two files side by side.
+- **Opens in about a second**: after the last window closes, View keeps running in the system tray, so the next file appears almost at once. Quit from the tray or with Ctrl+Q, or turn it off in Preferences. On GNOME the tray needs the AppIndicator extension (on by default in Ubuntu).
 - **Quick Look for GNOME Files**: press Space to preview a file (replaces Sushi; opt-in).
 - **Interface languages**: English and 简体中文 (Preferences → Language, or follow the system). Translations welcome, see [CONTRIBUTING.md](CONTRIBUTING.md#translations).
 - **Updates**: View tells you about new releases and can install them for you (see [Updating](#updating)).

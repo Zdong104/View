@@ -292,6 +292,7 @@ class TextViewer(Viewer):
         self._md = None                       # MarkdownPreview for .md files
         self._translation = None              # translate_view.SideBySide, when open
         self._md_mode = "source"
+        self._md_sync = None                  # translate_view.ScrollSync, Split + Sync Scrolling
         self._md_stale = False
         self.md_switch = None
         self.font_pt = DEFAULT_PT
@@ -439,6 +440,8 @@ class TextViewer(Viewer):
         add("translate-doc", lambda: self.translate_document())
         self.act_wrap = add("wrap", None, GLib.Variant("b", False))
         self.act_wrap.connect("change-state", self._on_wrap_state)
+        self.act_md_sync = add("md-sync", None, GLib.Variant("b", True))
+        self.act_md_sync.connect("change-state", self._on_md_sync_state)
         # the header bar is outside this widget: put the actions on the window
         host = self.window if isinstance(self.window, Gtk.Widget) else self
         host.insert_action_group("text", g)
@@ -449,6 +452,7 @@ class TextViewer(Viewer):
         s.append(_("Go to Line…"), "text.goto")
         s.append(_("Translate Document…"), "text.translate-doc")
         m.append_section(None, s)
+        self._menu_view = s             # (+ Sync Scrolling, for Markdown)
         # in the text's right-click menu: Translate (the selection, in a card)
         # when there is one, Translate Document… (side by side) always
         self._menu_sel = Gio.Menu()
@@ -609,6 +613,7 @@ class TextViewer(Viewer):
         if self._translation is not None:
             from . import translate_view
             translate_view.shutdown_for(self)
+        self._update_md_sync()                  # (_alive is False: stops it)
         if self._md is not None:
             self._md.release()
         for attr in ("_hl_timer", "_search_timer", "_osd_timer"):
@@ -1273,6 +1278,9 @@ class TextViewer(Viewer):
         self._md.base_dir = parent.get_path() if parent is not None else None
         if self.md_switch is not None:
             self.md_switch.set_visible(True)
+        if self._menu_view.get_n_items() == 3:
+            self._menu_view.insert(1, _("Sync Scrolling"), "text.md-sync")
+        self.act_md_sync.set_state(GLib.Variant("b", markdown_view.saved_sync()))
         self._set_md_mode(markdown_view.saved_mode(), save=False)
 
     def _set_md_mode(self, mode, save=True):
@@ -1299,8 +1307,62 @@ class TextViewer(Viewer):
             from . import markdown_view
             markdown_view.save_mode(mode)
             (self._md.view if mode == "preview" else self.view).grab_focus()
+        self._update_md_sync()
         if self._translation is not None:
             self._translation.restart_sync()          # the original side changed
+
+    # Split: the source and the preview scrolled together, block by block
+    def _on_md_sync_state(self, action, value):
+        action.set_state(value)
+        from . import markdown_view
+        markdown_view.save_sync(value.get_boolean())
+        self._update_md_sync()
+
+    def _update_md_sync(self):
+        want = (self._md is not None and self._md_mode == "split" and self._alive
+                and self.act_md_sync.get_state().get_boolean())
+        if want == (self._md_sync is not None):
+            return
+        if not want:
+            self._md_sync.release()
+            for obj, hid in self._md_sync_hids:
+                obj.disconnect(hid)
+            if self._md_sync_timer:
+                GLib.source_remove(self._md_sync_timer)
+            self._md_sync = None
+            return
+        from . import markdown_view, translate_view
+        md = self._md
+        cache = {}                      # source block lines, until the next edit
+
+        def lines():
+            if "l" not in cache:
+                cache["l"] = markdown_view.block_lines(self._current_text())
+            return cache["l"]
+
+        def start(i):
+            ls = lines()
+            return self.buf.get_iter_at_line(ls[i])[1] if i < len(ls) else None
+        self._md_sync = translate_view.ScrollSync(
+            translate_view.Side(self.view, lambda: len(lines()), start),
+            translate_view.Side(md.view, lambda: len(md.block_marks()), md.block_iter))
+
+        # Line heights far from the view are estimates until GTK lays them out,
+        # which it does a frame after a jump: line the follower up again then.
+        def align():
+            self._md_sync_timer = 0
+            if self._md_sync is not None:
+                self._md_sync._moved(None, self._md_sync.lead)
+            return False
+
+        def realign(*_a):
+            if not self._md_sync_timer:
+                self._md_sync_timer = GLib.timeout_add(120, align)
+        self._md_sync_timer = 0
+        self._md_sync_hids = [(self.buf, self.buf.connect("changed", lambda _b: cache.clear()))]
+        self._md_sync_hids += [(adj, adj.connect("changed", realign))
+                               for adj in (self.view.get_vadjustment(), md.view.get_vadjustment())]
+        realign()                       # (and the preview to where the source is now)
 
     def _md_source(self, text):
         from .markdown_view import PREVIEW_CAP
@@ -1308,6 +1370,8 @@ class TextViewer(Viewer):
             self._set_md_mode("source", save=False)
             if self.md_switch is not None:
                 self.md_switch.set_visible(False)
+            if self._menu_view.get_n_items() == 4:
+                self._menu_view.remove(1)
             self._md.release()
             self._md = None
             return

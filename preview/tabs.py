@@ -8,7 +8,9 @@ buttons travel with the page when it moves to another window, and two tabs
 of the same kind never share an action group.  Everything a viewer asks of
 "its window" (fullscreen, the Inspector, a parent for a dialog...) is
 looked up on the window the tab is in at that moment: never cached, since
-"Move to New Window" and dragging a tab out re-parent it.
+"Move to New Window" and dragging a tab out re-parent it.  A split window
+has two tab views side by side (MainWindow.split): "the window's current
+tab" is the selected one of the pane last used (is_current()).
 """
 import json
 import os
@@ -137,12 +139,20 @@ class TabHost(Gtk.Box):
         page = tv.get_selected_page() if tv is not None else None
         return page is not None and page.get_child() is self
 
+    def is_current(self):
+        """The window's current tab: its selected one (in a split view, that
+        of the pane last used)."""
+        fn = getattr(self._win(), "current_host", None)
+        return fn() is self if fn is not None else self.is_selected()
+
     def present(self):
         """Select this tab and bring its window to the front."""
         tv, page = self.tab_view(), self.page()
-        if tv is not None and page is not None:
-            tv.set_selected_page(page)
         w = self._win()
+        if hasattr(w, "select_host"):
+            w.select_host(self)
+        elif tv is not None and page is not None:
+            tv.set_selected_page(page)
         if w is not None:
             w.present()
 
@@ -207,7 +217,7 @@ class TabHost(Gtk.Box):
             tip = f"{title}\n{sub}" if sub else title
             page.set_tooltip(GLib.markup_escape_text(tip) if named else "")
         win = self._win()
-        if win is not None and self.is_selected() and hasattr(win, "sync_title"):
+        if win is not None and self.is_current() and hasattr(win, "sync_title"):
             win.sync_title()
 
     def open_files(self, files):
@@ -329,7 +339,7 @@ class TabHost(Gtk.Box):
                              if isinstance(c, Gtk.ShortcutController)
                              and c.get_scope() == Gtk.ShortcutScope.GLOBAL]
         if self.tab_view() is not None:
-            self.set_active(self.is_selected())
+            self.set_active(self.is_current())
         return viewer
 
     def load_files(self, kind, files):

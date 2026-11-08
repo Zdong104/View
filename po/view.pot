@@ -2390,6 +2390,9 @@ msgstr ""
 msgid "Find in file"
 msgstr ""
 
+msgid "Sync Scrolling"
+msgstr ""
+
 msgid "Wrap Lines"
 msgstr ""
 
@@ -2961,4 +2964,10 @@ msgid "Save Frame as PNG"
 msgstr ""
 
 msgid "Could not save the frame"
+msgstr ""
+
+msgid "Open in Split View"
+msgstr ""
+
+msgid "Move to Other Side"
 msgstr ""

@@ -317,7 +317,10 @@ class MainWindow(Adw.ApplicationWindow):
     """A window of tabs (Adw.TabView of preview.tabs.TabHost).  The tab bar
     shows only with two tabs or more, so one document looks as it always
     did.  `viewer`, `header`, load_files() and friends are the selected
-    tab's."""
+    tab's.  Split view ("Open in Split View"): two panes side by side in a
+    Gtk.Paned, each its own tab view and (always shown) tab bar; the pane
+    last focused or clicked is the current one, and a pane that loses its
+    last tab collapses the window back to one."""
 
     def __init__(self, app, empty_tab=True):
         super().__init__(application=app, default_width=1040, default_height=740,
@@ -328,36 +331,34 @@ class MainWindow(Adw.ApplicationWindow):
         self._asking = False
         self.inspector = None
 
-        self.tab_view = Adw.TabView()
-        try:
-            # Ctrl+(Shift+)Home/End are the PDF viewer's first/last page and text
-            # selection: leave them to the document
-            S = Adw.TabViewShortcuts
-            off = (S.CONTROL_HOME | S.CONTROL_END | S.CONTROL_SHIFT_HOME | S.CONTROL_SHIFT_END)
-            self.tab_view.set_shortcuts(S(int(S.ALL_SHORTCUTS) & ~int(off)))
-        except (AttributeError, TypeError):
-            pass
+        self._shortcuts = None          # the tab views' keyboard shortcuts
+        self._split_check = 0           # a pending _check_split
+        self._panes = {}                # split view: pane -> (its view, its tab bar)
         menu = Gio.Menu()
         sec = Gio.Menu()
         sec.append(_("Move to New Window"), "win.tab-move")
+        for label, action in ((_("Open in Split View"), "win.tab-split"),
+                              (_("Move to Other Side"), "win.tab-other-side")):
+            item = Gio.MenuItem.new(label, action)
+            item.set_attribute_value("hidden-when", GLib.Variant.new_string("action-disabled"))
+            sec.append_item(item)
         menu.append_section(None, sec)
         sec = Gio.Menu()
         sec.append(_("Close Other Tabs"), "win.tab-close-others")
         sec.append(_("Close Tab"), "win.tab-close")
         menu.append_section(None, sec)
-        self.tab_view.set_menu_model(menu)
-        self.tab_view.connect("notify::selected-page", lambda *_: self._on_selected())
-        self.tab_view.connect("page-attached", self._on_page_attached)
-        self.tab_view.connect("page-detached", self._on_page_detached)
-        self.tab_view.connect("close-page", self._on_close_page)
-        self.tab_view.connect("create-window", self._on_create_window)
-        self.tab_view.connect("setup-menu", self._on_setup_menu)
+        self._tab_menu = menu
+        self.tab_view = self._new_view()
+        self._views = [self.tab_view]   # one, or the left and right panes'
+        self._cur_view = self.tab_view  # the pane last focused or clicked
 
         self.tab_bar = Adw.TabBar(view=self.tab_view, autohide=True)
         self.toolbar = Adw.ToolbarView(content=self.tab_view)
         # the empty part of the tab bar moves the window, like a header bar
-        self.toolbar.add_top_bar(Gtk.WindowHandle(child=self.tab_bar))
+        self._bar_handle = Gtk.WindowHandle(child=self.tab_bar)
+        self.toolbar.add_top_bar(self._bar_handle)
         self.set_content(self.toolbar)
+        self.connect("notify::focus-widget", lambda *_: self._on_focus())
 
         for name, cb in (("open", self._open_action),
                          ("inspector", self.toggle_inspector),
@@ -367,6 +368,8 @@ class MainWindow(Adw.ApplicationWindow):
                          ("fullscreen", lambda: self.unfullscreen() if self.is_fullscreen()
                           else self.fullscreen()),
                          ("tab-move", lambda: self.move_to_new_window(self._menu_target())),
+                         ("tab-split", lambda: self.split(self._menu_target())),
+                         ("tab-other-side", lambda: self.move_to_other_side(self._menu_target())),
                          ("tab-close", lambda: self._close_page(self._menu_target())),
                          ("tab-close-others", self._close_others)):
             act = Gio.SimpleAction.new(name, None)
@@ -397,40 +400,79 @@ class MainWindow(Adw.ApplicationWindow):
         self._update_tab_actions()
 
     # ---- tabs ----------------------------------------------------------------------
+    def _new_view(self):
+        """A tab view with this window's tab menu and handlers (one, or one
+        per pane of a split view)."""
+        tv = Adw.TabView()
+        try:
+            # Ctrl+(Shift+)Home/End are the PDF viewer's first/last page and text
+            # selection: leave them to the document
+            S = Adw.TabViewShortcuts
+            off = (S.CONTROL_HOME | S.CONTROL_END | S.CONTROL_SHIFT_HOME | S.CONTROL_SHIFT_END)
+            self._shortcuts = S(int(S.ALL_SHORTCUTS) & ~int(off))
+            tv.set_shortcuts(self._shortcuts)
+        except (AttributeError, TypeError):
+            pass
+        tv.set_menu_model(self._tab_menu)
+        tv.connect("notify::selected-page", lambda *_: self._on_selected())
+        tv.connect("page-attached", self._on_page_attached)
+        tv.connect("page-detached", self._on_page_detached)
+        tv.connect("close-page", self._on_close_page)
+        tv.connect("create-window", self._on_create_window)
+        tv.connect("setup-menu", self._on_setup_menu)
+        # a tab dragged out of an emptied pane: collapse once the drag ends
+        tv.connect("notify::is-transferring-page", lambda *_: self._queue_split_check())
+        return tv
+
     def hosts(self):
-        tv = self.tab_view
-        return [tv.get_nth_page(i).get_child() for i in range(tv.get_n_pages())]
+        return [p.get_child() for p in self._pages()]
 
     def current_host(self):
-        page = self.tab_view.get_selected_page()
-        return page.get_child() if page is not None else None
+        for tv in [self._cur_view] + self._views:
+            page = tv.get_selected_page()
+            if page is not None:
+                return page.get_child()
+        return None
 
     def all_viewers(self):
         return [h.viewer for h in self.hosts() if h.viewer is not None]
 
     def add_tab(self, select=True):
-        """A new empty tab (the Recent page), selected unless `select` is False."""
+        """A new empty tab (the Recent page) in the current pane, selected
+        unless `select` is False."""
         from .tabs import TabHost
         host = TabHost(self.get_application())
-        page = self.tab_view.append(host)
+        tv = self._cur_view
+        page = tv.append(host)
         host.refresh_title()
         if select:
-            self.tab_view.set_selected_page(page)
+            tv.set_selected_page(page)
         return host
 
     def select_host(self, host):
-        page = self.tab_view.get_page(host)
-        if page is not None:
-            self.tab_view.set_selected_page(page)
+        tv = self._view_of_host(host)
+        if tv is not None:
+            tv.set_selected_page(tv.get_page(host))
+            self._set_current(tv)
+
+    @staticmethod
+    def _view_pages(tv):
+        return [tv.get_nth_page(i) for i in range(tv.get_n_pages())]
 
     def _pages(self):
-        tv = self.tab_view
-        return [tv.get_nth_page(i) for i in range(tv.get_n_pages())]
+        return [p for tv in self._views for p in self._view_pages(tv)]
+
+    def _view_of_host(self, host):
+        tv = host.tab_view() if host is not None else None
+        return tv if tv in self._views else None
+
+    def _view_of(self, page):
+        return next((tv for tv in self._views if page in self._view_pages(tv)), None)
 
     def _menu_target(self):
         page, self._menu_page = self._menu_page, None
         if page is None or page not in self._pages():
-            page = self.tab_view.get_selected_page()
+            page = self._cur_view.get_selected_page()
         return page
 
     def _on_setup_menu(self, _view, page):
@@ -439,11 +481,14 @@ class MainWindow(Adw.ApplicationWindow):
         self._update_tab_actions()
 
     def _update_tab_actions(self):
-        several = self.tab_view.get_n_pages() > 1
-        for name in ("tab-move", "tab-close-others"):
+        split = len(self._views) > 1
+        several = len(self._pages()) > 1
+        for name, on in (("tab-move", several), ("tab-close-others", several),
+                         ("tab-split", not split and self.tab_view.get_n_pages() > 1),
+                         ("tab-other-side", split)):
             act = self.lookup_action(name)
             if act is not None:
-                act.set_enabled(several)
+                act.set_enabled(on)
 
     def _on_selected(self):
         cur = self.current_host()
@@ -453,19 +498,22 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _on_page_attached(self, _view, page, _pos):
         host = page.get_child()
-        host.set_active(page is self.tab_view.get_selected_page())
+        host.set_active(host is self.current_host())
         host.refresh_title()
+        self._sync_title_buttons()
         self._sync_chrome()
         self._update_tab_actions()
 
     def _on_page_detached(self, _view, _page, _pos):
         self._update_tab_actions()
-        if self.tab_view.get_n_pages() == 0:
+        if len(self._views) > 1:
+            self._queue_split_check()
+        elif self.tab_view.get_n_pages() == 0:
             # the last tab closed or moved to another window
             GLib.idle_add(self._close_if_empty)
 
     def _close_if_empty(self):
-        if self.get_application() is not None and self.tab_view.get_n_pages() == 0:
+        if self.get_application() is not None and not self._pages():
             self._confirmed_close = True
             self.close()
         return GLib.SOURCE_REMOVE
@@ -478,31 +526,170 @@ class MainWindow(Adw.ApplicationWindow):
         return win.tab_view
 
     def move_to_new_window(self, page):
-        if page is None or self.tab_view.get_n_pages() < 2:
+        tv = self._view_of(page)
+        if tv is None or len(self._pages()) < 2:
             return None
         win = MainWindow(self.get_application(), empty_tab=False)
         win.set_default_size(self.get_width() or 1040, self.get_height() or 740)
-        self.tab_view.transfer_page(page, win.tab_view, 0)
+        tv.transfer_page(page, win.tab_view, 0)
         win.tab_view.set_selected_page(page)
         win.present()
         return win
 
     def close_tab(self):
         """Ctrl+W: close the tab (the window with its last one)."""
-        page = self.tab_view.get_selected_page()
+        h = self.current_host()
+        page = h.page() if h is not None else None
         if page is None:
             self.close()
         else:
             self._close_page(page)
 
     def _close_page(self, page):
-        if page is not None:
-            self.tab_view.close_page(page)
+        tv = self._view_of(page)
+        if tv is not None:
+            tv.close_page(page)
 
     def _close_others(self):
         page = self._menu_target()
-        if page is not None:
-            self.tab_view.close_other_pages(page)
+        tv = self._view_of(page)
+        if tv is None:
+            return
+        tv.close_other_pages(page)
+        for other in self._views:
+            if other is not tv:
+                for p in self._view_pages(other):
+                    other.close_page(p)
+
+    # ---- split view: two panes side by side --------------------------------------
+    def is_split(self):
+        return len(self._views) > 1
+
+    def _set_current(self, tv):
+        """The pane new tabs, Ctrl+W, the title and the Inspector follow."""
+        if tv is self._cur_view or tv not in self._views:
+            return
+        self._cur_view = tv
+        self._apply_shortcuts()
+        self._on_selected()
+
+    def _apply_shortcuts(self):
+        # Ctrl+Tab and friends: the current pane's only
+        if self._shortcuts is None:
+            return
+        for tv in self._views:
+            tv.set_shortcuts(self._shortcuts if tv is self._cur_view
+                             else Adw.TabViewShortcuts(0))
+
+    def _on_focus(self):
+        if not self.is_split():
+            return
+        w = self.get_focus()
+        while w is not None:
+            tv = w if w in self._views else self._panes.get(w, (None,))[0]
+            if tv is not None:
+                self._set_current(tv)
+                return
+            w = w.get_parent()
+
+    def _make_pane(self, tv):
+        bar = Adw.TabBar(view=tv, autohide=False)
+        pane = Adw.ToolbarView(content=tv, width_request=280)
+        pane.add_top_bar(Gtk.WindowHandle(child=bar))
+        pane.set_reveal_top_bars(self.toolbar.get_reveal_top_bars())
+        click = Gtk.GestureClick(button=0, propagation_phase=Gtk.PropagationPhase.CAPTURE)
+        click.connect("pressed", lambda *_: self._set_current(tv))
+        pane.add_controller(click)
+        self._panes[pane] = (tv, bar)
+        return pane
+
+    def split(self, page):
+        """Show `page` in a second pane, right of the selected tab."""
+        if self.is_split() or page is None or self.tab_view.get_n_pages() < 2 \
+                or self._view_of(page) is not self.tab_view:
+            return
+        right = self._new_view()
+        self.toolbar.set_content(None)
+        self.tab_bar.set_view(None)
+        self._bar_handle.set_visible(False)
+        paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL,
+                          start_child=self._make_pane(self.tab_view),
+                          end_child=self._make_pane(right),
+                          resize_start_child=True, resize_end_child=True,
+                          shrink_start_child=False, shrink_end_child=False)
+        if self.get_width() > 0:
+            paned.set_position(self.get_width() // 2)
+        self._views = [self.tab_view, right]
+        self.toolbar.set_content(paned)
+        self.tab_view.transfer_page(page, right, 0)
+        right.set_selected_page(page)
+        self._set_current(right)
+        self._update_tab_actions()
+        self._sync_chrome()
+        GLib.idle_add(self._focus_current)
+
+    def move_to_other_side(self, page):
+        src = self._view_of(page)
+        if not self.is_split() or src is None:
+            return
+        dst = next(tv for tv in self._views if tv is not src)
+        src.transfer_page(page, dst, dst.get_n_pages())
+        dst.set_selected_page(page)
+        self._set_current(dst)
+        GLib.idle_add(self._focus_current)
+
+    def _queue_split_check(self):
+        if self.is_split() and not self._split_check:
+            # before the next frame: no frame with an empty pane
+            self._split_check = GLib.idle_add(self._check_split, priority=GLib.PRIORITY_HIGH_IDLE)
+
+    def _check_split(self):
+        """A pane without tabs: back to one (not while a tab is being dragged:
+        a cancelled drag puts it back)."""
+        self._split_check = 0
+        if not self.is_split() or any(tv.get_is_transferring_page() for tv in self._views):
+            return GLib.SOURCE_REMOVE
+        left = [tv for tv in self._views if tv.get_n_pages() > 0]
+        if len(left) < 2:
+            self._unsplit(left[0] if left else self.tab_view)
+            if not left:
+                self._close_if_empty()
+        return GLib.SOURCE_REMOVE
+
+    def _unsplit(self, keep):
+        self.toolbar.set_content(None)
+        for pane, (_tv, bar) in self._panes.items():
+            bar.set_view(None)
+            pane.set_content(None)
+        self._panes = {}
+        self.tab_view = self._cur_view = keep
+        self._views = [keep]
+        self.tab_bar.set_view(keep)
+        self._bar_handle.set_visible(True)
+        self.toolbar.set_content(keep)
+        self._sync_title_buttons()
+        self._apply_shortcuts()
+        self._update_tab_actions()
+        self._sync_chrome()
+        self._on_selected()
+        GLib.idle_add(self._focus_current)
+
+    def _sync_title_buttons(self):
+        # the window buttons only at the window's edges
+        split = self.is_split()
+        for i, tv in enumerate(self._views):
+            for p in self._view_pages(tv):
+                hb = p.get_child().header
+                hb.set_show_start_title_buttons(not split or i == 0)
+                hb.set_show_end_title_buttons(not split or i == len(self._views) - 1)
+
+    def _focus_current(self):
+        # the focus was in a pane that moved: give it to the current tab
+        h = self.current_host()
+        f = self.get_focus()
+        if h is not None and (f is None or not f.is_ancestor(h)) and h.viewer is not None:
+            h.viewer.grab_focus()
+        return GLib.SOURCE_REMOVE
 
     def _on_close_page(self, view, page):
         host = page.get_child()
@@ -624,6 +811,8 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _reveal_bars(self, reveal):
         self.toolbar.set_reveal_top_bars(reveal)
+        for pane in self._panes:
+            pane.set_reveal_top_bars(reveal)
         for h in self.hosts():
             h.toolbar.set_reveal_top_bars(reveal)
 

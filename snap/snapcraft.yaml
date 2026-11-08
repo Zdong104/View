@@ -97,6 +97,12 @@ parts:
   view:
     plugin: python
     source: .
+    build-environment:
+      # The gnome extension puts the SDK's dist-packages (pip 25.1) on
+      # PYTHONPATH, so the venv's bin/pip imports that pip.  The plugin first
+      # upgrades pip; pip 26.3's bin/pip needs pip._internal.cli.main.cli,
+      # which 25.1 lacks, and the build stops.  Keep pip below 26.3.
+      - PIP_CONSTRAINT: "$CRAFT_PART_SRC/snap/pip-constraints.txt"
     python-requirements:
       - requirements.txt
       - requirements-ocr.txt

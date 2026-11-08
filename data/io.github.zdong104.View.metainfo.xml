@@ -79,6 +79,16 @@
     <keyword>STL</keyword>
   </keywords>
   <releases>
+    <release version="0.2.5" date="2026-11-08">
+      <description>
+        <p>Files open as tabs, and PDF forms can be filled in place.</p>
+        <ul>
+          <li>Opening files adds a tab to the current window instead of a new window each time; the tab bar appears only with two or more tabs. Right-click a tab for Move to New Window, Close Tab and Close Other Tabs, or drag a tab out of the window. Ctrl+W closes the tab, Ctrl+T opens a new one, Ctrl+Tab switches. Turn off "Open files in new tabs" in Preferences to get a window per file again.</li>
+          <li>PDF forms: text fields are typed into right on the page; Tab / Shift+Tab move to the next / previous field.</li>
+          <li>A PDF reloads when its file changes on disk.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.4" date="2026-11-02">
       <description>
         <p>Crop images, and touchpad signing fixed on haptic touchpads.</p>

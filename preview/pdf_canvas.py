@@ -13,7 +13,8 @@ import math
 import gi
 
 gi.require_version("Gtk", "4.0")
-from gi.repository import Gdk, GLib, GObject, Gtk
+gi.require_version("Gsk", "4.0")
+from gi.repository import Gdk, GLib, GObject, Graphene, Gsk, Gtk
 
 from .viewer_base import device_scale, surface_origin
 
@@ -65,6 +66,7 @@ class PageCanvas(Gtk.Widget, Gtk.Scrollable):
         self._settle_id = 0
         self._pending = None             # (pos, frac) to scroll to once allocated
         self.popovers = []
+        self.editor = None               # (widget, place) for an in-page editor
         self._pointer = (0, 0)
         self._pinch = None
         self._flip_acc = 0.0
@@ -110,6 +112,8 @@ class PageCanvas(Gtk.Widget, Gtk.Scrollable):
 
     def _on_adj_changed(self, adj):
         self.queue_draw()
+        if self.editor is not None:
+            self.queue_allocate()
         self.v.on_scrolled()
 
     def hv(self):
@@ -142,11 +146,15 @@ class PageCanvas(Gtk.Widget, Gtk.Scrollable):
             self._configure(self.hv(), self.vv())
         for p in self.popovers:
             p.present()
+        self._place_editor()
 
     def do_snapshot(self, s):
         self.v.paint(self, s)
+        if self.editor is not None:
+            self.snapshot_child(self.editor[0], s)
 
     def do_dispose(self):
+        self.clear_editor()
         for p in list(self.popovers):
             p.unparent()
         self.popovers = []
@@ -155,6 +163,38 @@ class PageCanvas(Gtk.Widget, Gtk.Scrollable):
     def add_popover(self, pop):
         pop.set_parent(self)
         self.popovers.append(pop)
+
+    def set_editor(self, widget, place):
+        """Show `widget` on the page; place() -> (x, y, w, h) in widget px, or None."""
+        self.clear_editor()
+        self.editor = (widget, place)
+        widget.set_parent(self)
+        self.queue_allocate()
+
+    def clear_editor(self):
+        if self.editor is not None:
+            w = self.editor[0]
+            self.editor = None
+            w.unparent()
+            self.queue_draw()
+
+    def _place_editor(self):
+        if self.editor is None:
+            return
+        w, place = self.editor
+        r = place()
+        w.set_child_visible(r is not None)
+        if r is None:
+            return
+        x, y, ww, hh = r
+        ww = max(ww, w.measure(Gtk.Orientation.HORIZONTAL, -1)[0])
+        mh = w.measure(Gtk.Orientation.VERTICAL, int(ww))[0]
+        if mh > hh:
+            y -= (mh - hh) / 2
+            hh = mh
+        pt = Graphene.Point()
+        pt.init(round(x), round(y))
+        w.allocate(round(ww), round(hh), -1, Gsk.Transform.new().translate(pt))
 
     def remove_popover(self, pop):
         if pop in self.popovers:

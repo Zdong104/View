@@ -55,6 +55,11 @@ CSS = """
 .pdf-thumb.drop-after { box-shadow: inset 0 -3px var(--accent-bg-color); }
 .pdf-doc-header { padding: 4px 2px; font-weight: bold; }
 .pdf-doc-header.drop-after { box-shadow: inset 0 -3px var(--accent-bg-color); }
+.pdf-field-editor { background-color: #e8f0ff; color: black; caret-color: black;
+  padding: 0 2px; margin: 0; min-height: 0; border: none; border-radius: 0;
+  box-shadow: 0 0 0 2px alpha(var(--accent-bg-color), .8); }
+textview.pdf-field-editor text { background-color: transparent; color: black; }
+.pdf-field-editor selection { background-color: alpha(var(--accent-bg-color), .35); color: black; }
 .pdf-markup-bar { border-bottom: 1px solid var(--border-color); background: var(--headerbar-bg-color); }
 """
 _css_done = False
@@ -196,6 +201,8 @@ class PdfViewer(Viewer):
         self.text_sel = None            # {"pos", "p0", "p1", "rects", "text"}
         self._press = None
         self._fields = {}               # (src, index) -> [field dicts]
+        self._fedit = None              # the text field being typed into, in place
+        self._fedit_css = None
         self._has_text = {}             # (src, index) -> bool
         self.ocr_lines = {}             # (src, index) -> [(poly, text)] Poppler frame
         self._ocr_running = set()
@@ -245,6 +252,7 @@ class PdfViewer(Viewer):
             if fh is not None:
                 fh.close()
         self._readers.clear()
+        self._end_field_edit(False)
         self._fields.clear()
         self.ocr_lines.clear()
         self._loaded = False
@@ -1192,6 +1200,9 @@ class PdfViewer(Viewer):
 
     def on_zoom_changed(self):
         self._on_zoom_changed_label()
+        if self._fedit is not None:
+            self._field_font()
+            self.canvas.queue_allocate()
 
     def _on_zoom_changed_label(self):
         if hasattr(self, "zoom_btn"):
@@ -1323,6 +1334,7 @@ class PdfViewer(Viewer):
 
     def canvas_press(self, x, y, state):
         self._press = None
+        self._end_field_edit(True)
         if not self._loaded:
             return False
         if self.mk.on_press(x, y, 1, state):
@@ -1668,6 +1680,13 @@ class PdfViewer(Viewer):
                         "value": pdf_ops.form_value(f), "multiline": False, "options": []}
                 if t == Poppler.FormFieldType.TEXT:
                     info["multiline"] = f.text_get_text_type() == Poppler.FormTextType.MULTILINE
+                    for key, get in (("font_size", f.get_font_size),
+                                     ("max_len", f.text_get_max_len),
+                                     ("password", f.text_is_password)):
+                        try:
+                            info[key] = get()
+                        except Exception:
+                            pass
                 elif t == Poppler.FormFieldType.CHOICE:
                     info["options"] = [f.choice_get_item(i) for i in range(f.choice_get_n_items())]
                 if info["name"]:
@@ -1693,6 +1712,9 @@ class PdfViewer(Viewer):
             ref.forms[name] = not bool(cur)
             self._changed(structure=False)
             return
+        if t == Poppler.FormFieldType.TEXT:
+            self._begin_field_edit(pos, f)
+            return
         rx, ry, rw, rh = self._from_poppler_rect(ref, *f["rect"])
         wx, wy = self.canvas.doc_to_widget(pos, rx, ry)
         rect = Gdk.Rectangle()
@@ -1705,28 +1727,198 @@ class PdfViewer(Viewer):
                 ref.forms[name] = value
                 self._changed(structure=False)
 
-        if t == Poppler.FormFieldType.TEXT:
-            entry = Gtk.Entry(text=str(cur or ""), width_chars=max(12, int(rw / 7)))
-            pop = Gtk.Popover(child=entry, position=Gtk.PositionType.BOTTOM)
-            entry.connect("activate", lambda *_: pop.popdown())
-            pop.connect("closed", lambda p: (commit(entry.get_text()), GLib.idle_add(
-                lambda: self.canvas.remove_popover(p) and False)))
-        else:
-            lb = Gtk.ListBox(css_classes=["navigation-sidebar"])
-            for opt in f["options"]:
-                lb.append(Gtk.Label(label=opt, xalign=0))
-            pop = Gtk.Popover(child=lb, position=Gtk.PositionType.BOTTOM)
-            state = {"v": cur}
+        lb = Gtk.ListBox(css_classes=["navigation-sidebar"])
+        for opt in f["options"]:
+            lb.append(Gtk.Label(label=opt, xalign=0))
+        pop = Gtk.Popover(child=lb, position=Gtk.PositionType.BOTTOM)
+        state = {"v": cur}
 
-            def picked(_lb, row):
-                state["v"] = f["options"][row.get_index()]
-                pop.popdown()
-            lb.connect("row-activated", picked)
-            pop.connect("closed", lambda p: (commit(state["v"]), GLib.idle_add(
-                lambda: self.canvas.remove_popover(p) and False)))
+        def picked(_lb, row):
+            state["v"] = f["options"][row.get_index()]
+            pop.popdown()
+        lb.connect("row-activated", picked)
+        pop.connect("closed", lambda p: (commit(state["v"]), GLib.idle_add(
+            lambda: self.canvas.remove_popover(p) and False)))
         self.canvas.add_popover(pop)
         pop.set_pointing_to(rect)
         pop.popup()
+
+    # Text fields are typed into in place, like Preview: Tab / Shift+Tab move to
+    # the next / previous text field, Enter or a click elsewhere keeps the text.
+    def _begin_field_edit(self, pos, f, select_all=False):
+        self._end_field_edit(True)
+        ref = self.pages[pos]
+        cur = ref.forms.get(f["name"], f["value"])
+        old = "" if cur is None or isinstance(cur, bool) else str(cur)
+        if f["multiline"]:
+            w = Gtk.TextView(wrap_mode=Gtk.WrapMode.WORD_CHAR, accepts_tab=False,
+                             top_margin=1, bottom_margin=1)
+            buf = w.get_buffer()
+            buf.set_text(old)
+
+            def get():
+                return buf.get_text(buf.get_start_iter(), buf.get_end_iter(), False)
+        else:
+            w = Gtk.Text(text=old)
+            if f.get("max_len", 0) > 0:
+                w.set_max_length(f["max_len"])
+            if f.get("password"):
+                w.set_visibility(False)
+            w.connect("activate", lambda *_: self._end_field_edit(True))
+            get = w.get_text
+        w.add_css_class("pdf-field-editor")
+        key = Gtk.EventControllerKey(propagation_phase=Gtk.PropagationPhase.CAPTURE)
+        key.connect("key-pressed", self._field_key)
+        w.add_controller(key)
+        focus = Gtk.EventControllerFocus()
+        focus.connect("leave", lambda *_: GLib.idle_add(self._field_focus_left, w))
+        w.add_controller(focus)
+        self._fedit = {"pos": pos, "ref": ref, "f": f, "w": w, "get": get, "old": old,
+                       "z": None}
+        self._scroll_field_into_view(pos, f)
+        self._field_font()
+        self.canvas.set_editor(w, self._field_place)
+        w.grab_focus()
+        if f["multiline"]:
+            buf.place_cursor(buf.get_start_iter() if select_all else buf.get_end_iter())
+            if select_all:
+                buf.select_range(buf.get_start_iter(), buf.get_end_iter())
+        elif select_all:
+            w.select_region(0, -1)
+        else:
+            w.set_position(-1)
+
+    def _end_field_edit(self, commit=True):
+        fe = self._fedit
+        if fe is None:
+            return
+        self._fedit = None
+        w = fe["w"]
+        value = fe["get"]()
+        had_focus = w.has_focus()
+        self.canvas.clear_editor()
+        if had_focus:
+            self.canvas.grab_focus()
+        ref, name = fe["ref"], fe["f"]["name"]
+        if commit and value != fe["old"] and any(r is ref for r in self.pages):
+            self.push_undo()
+            ref.forms[name] = value
+            self._changed(structure=False)
+
+    def _field_focus_left(self, w):
+        fe = self._fedit
+        if fe is None or fe["w"] is not w or w.has_focus():
+            return False
+        root = w.get_root()
+        if root is not None and hasattr(root, "is_active") and not root.is_active():
+            return False   # another window took focus; keep typing when it comes back
+        self._end_field_edit(True)
+        return False
+
+    def _field_key(self, _ctrl, keyval, _code, state):
+        fe = self._fedit
+        if fe is None:
+            return False
+        if keyval in (Gdk.KEY_Tab, Gdk.KEY_KP_Tab, Gdk.KEY_ISO_Left_Tab):
+            back = keyval == Gdk.KEY_ISO_Left_Tab or bool(state & Gdk.ModifierType.SHIFT_MASK)
+            nxt = self._field_neighbor(fe["pos"], fe["f"], -1 if back else 1)
+            self._end_field_edit(True)
+            if nxt is not None:
+                self._begin_field_edit(*nxt, select_all=True)
+            return True
+        if keyval == Gdk.KEY_Escape:
+            self._end_field_edit(True)
+            return True
+        if fe["f"]["multiline"] and keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter) and \
+                state & Gdk.ModifierType.CONTROL_MASK:
+            self._end_field_edit(True)
+            return True
+        return False
+
+    def _tab_order(self, pos):
+        """Text fields of a page in reading order: rows top to bottom, then left to right.
+        Fields share a row when they overlap vertically by half the shorter one."""
+        ref = self.pages[pos]
+        items = sorted(((self._from_poppler_rect(ref, *f["rect"]), f)
+                        for f in self._fields_for(ref) if f["type"] == Poppler.FormFieldType.TEXT),
+                       key=lambda t: (t[0][1], t[0][0]))
+        rows = []
+        for r, f in items:
+            if rows:
+                a = rows[-1][0][0]
+                overlap = min(a[1] + a[3], r[1] + r[3]) - max(a[1], r[1])
+                if overlap >= 0.5 * min(a[3], r[3]):
+                    rows[-1].append((r, f))
+                    continue
+            rows.append([(r, f)])
+        return [f for row in rows for _r, f in sorted(row, key=lambda t: t[0][0])]
+
+    def _field_neighbor(self, pos, f, step):
+        n = len(self.pages)
+        p = pos
+        for k in range(n + 1):
+            order = self._tab_order(p)
+            if k == 0:
+                i = next((j for j, g in enumerate(order)
+                          if g is f or (g["name"] == f["name"] and g["rect"] == f["rect"])), None)
+                j = -1 if i is None else i + step
+            else:
+                j = 0 if step > 0 else len(order) - 1
+            if 0 <= j < len(order):
+                return p, order[j]
+            p = (p + step) % n
+        return None
+
+    def _field_place(self):
+        fe = self._fedit
+        c = self.canvas
+        if fe is None or fe["pos"] >= len(c.rects) or c.rects[fe["pos"]] is None:
+            return None
+        rx, ry, rw, rh = self._from_poppler_rect(fe["ref"], *fe["f"]["rect"])
+        x, y = c.doc_to_widget(fe["pos"], rx, ry)
+        return x, y, rw * c.zoom, rh * c.zoom
+
+    def _field_font(self):
+        """Match the editor's text size to the field's at the current zoom."""
+        fe = self._fedit
+        if fe is None or fe["z"] == self.canvas.zoom:
+            return
+        fe["z"] = z = self.canvas.zoom
+        f = fe["f"]
+        _rx, _ry, _rw, rh = self._from_poppler_rect(fe["ref"], *f["rect"])
+        pts = f.get("font_size") or 0
+        if pts <= 0:   # auto size
+            pts = 10 if f["multiline"] else max(6, (rh - 2) * 0.8)   # Poppler fills the height
+        if self._fedit_css is None:
+            self._fedit_css = Gtk.CssProvider()
+            Gtk.StyleContext.add_provider_for_display(
+                Gdk.Display.get_default(), self._fedit_css,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1)
+        self._fedit_css.load_from_string(
+            ".pdf-field-editor { font-size: %.2fpx; }" % max(4.0, pts * z))
+
+    def _scroll_field_into_view(self, pos, f):
+        c = self.canvas
+        if c.layout_mode == "single" and pos != self.current:
+            self.goto_page(pos)
+        if pos >= len(c.rects) or c.rects[pos] is None:
+            return
+        rx, ry, rw, rh = self._from_poppler_rect(self.pages[pos], *f["rect"])
+        cx, cy = c.doc_to_content(pos, rx, ry)
+        w, h = rw * c.zoom, rh * c.zoom
+        m = 40
+        hv, vv = c.hv(), c.vv()
+        nh, nv = hv, vv
+        if cy < vv + m or h + 2 * m > c.view_h:
+            nv = cy - m
+        elif cy + h > vv + c.view_h - m:
+            nv = cy + h - c.view_h + m
+        if cx < hv + m or w + 2 * m > c.view_w:
+            nh = cx - m
+        elif cx + w > hv + c.view_w - m:
+            nh = cx + w - c.view_w + m
+        if (nh, nv) != (hv, vv):
+            c._configure(nh, nv)
 
     # ========================================================= sidebar rows ====
     def _rows(self):
@@ -2055,17 +2247,20 @@ class PdfViewer(Viewer):
     def undo(self):
         if self.mk.pad is not None:
             return
+        self._end_field_edit(True)
         if self._undo:
             self._redo.append(self._snapshot())
             self._restore(self._undo.pop())
 
     def redo(self):
+        self._end_field_edit(True)
         if self._redo:
             self._undo.append(self._snapshot())
             self._restore(self._redo.pop())
 
     def _changed(self, structure=True, select=None):
         if structure:
+            self._end_field_edit(True)
             self._recompute_sizes()
             self._search_reset()
             self.text_sel = None
@@ -2314,6 +2509,7 @@ class PdfViewer(Viewer):
         return f"{stem}{suffix}.pdf"
 
     def save(self):
+        self._end_field_edit(True)
         if not self._loaded or self._busy or self.compact:
             return
         if self._save_mode() == "selected":
@@ -2369,6 +2565,7 @@ class PdfViewer(Viewer):
             dlg.save(self._parent(), None, done)
 
     def save_as(self):
+        self._end_field_edit(True)
         if not self._loaded or self._busy:
             return
         d = self.doc
@@ -2376,6 +2573,7 @@ class PdfViewer(Viewer):
                           lambda path: self._write_doc(self.active, path))
 
     def save_selected(self):
+        self._end_field_edit(True)
         rows = self._selected_rows() or [(self.active, self.current)]
         rows.sort()
         refs = [self.docs[di].pages[p].copy() for di, p in rows]
@@ -2778,6 +2976,7 @@ class PdfViewer(Viewer):
 
     # ================================================================ print ====
     def print_doc(self):
+        self._end_field_edit(True)
         if not self._loaded:
             return
         refs = [r.copy() for r in self.pages]

@@ -22,7 +22,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 gi.require_version("Gdk", "4.0")
-from gi.repository import Adw, Gdk, GLib, Gtk  # noqa: E402
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
 from . import i18n, runtime  # noqa: E402
 from .i18n import _  # noqa: E402
@@ -77,6 +77,13 @@ class TabHost(Gtk.Box):
 
     def __init__(self, app):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, hexpand=True, vexpand=True)
+        # Give this tab its action muxer before any child exists.  The viewer
+        # puts its action groups ("text", "pdf"...) here later, and a child
+        # whose muxer was linked up while this tab had none (Adw.ToastOverlay
+        # makes its own at once) keeps skipping this tab: the viewer's
+        # shortcuts then name actions they cannot find, and Ctrl+S in a text
+        # file did nothing.
+        Gtk.Widget.insert_action_group(self, "tab", Gio.SimpleActionGroup())
         self.app = app
         self.viewer = None
         self.kind = None

@@ -9,8 +9,9 @@
 
 ![A PDF translated side by side into Chinese, offline](docs/screenshots/translate-pdf.png)
 
-## Coming in the next release
+## What's new in 0.2.7
 
+- **Ctrl+S saves text and Markdown files again.** Since files opened as tabs (0.2.5), Ctrl+S in a text or Markdown file did nothing and the changes stayed unsaved. Fixed, together with the other keyboard shortcuts inside a tab.
 - **Two files side by side.** Right-click a tab and choose **Open in Split View**: the tab moves into a pane on the right, next to the one you were reading, each side with its own tabs and toolbar. **Move to Other Side** moves a tab across; when one side runs out of tabs the window goes back to a single pane.
 - **Sync Scrolling for Markdown Split view**, in the ⋮ menu. When ticked, scrolling the source or the preview keeps the other side on the same heading or paragraph; untick it to scroll each side on its own. On by default, and your choice is remembered.
 
@@ -109,22 +110,22 @@ Earlier changes are listed on the [Releases](https://github.com/Zdong104/View/re
 
 ### Ubuntu / Debian (.deb)
 
-Download [`view_0.2.6_all.deb`](https://github.com/Zdong104/View/releases/download/v0.2.6/view_0.2.6_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
+Download [`view_0.2.7_all.deb`](https://github.com/Zdong104/View/releases/download/v0.2.7/view_0.2.7_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
 
 ```bash
-sudo apt install ./view_0.2.6_all.deb
+sudo apt install ./view_0.2.7_all.deb
 ```
 
 Or in one go:
 
 ```bash
-wget https://github.com/Zdong104/View/releases/download/v0.2.6/view_0.2.6_all.deb && sudo apt install ./view_0.2.6_all.deb
+wget https://github.com/Zdong104/View/releases/download/v0.2.7/view_0.2.7_all.deb && sudo apt install ./view_0.2.7_all.deb
 ```
 
 `apt` is recommended because it also installs the dependencies. If you prefer `dpkg`:
 
 ```bash
-sudo dpkg -i view_0.2.6_all.deb && sudo apt -f install
+sudo dpkg -i view_0.2.7_all.deb && sudo apt -f install
 ```
 
 ### Snap (edge channel)
@@ -145,9 +146,9 @@ The .deb installs that menu item for you when `python3-nautilus` is present (`ap
 
 ### Windows (**experimental**)
 
-Download [`View-Setup-0.2.6.exe`](https://github.com/Zdong104/View/releases/download/v0.2.6/View-Setup-0.2.6.exe) (installer) or [`View-0.2.6-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.2.6/View-0.2.6-windows-portable.zip) (no install). It is tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: click the box or press **Space** and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
+Download [`View-Setup-0.2.7.exe`](https://github.com/Zdong104/View/releases/download/v0.2.7/View-Setup-0.2.7.exe) (installer) or [`View-0.2.7-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.2.7/View-0.2.7-windows-portable.zip) (no install). It is tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: click the box or press **Space** and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
 
-**Updating from 0.1.6–0.1.9:** in those versions the background screenshot watcher kept View's files open, so Setup could stop without a message. The 0.2.0 installer stops the watcher itself, also when an older View starts the update. If an update still doesn't go through, end the background **View** process in Task Manager (or run `taskkill /F /IM View.exe`), then run `View-Setup-0.2.6.exe` again.
+**Updating from 0.1.6–0.1.9:** in those versions the background screenshot watcher kept View's files open, so Setup could stop without a message. The 0.2.0 installer stops the watcher itself, also when an older View starts the update. If an update still doesn't go through, end the background **View** process in Task Manager (or run `taskkill /F /IM View.exe`), then run `View-Setup-0.2.7.exe` again.
 
 The **first start after installing** can take 20 seconds or more while Windows checks each new file (the build isn't code-signed yet, see below). Later starts take about a second.
 
@@ -159,7 +160,7 @@ Text recognition (OCR) and translation each run in a small helper program, `ocr\
 
 View is also supported in Chrome as an extension.
 
-1. Download [`view-chrome-0.2.6.zip`](https://github.com/Zdong104/View/releases/download/v0.2.6/view-chrome-0.2.6.zip) and unzip it.
+1. Download [`view-chrome-0.2.7.zip`](https://github.com/Zdong104/View/releases/download/v0.2.7/view-chrome-0.2.7.zip) and unzip it.
 2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and choose the unzipped folder.
 3. To open local files, click **Details** on View and turn on **Allow access to file URLs**.
 

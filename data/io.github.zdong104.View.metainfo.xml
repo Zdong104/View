@@ -79,6 +79,16 @@
     <keyword>STL</keyword>
   </keywords>
   <releases>
+    <release version="0.2.7" date="2026-11-09">
+      <description>
+        <p>Ctrl+S saves again, and two files can be shown side by side.</p>
+        <ul>
+          <li>Ctrl+S saves text and Markdown files again. Since files opened as tabs (0.2.5), Ctrl+S in a text or Markdown file did nothing; the other keyboard shortcuts inside a tab are fixed with it.</li>
+          <li>Two files side by side: right-click a tab and choose Open in Split View. Move to Other Side moves a tab across; when one side runs out of tabs the window goes back to a single pane.</li>
+          <li>Sync Scrolling for the Markdown Split view, in the ⋮ menu: scrolling the source or the preview keeps the other side on the same heading or paragraph. On by default.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.6" date="2026-11-08">
       <description>
         <p>The Snap Store package is updated again.</p>

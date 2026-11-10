@@ -31,12 +31,14 @@ Interaction
       optional:
         mk_text_quads(key, x0, y0, x1, y1) -> (text, [(x, y, w, h), ...])
         mk_tool_changed(tool)
+        mk_edit_note(key, item, new) -> bool         edit a note's text itself
 """
 from __future__ import annotations
 
 import copy
 import itertools
 import math
+import os
 import time
 import sys
 from dataclasses import asdict, dataclass, field
@@ -58,6 +60,7 @@ BOX_KINDS = {"rect", "rrect", "oval", "bubble", "star", "text", "sig", "note"}
 LINE_KINDS = {"line", "arrow"}
 INK_KINDS = {"sketch", "draw"}
 TEXTMARK_KINDS = {"highlight", "underline", "strike"}
+HOLD_SECONDS = 0.5      # Draw: keep still this long before letting go to snap to a shape
 ANNOT_KINDS = {"note"} | TEXTMARK_KINDS          # saved as real PDF annotations
 SHAPES = ["line", "arrow", "rect", "rrect", "oval", "bubble", "star"]
 NOTE_SIZE = 20.0
@@ -90,6 +93,10 @@ class Item:
     font: str = "Sans"
     size: float = 14.0
     sig: dict | None = None
+    # note read from the opened PDF: the host's record of the /Text annotation it
+    # came from (author, date, original text and rect...), so saving updates that
+    # annotation instead of adding a copy. Shared between copies, never mutated.
+    meta: dict | None = None
     id: int = field(default_factory=lambda: next(_ids))
 
     def copy(self) -> "Item":
@@ -430,7 +437,7 @@ def render_item(cr, it: Item):
             try:
                 from .signature import render_strokes
                 hexc = "#%02x%02x%02x" % tuple(int(c * 255) for c in it.stroke[:3])
-                render_strokes(cr, [[tuple(p[:3]) if len(p) > 2 else (p[0], p[1], 0)
+                render_strokes(cr, [[tuple(p[:4]) if len(p) > 2 else (p[0], p[1], 0)
                                      for p in s] for s in it.points], hexc, it.width)
             except Exception:
                 k = "sketch"
@@ -518,6 +525,114 @@ def recognise(points):
     return None
 
 
+def _texture(surf):
+    """A Gdk texture of a (flushed) cairo ARGB32 surface."""
+    fmt = (Gdk.MemoryFormat.B8G8R8A8_PREMULTIPLIED if sys.byteorder == "little"
+           else Gdk.MemoryFormat.A8R8G8B8_PREMULTIPLIED)
+    return Gdk.MemoryTexture.new(surf.get_width(), surf.get_height(), fmt,
+                                 GLib.Bytes.new(bytes(surf.get_data())), surf.get_stride())
+
+
+def _ink_pieces(old, new, items, statics):
+    """What to draw on top of a cache made for entries `old` to get `new`:
+    finished strokes added to its last item and items appended after it.
+    None when anything else changed (then the cache is rebuilt)."""
+    k = len(old)
+    if k == 0:
+        return [st for st in statics if st is not None]
+    if len(new) < k or new[:k - 1] != old[:k - 1]:
+        return None
+    pieces = []
+    if k:
+        o, n = old[-1], new[k - 1]
+        if o != n:
+            if o[:2] != n[:2] or n[2] < o[2]:
+                return None
+            it = items[k - 1]
+            part = copy.copy(it)
+            part.points = it.points[o[2]:n[2]]
+            pieces.append(part)
+    pieces += [st for st in statics[k:] if st is not None]
+    return pieces
+
+
+def _predicted(pts, now, cap):
+    """The stroke plus where the finger is about to be (~25 ms ahead, at its
+    current speed): hides part of the time from input to screen. Nothing is
+    added once it slows to a stop; at most `cap` page units."""
+    if len(pts) < 3 or len(pts[-1]) < 3:
+        return pts
+    last = pts[-1]
+    if not 0 <= now - last[2] <= 0.05:     # stopped (or a clock we can't compare)
+        return pts
+    ref = None
+    for q in reversed(pts[:-1]):
+        if last[2] - q[2] > 0.04:
+            break
+        ref = q
+    if ref is None or last[2] - ref[2] < 0.006:
+        return pts
+    dt = last[2] - ref[2]
+    vx, vy = (last[0] - ref[0]) / dt, (last[1] - ref[1]) / dt
+    lead = min(max(now - last[2], 0.0), 0.012) + 0.013
+    dx, dy = vx * lead, vy * lead
+    d = math.hypot(dx, dy)
+    if d > cap:
+        dx, dy = dx * cap / d, dy * cap / d
+    return pts + [[last[0] + dx, last[1] + dy, last[2] + lead] + list(last[3:])]
+
+
+# ======================================================== ink latency ===
+
+class _InkStats:
+    """VIEW_DEBUG_INK=1: once a second while drawing, print where ink latency
+    goes — how old input events are when they reach View, how long until the
+    next paint, the paint itself, and paint -> on screen (GTK's frame timings)."""
+
+    def __init__(self):
+        self.t0 = time.monotonic()
+        self.n = {"pad": 0, "mouse": 0}
+        self.age, self.wait, self.paint_ms, self.screen = [], [], [], []
+        self.pending = []
+        self.paints = 0
+
+    def input(self, src, age_ms=None):
+        self.n[src] += 1
+        if age_ms is not None:
+            self.age.append(age_ms)
+        self.pending.append(time.monotonic())
+
+    def painted(self, widget, ms):
+        now = time.monotonic()
+        self.wait += [(now - t) * 1000 for t in self.pending]
+        self.pending.clear()
+        self.paints += 1
+        self.paint_ms.append(ms)
+        clock = widget.get_frame_clock() if widget is not None else None
+        if clock is not None:
+            tm = clock.get_timings(clock.get_frame_counter() - 3)
+            if tm is not None and tm.get_complete() and tm.get_presentation_time():
+                self.screen.append((tm.get_presentation_time() - tm.get_frame_time()) / 1000)
+        if now - self.t0 >= 1.0:
+            if any(self.n.values()):
+                self.report(now - self.t0)
+            self.__init__()
+
+    def report(self, dt):
+        def mm(v):
+            if not v:
+                return "-"
+            v = sorted(v)
+            return f"{v[len(v) // 2]:.1f}/{v[-1]:.1f}"
+        print(f"[ink] pad {self.n['pad'] / dt:.0f}/s  mouse {self.n['mouse'] / dt:.0f}/s  "
+              f"event age {mm(self.age)} ms  input->paint {mm(self.wait)} ms  "
+              f"paint {mm(self.paint_ms)} ms  paint->screen {mm(self.screen)} ms  "
+              f"{self.paints / dt:.0f} fps   (median/max)", file=sys.stderr, flush=True)
+
+
+_INK_STATS = _InkStats() if os.environ.get("VIEW_DEBUG_INK") else None
+
+
 # ============================================================ clipboard ===
 
 _CLIPBOARD: list = []
@@ -547,6 +662,7 @@ class MarkupController(GObject.Object):
         self.enabled = True
         self._op = None
         self._preview = None            # (key, Item) being created
+        self._ink_cache = {}            # key -> (signature, surface, x, y): see _draw_items
         self.pad = None                 # TouchpadDrawing session
         self._popover = None
 
@@ -682,10 +798,13 @@ class MarkupController(GObject.Object):
         key, x, y = hitp
         if self.tool in INK_KINDS:
             t = time.monotonic()
-            it = Item(self.tool, stroke=self.stroke, width=self.width,
+            it = Item("draw", stroke=self.stroke, width=self.width,
                       points=[[[x, y, t]]])
             self._preview = (key, it)
-            self._op = {"mode": "ink", "key": key, "item": it}
+            op = {"mode": "ink", "key": key, "item": it, "anchor": (x, y), "still": t,
+                  "shape": None}
+            op["tick"] = GLib.timeout_add(50, self._hold_tick, op)
+            self._op = op
             return True
         if self.tool in TEXTMARK_KINDS:
             it = Item(self.tool, stroke=self.highlight_color if self.tool == "highlight"
@@ -712,6 +831,8 @@ class MarkupController(GObject.Object):
         op = self._op
         if not op:
             return
+        if _INK_STATS is not None and op["mode"] == "ink":
+            _INK_STATS.input("mouse")
         host = self.host
         mode = op["mode"]
         shift = bool(state & Gdk.ModifierType.SHIFT_MASK)
@@ -748,8 +869,16 @@ class MarkupController(GObject.Object):
         if mode == "ink":
             s = op["item"].points[-1]
             lx, ly = s[-1][0], s[-1][1]
-            if math.hypot(x - lx, y - ly) * host.mk_scale(key) >= 1.5:
+            scale = host.mk_scale(key)
+            if math.hypot(x - lx, y - ly) * scale >= 1.5:
                 s.append([x, y, time.monotonic()])
+            ax, ay = op["anchor"]
+            if math.hypot(x - ax, y - ay) * scale > 4:     # moving again: not a hold
+                op["anchor"], op["still"] = (x, y), time.monotonic()
+                if op["shape"] is not None:
+                    op["shape"] = None
+                    self._preview = (key, op["item"])
+                    host.mk_widget().queue_draw()
         elif mode == "textmark":
             fn = getattr(host, "mk_text_quads", None)
             if fn:
@@ -806,9 +935,29 @@ class MarkupController(GObject.Object):
         it.__dict__.update(restore.__dict__)
         set_bbox(it, x1, y1, nw, nh)
 
+    def _hold_tick(self, op):
+        """Draw: holding still before letting go snaps the stroke to a line,
+        rectangle or oval (shown at once; moving again goes back to ink)."""
+        if self._op is not op:
+            op["tick"] = 0
+            return False
+        if (op["shape"] is None and op.get("tried") != op["still"]
+                and time.monotonic() - op["still"] >= HOLD_SECONDS):
+            op["tried"] = op["still"]
+            shape = recognise(op["item"].points[0])
+            if shape is not None:
+                shape.stroke, shape.width = op["item"].stroke, op["item"].width
+                op["shape"] = shape
+                self._preview = (op["key"], shape)
+                self.host.mk_widget().queue_draw()
+        return True
+
     def on_release(self, wx, wy):
         op, self._op = self._op, None
         self._preview = None
+        if op and op.get("tick"):
+            GLib.source_remove(op["tick"])
+            op["tick"] = 0
         if not op:
             return
         host = self.host
@@ -821,12 +970,7 @@ class MarkupController(GObject.Object):
             return
         key = op["key"]
         if mode == "ink":
-            it = op["item"]
-            if self.tool == "sketch" and len(it.points) == 1:
-                shape = recognise(it.points[0])
-                if shape is not None:
-                    shape.stroke, shape.width = it.stroke, it.width
-                    it = shape
+            it = op["shape"] or op["item"]
             self._add(key, it, keep_tool=True)
             return
         if mode == "textmark":
@@ -945,7 +1089,11 @@ class MarkupController(GObject.Object):
 
     # ----------------------------------------------------- text edit ----
     def edit_item(self, key, it, new=False):
-        """Popover editor for a text box or a note."""
+        """Popover editor for a text box or a note (unless the host shows
+        notes itself: optional mk_edit_note(key, item, new) -> True)."""
+        edit_note = getattr(self.host, "mk_edit_note", None)
+        if it.kind == "note" and edit_note is not None and edit_note(key, it, new):
+            return
         widget = self.host.mk_widget()
         if self._popover is not None:
             self._popover.popdown()
@@ -1025,29 +1173,208 @@ class MarkupController(GObject.Object):
     def draw(self, cr, key, scale, accent=(0.21, 0.52, 0.89)):
         """Paint the page's items, the in-progress item and the selection
         chrome. cr is in page units; scale = widget px per unit."""
+        self._draw_pad_area(cr, key, scale, accent)       # under the ink
         render_items(cr, self.host.mk_items(key))
         if self._preview and self._preview[0] == key:
             render_item(cr, self._preview[1])
-        if self.pad is not None and self.pad.key == key and self.pad.rect:
-            x, y, w, h = self.pad.rect
-            cr.save()
-            cr.set_source_rgba(accent[0], accent[1], accent[2], 0.08)
-            cr.rectangle(x, y, w, h)
-            cr.fill_preserve()
-            cr.set_source_rgba(accent[0], accent[1], accent[2], 0.9)
-            cr.set_line_width(1.5 / scale)
-            cr.set_dash([6 / scale, 4 / scale])
-            cr.stroke()
-            if self.pad.finger:
-                fx, fy = self.pad.finger
-                cr.set_dash([])
-                cr.arc(fx, fy, 5 / scale, 0, 2 * math.pi)
-                cr.stroke()
-            cr.restore()
         if self.selected and self.selected[0] == key:
             _k, it = self.selected_item()
             if it is not None:
                 self._draw_chrome(cr, it, scale, accent)
+
+    def _draw_pad_area(self, cr, key, scale, accent):
+        """The page region the touchpad maps onto: a light tint, dashed edge."""
+        if self.pad is None or self.pad.key != key or not self.pad.rect:
+            return
+        x, y, w, h = self.pad.rect
+        cr.save()
+        cr.set_source_rgba(accent[0], accent[1], accent[2], 0.08)
+        cr.rectangle(x, y, w, h)
+        cr.fill_preserve()
+        cr.set_source_rgba(accent[0], accent[1], accent[2], 0.9)
+        cr.set_line_width(1.5 / scale)
+        cr.set_dash([6 / scale, 4 / scale])
+        cr.stroke()
+        cr.restore()
+
+    def inking(self, key) -> bool:
+        """Drawing ink on this page (Draw tool, or a touchpad session on it)."""
+        return (self.pad is not None and self.pad.key == key) or \
+            (self.pad is None and self.tool in INK_KINDS)
+
+    def snapshot_ink(self, snap, key, ox, oy, z, clip, ds, align=(0.0, 0.0),
+                     accent=(0.21, 0.52, 0.89)) -> bool:
+        """Fast path while drawing ink, instead of a cairo node over the whole
+        view on every touchpad frame (which re-rendered everything ever written
+        and re-uploaded it to the GPU each time). Everything already on the page
+        is rendered once into a texture on the device-pixel grid; each frame then
+        only appends that texture and a small cairo node around the stroke in
+        progress.
+
+        Page point (x, y) is at snapshot point (ox + x*z, oy + y*z); clip is the
+        visible (x, y, w, h) in snapshot coordinates; ds = device px per snapshot
+        unit; (snapshot point + align) * ds lands on whole device pixels.
+        Returns False (caller paints with draw()) when not drawing ink."""
+        if _INK_STATS is not None and self.inking(key):
+            t_paint = time.perf_counter()
+            try:
+                return self._snapshot_ink(snap, key, ox, oy, z, clip, ds, align, accent)
+            finally:
+                _INK_STATS.painted(self.host.mk_widget(),
+                                   (time.perf_counter() - t_paint) * 1000)
+        return self._snapshot_ink(snap, key, ox, oy, z, clip, ds, align, accent)
+
+    def _snapshot_ink(self, snap, key, ox, oy, z, clip, ds, align, accent):
+        if not self.inking(key) or (self.selected and self.selected[0] == key):
+            self._ink_cache.pop(key, None)
+            return False
+        items = self.host.mk_items(key)
+        pad = self.pad if self.pad is not None and self.pad.key == key else None
+        # the touchpad stroke in progress is the last stroke of pad.item
+        live = pad.item if (pad is not None and pad.active_id is not None
+                            and pad.snap is None and pad.item is not None
+                            and pad.item.points) else None
+        entries, statics = [], []
+        for it in items:
+            n = len(it.points) - (1 if it is live else 0)
+            entries.append((id(it), it.id, n))  # undo/redo swap in other objects
+            if it is live:
+                if n <= 0:
+                    statics.append(None)
+                    continue
+                it = copy.copy(it)
+                it.points = it.points[:n]
+            statics.append(it)
+        cx, cy, cw, ch = clip
+        ax, ay = align
+        px0, py0 = math.floor((cx + ax) * ds), math.floor((cy + ay) * ds)
+        pw = math.ceil((cx + cw + ax) * ds) - px0
+        ph = math.ceil((cy + ch + ay) * ds) - py0
+        if pw <= 0 or ph <= 0:
+            return True
+        if pw * ph > 40_000_000:
+            self._ink_cache.pop(key, None)
+            return False
+        pad_rect = pad.rect if pad is not None else None
+        geo = (id(items), ox + ax, oy + ay, z, px0, py0, pw, ph, ds, pad_rect, accent)
+
+        def page_cr(surf, sx, sy):
+            """cairo in page units on a surface whose (0, 0) is cache pixel (sx, sy)."""
+            cr = cairo.Context(surf)
+            cr.translate(-(px0 + sx), -(py0 + sy))
+            cr.scale(ds, ds)
+            cr.translate(ox + ax, oy + ay)
+            cr.scale(z, z)
+            return cr
+
+        c = self._ink_cache.get(key)
+        if c is not None and c["geo"] == geo and c["entries"] != entries:
+            pieces = _ink_pieces(c["entries"], entries, items, statics)
+            if pieces is None:
+                c = None                        # something else changed: rebuild
+            else:
+                # only what was added since: draw it into a small texture over
+                # the cache (cost independent of how much is on the page)
+                for it in pieces:
+                    x, y, w, h = bbox(it)
+                    m = (it.width or 1) * 2 + 3 / z
+                    if it.kind in LINE_KINDS:
+                        m += (it.width or 1) * 6 + 8 / z
+                    dx0 = max(math.floor(((ox + (x - m) * z) + ax) * ds) - px0, 0)
+                    dy0 = max(math.floor(((oy + (y - m) * z) + ay) * ds) - py0, 0)
+                    dx1 = min(math.ceil(((ox + (x + w + m) * z) + ax) * ds) - px0, pw)
+                    dy1 = min(math.ceil(((oy + (y + h + m) * z) + ay) * ds) - py0, ph)
+                    if dx1 <= dx0 or dy1 <= dy0:
+                        continue
+                    dsurf = cairo.ImageSurface(cairo.FORMAT_ARGB32, dx1 - dx0, dy1 - dy0)
+                    cr = page_cr(dsurf, dx0, dy0)
+                    render_item(cr, it)
+                    del cr
+                    dsurf.flush()
+                    c["deltas"].append((_texture(dsurf), dx0, dy0, dx1 - dx0, dy1 - dy0))
+                    if c["surf"] is None:
+                        c["surf"] = cairo.ImageSurface(cairo.FORMAT_ARGB32, pw, ph)
+                    bcr = cairo.Context(c["surf"])
+                    bcr.set_source_surface(dsurf, dx0, dy0)
+                    bcr.paint()
+                    del bcr
+                if len(c["deltas"]) > 24:       # fold them into one texture again
+                    c["tex"], c["deltas"] = self._fold(c, pw, ph), []
+                c["entries"] = entries
+                c["refs"] = list(items)         # keeps their id()s from being reused
+        if c is None or c["geo"] != geo:
+            surf = tex = None
+            if any(statics) or pad_rect:
+                surf = cairo.ImageSurface(cairo.FORMAT_ARGB32, pw, ph)
+                cr = page_cr(surf, 0, 0)
+                self._draw_pad_area(cr, key, z, accent)
+                render_items(cr, [it for it in statics if it is not None])
+                del cr
+                surf.flush()
+                tex = _texture(surf)
+            c = {"geo": geo, "entries": entries, "surf": surf, "tex": tex, "deltas": [],
+                 "refs": list(items)}
+            self._ink_cache[key] = c
+        from gi.repository import Graphene
+        r = Graphene.Rect()
+        if c["tex"] is not None:
+            r.init(px0 / ds - ax, py0 / ds - ay, pw / ds, ph / ds)
+            snap.append_texture(c["tex"], r)
+        for tex, dx0, dy0, dw, dh in c["deltas"]:
+            r.init((px0 + dx0) / ds - ax, (py0 + dy0) / ds - ay, dw / ds, dh / ds)
+            snap.append_texture(tex, r)
+        dyn = []
+        if live is not None:
+            dyn.append(Item("draw", stroke=live.stroke, width=live.width,
+                            points=[_predicted(live.points[-1], time.time(), 25 / z)]))
+        if self._preview and self._preview[0] == key:
+            it = self._preview[1]
+            op = self._op
+            if op and op.get("mode") == "ink" and it is op["item"] and it.points:
+                it = Item("draw", stroke=it.stroke, width=it.width,
+                          points=[_predicted(it.points[-1], time.monotonic(), 25 / z)])
+            dyn.append(it)
+        for it in dyn:
+            x, y, w, h = bbox(it)
+            m = (it.width or 1) * 2 + 3 / z
+            if it.kind in LINE_KINDS:
+                m += (it.width or 1) * 6 + 8 / z      # arrow heads
+            rx0, ry0 = max(ox + (x - m) * z, cx), max(oy + (y - m) * z, cy)
+            rx1 = min(ox + (x + w + m) * z, cx + cw)
+            ry1 = min(oy + (y + h + m) * z, cy + ch)
+            if rx1 <= rx0 or ry1 <= ry0:
+                continue
+            r = Graphene.Rect()
+            r.init(rx0, ry0, rx1 - rx0, ry1 - ry0)
+            cr = snap.append_cairo(r)
+            cr.translate(ox, oy)
+            cr.scale(z, z)
+            render_item(cr, it)
+            del cr
+        return True
+
+    def _fold(self, c, pw, ph):
+        """One texture of the cache's base and deltas: composited by the GPU
+        renderer (a copy of the whole layer through Python took ~23 ms), else
+        from the CPU copy kept alongside."""
+        try:
+            from gi.repository import Graphene, Gsk
+            ren = self.host.mk_widget().get_native().get_renderer()
+            nodes = []
+            r = Graphene.Rect()
+            if c["tex"] is not None:
+                r.init(0, 0, pw, ph)
+                nodes.append(Gsk.TextureNode.new(c["tex"], r))
+            for tex, dx0, dy0, dw, dh in c["deltas"]:
+                r = Graphene.Rect()
+                r.init(dx0, dy0, dw, dh)
+                nodes.append(Gsk.TextureNode.new(tex, r))
+            vp = Graphene.Rect()
+            vp.init(0, 0, pw, ph)
+            return ren.render_texture(Gsk.ContainerNode.new(nodes), vp)
+        except Exception:
+            c["surf"].flush()
+            return _texture(c["surf"])
 
     def _draw_chrome(self, cr, it, scale, accent):
         px = 1.0 / scale
@@ -1094,6 +1421,13 @@ class MarkupController(GObject.Object):
         return None
 
 
+def _speed_pressure(v_mm_s):
+    """The pressure that gives the width signature.py's speed model gives a
+    finger moving at v mm/s (slow: wider, fast: finer, never hairline)."""
+    target = 1.3 - 0.6 * min(v_mm_s / 260.0, 1.0)
+    return (target - 0.35) / 1.1
+
+
 class TouchpadDrawing:
     """One finger on the (grabbed) touchpad draws ink onto a page region.
     Any key, focus loss, or 45 s without touch ends the session."""
@@ -1109,6 +1443,11 @@ class TouchpadDrawing:
         self.active_id = None
         self.finger = None
         self.last_touch = time.monotonic()
+        self.anchor, self.still = None, 0.0     # hold-to-snap, as in on-screen Draw
+        self.snap = None                        # (shape Item, stroke it replaced)
+        self.shapes = []                        # snapped shapes, for Backspace
+        self._hold = 0
+        self._tried = None                      # the stillness recognise() last saw
         vx, vy, vw, vh = self.host.mk_visible_rect(key)
         pad_w, pad_h = self.pad.width_mm, self.pad.height_mm
         mx, my = vw * 0.04, vh * 0.04
@@ -1138,20 +1477,34 @@ class TouchpadDrawing:
             my = min(max(my, m), self.pad.height_mm - m)
             px, py = x0 + mx * self.s, y0 + my * self.s
             self.finger = (px, py)
-            if self.item is None:
-                self.host.mk_begin_edit()
-                self.item = Item("draw", stroke=self.ctrl.stroke,
-                                 width=max(self.ctrl.width * 0.75, 0.6), points=[])
-                self.host.mk_items(self.key).append(self.item)
-            if cid != self.active_id:
+            if _INK_STATS is not None and sys.platform.startswith("linux"):
+                _INK_STATS.input("pad", (time.time() - t) * 1000)   # evdev: CLOCK_REALTIME
+            if cid != self.active_id or self.item is None:
+                self._commit_snap()
+                if self.item is None:
+                    self.host.mk_begin_edit()
+                    self.item = Item("draw", stroke=self.ctrl.stroke,
+                                     width=self.ctrl.width, points=[])
+                    self.host.mk_items(self.key).append(self.item)
                 self.active_id = cid
-                self.item.points.append([[px, py, t]])
+                self.item.points.append([[px, py, t, _speed_pressure(0.0)]])
+                self.anchor, self.still = (px, py), time.monotonic()
+                if not self._hold:
+                    self._hold = GLib.timeout_add(50, self._hold_tick)
             else:
-                s = self.item.points[-1]
-                lx, ly = s[-1][0], s[-1][1]
-                if math.hypot(px - lx, py - ly) >= 0.12 * self.s:
-                    s.append([px, py, t])
+                if math.hypot(px - self.anchor[0], py - self.anchor[1]) > 0.8 * self.s:
+                    self.anchor, self.still = (px, py), time.monotonic()
+                    self._unsnap()
+                if self.snap is None:
+                    s = self.item.points[-1]
+                    lx, ly = s[-1][0], s[-1][1]
+                    if math.hypot(px - lx, py - ly) >= 0.12 * self.s:
+                        # finger speed in mm/s, kept as a pressure value: the
+                        # ink model's speed limits are in mm, page units are not
+                        v = math.hypot(px - lx, py - ly) / self.s / max(t - s[-1][2], 0.004)
+                        s.append([px, py, t, _speed_pressure(v)])
         else:
+            self._commit_snap()
             if (len(contacts) > 1 and self.active_id is not None and self.item
                     and self.item.points):
                 s = self.item.points[-1]
@@ -1161,9 +1514,61 @@ class TouchpadDrawing:
             self.finger = None
         self.host.mk_widget().queue_draw()
 
+    def _hold_tick(self):
+        if self.ctrl.pad is not self or self.active_id is None:
+            self._hold = 0
+            return False
+        if (self.snap is None and self.item and self.item.points
+                and self._tried != self.still
+                and time.monotonic() - self.still >= HOLD_SECONDS):
+            self._tried = self.still
+            shape = recognise(self.item.points[-1])
+            if shape is not None:
+                shape.stroke, shape.width = self.item.stroke, self.item.width
+                self.snap = (shape, self.item.points.pop())
+                self.host.mk_items(self.key).append(shape)
+                self.host.mk_widget().queue_draw()
+        return True
+
+    def _unsnap(self):
+        """The finger moved on after a snap: back to the ink stroke."""
+        if self.snap is None:
+            return
+        shape, stroke = self.snap
+        self.snap = None
+        items = self.host.mk_items(self.key)
+        items[:] = [i for i in items if i.id != shape.id]
+        self.item.points.append(stroke)
+
+    def _commit_snap(self):
+        """The finger lifted on a snapped shape: keep it. Later strokes go into a
+        new ink item so they draw above the shape."""
+        if self.snap is None:
+            return
+        shape, _stroke = self.snap
+        self.snap = None
+        self.shapes.append(shape)
+        if self.item is not None and not self.item.points:
+            items = self.host.mk_items(self.key)
+            items[:] = [i for i in items if i.id != self.item.id]
+        self.item = None
+
     def _on_key(self, ctrl, keyval, code, state):
-        if keyval in (Gdk.KEY_BackSpace,) and self.item and self.item.points:
-            self.item.points.pop()
+        if keyval in (Gdk.KEY_BackSpace,):
+            items = self.host.mk_items(self.key)
+            if self.snap is not None:               # drop the shape being held
+                shape, _stroke = self.snap
+                self.snap = None
+                items[:] = [i for i in items if i.id != shape.id]
+                self.active_id = None               # a finger still down starts afresh
+            elif self.item and self.item.points:
+                self.item.points.pop()
+                self.active_id = None
+            elif self.shapes:
+                gone = self.shapes.pop()
+                items[:] = [i for i in items if i.id != gone.id]
+            else:
+                return True
             self.host.mk_widget().queue_draw()
             return True
         if keyval in (Gdk.KEY_Shift_L, Gdk.KEY_Shift_R, Gdk.KEY_Control_L, Gdk.KEY_Control_R,
@@ -1194,6 +1599,10 @@ class TouchpadDrawing:
         if self._idle:
             GLib.source_remove(self._idle)
             self._idle = 0
+        if self._hold:
+            GLib.source_remove(self._hold)
+            self._hold = 0
+        self._commit_snap()
         if isinstance(self.root, Gtk.Window):
             self.root.remove_controller(self.keys)
             if self._active_h:
@@ -1331,11 +1740,10 @@ class MarkupToolbar(Gtk.Box):
                 self.append(b)
             self.append(Gtk.Separator(orientation=Gtk.Orientation.VERTICAL, margin_start=4,
                                       margin_end=4))
-        for k, tip in (("sketch", N_("Sketch (shapes are recognised)")),
-                      ("draw", N_("Draw (ink)"))):
-            b = _tool_button(k, tip, sel)
-            self.buttons[k] = b
-            self.append(b)
+        # one ink tool: hold still before letting go to snap to a line or shape
+        b = _tool_button("draw", N_("Draw — hold still at the end to make a shape"), sel)
+        self.buttons["draw"] = b
+        self.append(b)
         # shapes: one toggle showing the last shape + a chooser
         self.shape = "rect"
         self.shape_btn = _tool_button("rect", N_("Shapes"), sel)
@@ -1392,8 +1800,11 @@ class MarkupToolbar(Gtk.Box):
         self.append(self.pad_btn)
 
         self._syncing = False
+        self._just_on = None
         for k, b in self.buttons.items():
             b.connect("toggled", self._toggled, k)
+            if k != "select":
+                b.connect("clicked", self._clicked, k)
         ctrl.connect("tool-changed", lambda c, t: self.sync())
         ctrl.connect("selection-changed", lambda c: self._sync_style())
         self.sync()
@@ -1408,7 +1819,20 @@ class MarkupToolbar(Gtk.Box):
     def _toggled(self, btn, k):
         if self._syncing or not btn.get_active():
             return
+        self._just_on = k
         self.ctrl.set_tool(self.shape if k == "shape" else k)
+
+    def _clicked(self, btn, k):
+        # "clicked" runs after the button's own toggling. A grouped button that
+        # was already active stays on, so a second click is the user turning the
+        # tool off: go back to the pointer.
+        if self._just_on == k:
+            self._just_on = None
+            return
+        if btn.get_active():
+            if self.ctrl.pad is not None:
+                self.ctrl.pad.stop()
+            self.ctrl.set_tool("select")
 
     def sync(self):
         self._syncing = True

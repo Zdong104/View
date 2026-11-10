@@ -29,6 +29,7 @@ All code lives in `preview/`:
 | `pdf_view.py` | PDF viewer: thumbnails, page editing, forms, search, export |
 | `pdf_canvas.py` | Scrolling page canvas, zoom and layout modes |
 | `pdf_render.py` | Background page rendering (worker threads) |
+| `pdf_notes.py` | Side panel of note cards next to the PDF pages |
 | `pdf_ops.py` | PDF document model and save/export pipeline |
 | `markup.py` | Markup layer: shapes, ink, text, notes, signatures |
 | `signature.py`, `touchpad.py` | Signature storage/rendering and absolute touchpad capture (evdev) |

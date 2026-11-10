@@ -120,6 +120,20 @@ class PreferencesDialog(Adw.PreferencesDialog):
                     title=_("Could not change the setting: {error}").format(error=e)))
         row.connect("notify::active", toggled)
         grp.add(row)
+
+        from . import pdf_view
+        ow = Adw.SwitchRow(title=_("Ask before overwriting PDFs"),
+                           subtitle=_("Confirm before Save writes changes into the original file"),
+                           active=pdf_view.confirm_overwrite())
+
+        def ow_toggled(r, _pspec):
+            try:
+                pdf_view.set_confirm_overwrite(r.get_active())
+            except OSError as e:
+                self.add_toast(Adw.Toast(
+                    title=_("Could not change the setting: {error}").format(error=e)))
+        ow.connect("notify::active", ow_toggled)
+        grp.add(ow)
         return grp
 
     # ---- background ----

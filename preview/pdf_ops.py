@@ -56,10 +56,13 @@ class PageRef:
     rotation: int = 0             # user rotation, clockwise, multiple of 90
     items: list = field(default_factory=list)     # markup.Item, display frame
     forms: dict = field(default_factory=dict)     # field name -> str | bool
+    # /Text annotations of the source page shown as note items (their Item.meta):
+    # on save, a note whose item is gone is removed from the page
+    notes: tuple = ()
 
     def copy(self) -> "PageRef":
         return PageRef(self.src, self.index, self.rotation,
-                       [i.copy() for i in self.items], dict(self.forms))
+                       [i.copy() for i in self.items], dict(self.forms), self.notes)
 
     def key(self):
         return (self.src, self.index, self.rotation,
@@ -68,6 +71,31 @@ class PageRef:
 
 
 rotate_point = markup.rotate_point
+
+
+# Notes (/Text annotations) are shown as markup items, so Poppler must not paint
+# them too: render everything but /Text (Poppler 25.02+ has render_full; older
+# ones get the notes taken off their in-memory page instead).
+_NO_NOTES = None
+if hasattr(Poppler, "RenderAnnotsFlags") and hasattr(Poppler.Page, "render_full"):
+    _NO_NOTES = Poppler.RenderAnnotsFlags(0)
+    for _f in Poppler.RenderAnnotsFlags.__flags_values__.values():
+        if _f != Poppler.RenderAnnotsFlags.TEXT:
+            _NO_NOTES |= _f
+
+
+def render_page(page, cr, printing=False):
+    """Poppler page render without its sticky notes (see _NO_NOTES)."""
+    if _NO_NOTES is not None:
+        page.render_full(cr, printing, _NO_NOTES)
+        return
+    try:
+        for m in page.get_annot_mapping():
+            if m.annot.get_annot_type() == Poppler.AnnotType.TEXT:
+                page.remove_annot(m.annot)
+    except Exception:
+        pass
+    (page.render_for_printing if printing else page.render)(cr)
 
 
 def poppler_open(src: Source):
@@ -177,6 +205,65 @@ def _author():
         return ""
 
 
+_HIDDEN = 2 | 32        # /F Hidden, NoView
+
+
+def _rgb(c):
+    """/C array -> RGBA tuple (None if absent or odd)."""
+    try:
+        v = [float(x) for x in c]
+    except Exception:
+        return None
+    if len(v) == 1:
+        v = v * 3
+    elif len(v) == 4:
+        v = [(1 - v[i]) * (1 - v[3]) for i in range(3)]
+    return tuple(v) + (1.0,) if len(v) == 3 else None
+
+
+def read_notes(reader, index):
+    """Sticky notes (/Text annotations) of a pypdf page as note Items in its
+    display frame (before any user rotation). Item.meta remembers the
+    annotation each came from: see _write_notes. Hidden ones and review states
+    (Acrobat's Accepted/Rejected marks) stay as they are."""
+    page = reader.pages[index]
+    annots = page.get("/Annots")
+    if annots is None:
+        return []
+    fr = PageFrame(page)
+    inv = cairo.Matrix(*fr.m)
+    inv.invert()
+    out = []
+    for i, ref in enumerate(annots.get_object() or ()):
+        try:
+            a = ref.get_object()
+            if a.get("/Subtype") != "/Text" or "/StateModel" in a \
+                    or int(a.get("/F", 0)) & _HIDDEN:
+                continue
+            r = [float(v) for v in a["/Rect"]]
+            rect = (min(r[0], r[2]), min(r[1], r[3]), max(r[0], r[2]), max(r[1], r[3]))
+            p = inv.transform_point(rect[0] - fr.l, fr.t - rect[1])
+            q = inv.transform_point(rect[2] - fr.l, fr.t - rect[3])
+            x, y, w, h = min(p[0], q[0]), min(p[1], q[1]), abs(p[0] - q[0]), abs(p[1] - q[1])
+            if w < 4 or h < 4:          # icon size is up to the viewer
+                w = h = markup.NOTE_SIZE
+            text = str(a.get("/Contents") or "")
+            stroke = _rgb(a.get("/C") or ()) or markup.NOTE_COLOR
+            meta = {"i": i, "nm": str(a.get("/NM") or ""), "text": text, "rect": rect,
+                    "stroke": stroke, "author": str(a.get("/T") or ""),
+                    "date": str(a.get("/M") or ""), "reply": "/IRT" in a}
+            out.append(Item("note", x, y, w, h, stroke=stroke, text=text, meta=meta))
+        except Exception:
+            continue
+    return out
+
+
+def _note_rect(it: Item, frame: PageFrame):
+    pts = [frame.to_user(it.x, it.y), frame.to_user(it.x + it.w, it.y + it.h)]
+    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+    return [min(xs), min(ys), max(xs), max(ys)]
+
+
 def _annotation(it: Item, frame: PageFrame):
     from pypdf.generic import (ArrayObject, DictionaryObject, FloatObject, NameObject,
                                NumberObject, TextStringObject, BooleanObject)
@@ -193,11 +280,9 @@ def _annotation(it: Item, frame: PageFrame):
         NameObject("/C"): color,
     })
     if it.kind == "note":
-        pts = [frame.to_user(it.x, it.y), frame.to_user(it.x + it.w, it.y + it.h)]
-        xs, ys = [p[0] for p in pts], [p[1] for p in pts]
         d.update({
             NameObject("/Subtype"): NameObject("/Text"),
-            NameObject("/Rect"): arr([min(xs), min(ys), max(xs), max(ys)]),
+            NameObject("/Rect"): arr(_note_rect(it, frame)),
             NameObject("/Contents"): TextStringObject(it.text or ""),
             NameObject("/Name"): NameObject("/Comment"),
             NameObject("/Open"): BooleanObject(False),
@@ -223,6 +308,102 @@ def _annotation(it: Item, frame: PageFrame):
     return d
 
 
+def _write_notes(writer, page, frame, items, imported):
+    """Annotation items onto a pypdf page. A note read from the file
+    (PageRef.notes) updates its own /Text annotation in place, so its author,
+    /NM, popup and replies stay; one whose item was deleted is removed; the
+    rest are added as new annotations."""
+    from pypdf.generic import ArrayObject, FloatObject, NameObject, TextStringObject
+    arr = page["/Annots"].get_object() if "/Annots" in page else None
+    dicts = [r.get_object() for r in arr] if arr is not None else []
+
+    def find(m):
+        i = m["i"]
+        a = dicts[i] if i < len(dicts) else None
+        if a is not None and a.get("/Subtype") == "/Text" and str(a.get("/NM") or "") == m["nm"] \
+                and (m["nm"] or str(a.get("/Contents") or "") == m["text"]):
+            return a
+        if m["nm"]:
+            for a in dicts:
+                if a.get("/Subtype") == "/Text" and str(a.get("/NM") or "") == m["nm"]:
+                    return a
+        return None
+
+    own = {id(m): (m, find(m)) for m in imported}
+    claimed, new = set(), []
+    for it in items:
+        m = it.meta
+        a = own.get(id(m), (None, None))[1] if m is not None and id(m) not in claimed else None
+        if a is None:
+            new.append(it)
+            continue
+        claimed.add(id(m))
+        touched = False
+        if it.text != m["text"]:
+            a[NameObject("/Contents")] = TextStringObject(it.text)
+            touched = True
+        if [round(v, 3) for v in it.stroke[:3]] != [round(v, 3) for v in m["stroke"][:3]]:
+            a[NameObject("/C")] = ArrayObject([FloatObject(round(v, 3)) for v in it.stroke[:3]])
+        r = _note_rect(it, frame)
+        if any(abs(u - v) > 0.5 for u, v in zip(r, m["rect"])):
+            a[NameObject("/Rect")] = ArrayObject([FloatObject(round(v, 3)) for v in r])
+            pop = a.get("/Popup")
+            pop = pop.get_object() if pop is not None else None
+            if pop is not None and "/Rect" in pop:     # the popup follows its note
+                dx, dy = r[0] - m["rect"][0], r[3] - m["rect"][3]
+                pr = [float(v) for v in pop["/Rect"]]
+                pop[NameObject("/Rect")] = ArrayObject(
+                    [FloatObject(round(v + (dy if k % 2 else dx), 3)) for k, v in enumerate(pr)])
+            touched = True
+        if touched:
+            a[NameObject("/M")] = TextStringObject(_pdf_date())
+    gone = [a for k, (m, a) in own.items() if k not in claimed and a is not None]
+    if gone and arr is not None:
+        drop = {id(a) for a in gone}
+        for a in gone:
+            pop = a.get("/Popup")
+            if pop is not None:
+                drop.add(id(pop.get_object()))
+        for r in arr:                   # review states of a deleted note go with it
+            o = r.get_object()
+            irt = o.get("/IRT")
+            if "/StateModel" in o and irt is not None and id(irt.get_object()) in drop:
+                drop.add(id(o))
+        keep = [r for r in arr if id(r.get_object()) not in drop]
+        for r in keep:
+            o = r.get_object()
+            irt = o.get("/IRT")
+            if irt is not None and id(irt.get_object()) in drop:
+                del o["/IRT"]           # a reply to a deleted note stands alone
+        arr[:] = keep
+    if new:
+        annots = [_annotation(i, frame) for i in new]
+        _add_annots(writer, page, annots)
+        _add_annots(writer, page, [_popup(a, frame) for a in annots
+                                   if a.get("/Subtype") == "/Text"])
+
+
+def _popup(note, frame):
+    """The /Popup a viewer opens a new note's text in (Acrobat writes one per
+    note): right of the icon, inside the page, closed."""
+    from pypdf.generic import (ArrayObject, BooleanObject, DictionaryObject, FloatObject,
+                               NameObject, NumberObject)
+    x0, y0, x1, y1 = (float(v) for v in note["/Rect"])
+    w, h = min(200.0, frame.r - frame.l), min(120.0, frame.t - frame.b)
+    px = max(frame.l, min(x1 + 4, frame.r - w))
+    py = max(frame.b, min(y1, frame.t) - h)
+    pop = DictionaryObject({
+        NameObject("/Type"): NameObject("/Annot"),
+        NameObject("/Subtype"): NameObject("/Popup"),
+        NameObject("/Parent"): note.indirect_reference,
+        NameObject("/Rect"): ArrayObject([FloatObject(round(v, 3))
+                                          for v in (px, py, px + w, py + h)]),
+        NameObject("/Open"): BooleanObject(False),
+        NameObject("/F"): NumberObject(4 | 8 | 16),
+    })
+    return pop
+
+
 def _add_annots(writer, page, annots):
     from pypdf.generic import ArrayObject, NameObject
     if "/Annots" in page:
@@ -232,7 +413,11 @@ def _add_annots(writer, page, annots):
         page[NameObject("/Annots")] = arr
     for a in annots:
         a[NameObject("/P")] = page.indirect_reference
-        arr.append(writer._add_object(a))
+        ref = writer._add_object(a)
+        arr.append(ref)
+        parent = a.get("/Parent")
+        if a.get("/Subtype") == "/Popup" and parent is not None:
+            parent.get_object()[NameObject("/Popup")] = ref
 
 
 # ------------------------------------------------------------------ forms ---
@@ -434,9 +619,8 @@ def build_writer(sources, pages, base_src=0, metadata=None, text_layers=None):
         notes = [i for i in ref.items if i.kind in ANNOT_KINDS]
         if flat:
             _stamp(page, flat)
-        if notes:
-            fr = PageFrame(page)
-            _add_annots(writer, page, [_annotation(i, fr) for i in notes])
+        if notes or ref.notes:
+            _write_notes(writer, page, PageFrame(page), notes, ref.notes)
         if ref.forms:
             form_fields += _write_forms(writer, page, ref.forms)
         if text_layers and text_layers.get(n):
@@ -548,7 +732,7 @@ def render_page_surface(doc, ref: PageRef, scale, transparent=False):
     elif r == 270:
         cr.translate(0, dh)
         cr.rotate(-math.pi / 2)
-    page.render_for_printing(cr)
+    render_page(page, cr, True)
     cr.restore()
     markup.render_items(cr, ref.items)
     surf.flush()

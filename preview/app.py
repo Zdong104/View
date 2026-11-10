@@ -1153,6 +1153,39 @@ class PreviewApp(Adw.Application):
                 return w
         return None
 
+    def find_open_host(self, gfile):
+        """The tab (TabHost, any MainWindow) whose document is `gfile`, else
+        None.  Files are compared by identity (symlinks and relative paths
+        resolve alike); a tab's current file follows a Save As; untitled
+        documents have no file and never match."""
+        def same(a, b):
+            try:
+                if a.equal(b):
+                    return True
+                pa, pb = a.get_path(), b.get_path()
+                return bool(pa and pb and os.path.exists(pa) and os.path.exists(pb)
+                            and (os.path.realpath(pa) == os.path.realpath(pb)
+                                 or os.path.samefile(pa, pb)))
+            except OSError:
+                return False
+        if gfile is None:
+            return None
+        for w in self.get_windows():
+            if not isinstance(w, MainWindow):
+                continue
+            for h in w.hosts():
+                v = getattr(h, "viewer", None)
+                if v is None:
+                    continue
+                try:
+                    getter = getattr(v, "get_current_file", None)
+                    cur = getter() if getter is not None else getattr(v, "gfile", None)
+                except Exception:  # noqa: BLE001
+                    cur = None
+                if cur is not None and same(cur, gfile):
+                    return h
+        return None
+
     def route_files(self, files, target=None, startup_id=""):
         """Open files: all images in one tab, each PDF/model in its own (PDFs
         share one when the viewer can show several).  With "Open files in new
@@ -1199,6 +1232,17 @@ class PreviewApp(Adw.Application):
                 token[0] = ""
             w.present()
             _to_front(w)
+
+        # a file already open in some tab: select that tab instead of opening another
+        already = None
+        for lst in (images, pdfs, models, cads, tables, videos, texts, unknown):
+            for f in list(lst):
+                h = self.find_open_host(f)
+                if h is not None:
+                    lst.remove(f)
+                    already = already or h
+        if already is not None:
+            show(already)
 
         def host():
             nonlocal spare
@@ -1253,7 +1297,7 @@ class PreviewApp(Adw.Application):
         if empty:
             anchor().show_toast(_("No images in {folder}").format(
                 folder=empty[0].get_basename() or _("this folder")))
-        w = first[0]
+        w = first[0] or already
         return w.get_root() if isinstance(w, TabHost) else w
 
     @staticmethod

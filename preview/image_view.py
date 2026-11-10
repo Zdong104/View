@@ -821,9 +821,12 @@ class ImageCanvas(Gtk.Widget):
                                            r.init(ox0, oy0, ov["w"] * s, ov["h"] * s))
         mk_items = self.markup_items() if self.markup is not None else []
         show_text = self.text is not None and (self.text.has_selection() or self.text.show_boxes)
-        if mk_items or (self.markup is not None and self.markup.tool != "select") or show_text:
+        inked = self.markup is not None and self.markup.snapshot_ink(
+            snapshot, "img", x0, y0, s, (0, 0, vw, vh), ds, surface_origin(self))
+        if (not inked and (mk_items or (self.markup is not None
+                                        and self.markup.tool != "select"))) or show_text:
             cr = snapshot.append_cairo(r.init(0, 0, vw, vh))
-            if self.markup is not None:
+            if self.markup is not None and not inked:
                 cr.save()
                 cr.translate(x0, y0)
                 cr.scale(s, s)
@@ -2279,6 +2282,10 @@ class ImageViewer(Viewer):
         if it is None or it.rendered is None:
             return
         from .signature import signature_aspect, signature_png_bytes
+        if self.mk is not None:        # signing ends any drawing tool: back to the pointer
+            if self.mk.pad is not None:
+                self.mk.pad.stop()
+            self.mk.set_tool("select")
         self._commit_overlay(it)
         dw, dh = it.rendered.size
         w = min(dw * 0.35, 900)

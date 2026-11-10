@@ -177,7 +177,7 @@ class RenderWorker:
             cr.translate(-ox, -oy)
             cr.scale(scale, scale)
         apply_rotation(cr, rot, dw, dh)
-        page.render(cr)
+        pdf_ops.render_page(page, cr)
         surf.flush()
         data = GLib.Bytes.new(bytes(surf.get_data()))
         return Gdk.MemoryTexture.new(pw, ph, Gdk.MemoryFormat.B8G8R8A8_PREMULTIPLIED,

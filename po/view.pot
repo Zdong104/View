@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: View\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 18:44-0500\n"
+"POT-Creation-Date: 2026-11-10 14:29-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -57,6 +57,9 @@ msgstr ""
 msgid "New Window"
 msgstr ""
 
+msgid "New Tab"
+msgstr ""
+
 msgid "New from Clipboard"
 msgstr ""
 
@@ -66,13 +69,31 @@ msgstr ""
 msgid "Full Screen"
 msgstr ""
 
-msgid "Close Window"
+msgid "Close Tab"
 msgstr ""
 
 msgid "Quit"
 msgstr ""
 
 msgid "Keyboard Shortcuts"
+msgstr ""
+
+msgid "Tabs"
+msgstr ""
+
+msgid "Next Tab"
+msgstr ""
+
+msgid "Previous Tab"
+msgstr ""
+
+msgid "Move Tab Left"
+msgstr ""
+
+msgid "Move Tab Right"
+msgstr ""
+
+msgid "Go to Tab"
 msgstr ""
 
 msgid "Play / Pause"
@@ -189,40 +210,16 @@ msgstr ""
 msgid "Cancel Selection / Tool"
 msgstr ""
 
-msgid "Open… (Ctrl+O)"
+msgid "Move to New Window"
 msgstr ""
 
-msgid "Main Menu"
+msgid "Open in Split View"
 msgstr ""
 
-msgid "Inspector (Ctrl+I)"
+msgid "Move to Other Side"
 msgstr ""
 
-msgid "Drop a PDF, image, video, text file or spreadsheet here"
-msgstr ""
-
-msgid "Or open a file to get started."
-msgstr ""
-
-msgid "Recent"
-msgstr ""
-
-msgid "Could not open this file"
-msgstr ""
-
-msgid "Open Another File…"
-msgstr ""
-
-msgid "Discard Changes?"
-msgstr ""
-
-msgid "This document has unsaved changes that will be lost if you close it."
-msgstr ""
-
-msgid "Cancel"
-msgstr ""
-
-msgid "Discard"
+msgid "Close Other Tabs"
 msgstr ""
 
 msgid "Open Recent"
@@ -303,6 +300,9 @@ msgid "No images to export"
 msgstr ""
 
 msgid "Export as PDF"
+msgstr ""
+
+msgid "Cancel"
 msgstr ""
 
 msgid "Export"
@@ -951,10 +951,7 @@ msgstr ""
 msgid "Strike Through Text"
 msgstr ""
 
-msgid "Sketch (shapes are recognised)"
-msgstr ""
-
-msgid "Draw (ink)"
+msgid "Draw — hold still at the end to make a shape"
 msgstr ""
 
 msgid "Shapes"
@@ -1092,6 +1089,37 @@ msgstr ""
 msgid "Cancelling…"
 msgstr ""
 
+msgid "Just now"
+msgstr ""
+
+#, python-brace-format
+msgid "{n} minute ago"
+msgid_plural "{n} minutes ago"
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-brace-format
+msgid "{n} hour ago"
+msgid_plural "{n} hours ago"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Delete Note"
+msgstr ""
+
+#, python-brace-format
+msgid "{author} (reply)"
+msgstr ""
+
+msgid "Edited"
+msgstr ""
+
+msgid "Empty note"
+msgstr ""
+
+msgid "You"
+msgstr ""
+
 msgid "Search document"
 msgstr ""
 
@@ -1216,6 +1244,13 @@ msgstr ""
 msgid "Unlock"
 msgstr ""
 
+#, python-brace-format
+msgid "“{name}” changed on disk"
+msgstr ""
+
+msgid "Reload"
+msgstr ""
+
 msgid " — Edited"
 msgstr ""
 
@@ -1312,6 +1347,13 @@ msgid ""
 msgstr ""
 
 msgid "Overwrite"
+msgstr ""
+
+msgid "Don’t ask again"
+msgstr ""
+
+#, python-brace-format
+msgid "Could not change the setting: {error}"
 msgstr ""
 
 msgid "Can only save to local files"
@@ -1571,10 +1613,6 @@ msgstr ""
 msgid "Installed for all users by the View package"
 msgstr ""
 
-#, python-brace-format
-msgid "Could not change the setting: {error}"
-msgstr ""
-
 msgid "Screenshots"
 msgstr ""
 
@@ -1584,6 +1622,23 @@ msgstr ""
 msgid ""
 "Press Print Screen and the screenshot opens in View for quick markup; Done "
 "saves it and copies it to the clipboard"
+msgstr ""
+
+msgid "Windows"
+msgstr ""
+
+msgid "Open files in new tabs"
+msgstr ""
+
+msgid ""
+"Otherwise each file opens in a window of its own. Right-click a tab to move "
+"it to a new window"
+msgstr ""
+
+msgid "Ask before overwriting PDFs"
+msgstr ""
+
+msgid "Confirm before Save writes changes into the original file"
 msgstr ""
 
 msgid "Background"
@@ -1805,6 +1860,9 @@ msgid "Discard changes?"
 msgstr ""
 
 msgid "The screenshot and the clipboard keep the original."
+msgstr ""
+
+msgid "Discard"
 msgstr ""
 
 msgid "Black"
@@ -2387,10 +2445,37 @@ msgstr ""
 msgid "Exported “{v}”"
 msgstr ""
 
-msgid "Find in file"
+msgid "Open… (Ctrl+O)"
 msgstr ""
 
-msgid "Sync Scrolling"
+msgid "Main Menu"
+msgstr ""
+
+msgid "Inspector (Ctrl+I)"
+msgstr ""
+
+msgid "Could not open this file"
+msgstr ""
+
+msgid "Open Another File…"
+msgstr ""
+
+msgid "Drop a PDF, image, video, text file or spreadsheet here"
+msgstr ""
+
+msgid "Or open a file to get started."
+msgstr ""
+
+msgid "Recent"
+msgstr ""
+
+msgid "Discard Changes?"
+msgstr ""
+
+msgid "This document has unsaved changes that will be lost if you close it."
+msgstr ""
+
+msgid "Find in file"
 msgstr ""
 
 msgid "Wrap Lines"
@@ -2507,6 +2592,9 @@ msgid "Preview"
 msgstr ""
 
 msgid "Rendered Markdown"
+msgstr ""
+
+msgid "Sync Scrolling"
 msgstr ""
 
 msgid "English"
@@ -2964,10 +3052,4 @@ msgid "Save Frame as PNG"
 msgstr ""
 
 msgid "Could not save the frame"
-msgstr ""
-
-msgid "Open in Split View"
-msgstr ""
-
-msgid "Move to Other Side"
 msgstr ""

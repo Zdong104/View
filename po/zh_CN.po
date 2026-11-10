@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: View\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-01 18:44-0500\n"
+"POT-Creation-Date: 2026-11-10 14:29-0500\n"
 "PO-Revision-Date: 2026-10-26 15:40-0400\n"
 "Last-Translator: View contributors\n"
 "Language-Team: Simplified Chinese\n"
@@ -54,6 +54,9 @@ msgstr "打开…"
 msgid "New Window"
 msgstr "新建窗口"
 
+msgid "New Tab"
+msgstr "新建标签页"
+
 msgid "New from Clipboard"
 msgstr "从剪贴板新建"
 
@@ -63,14 +66,32 @@ msgstr "显示检查器"
 msgid "Full Screen"
 msgstr "全屏"
 
-msgid "Close Window"
-msgstr "关闭窗口"
+msgid "Close Tab"
+msgstr "关闭标签页"
 
 msgid "Quit"
 msgstr "退出"
 
 msgid "Keyboard Shortcuts"
 msgstr "键盘快捷键"
+
+msgid "Tabs"
+msgstr "标签页"
+
+msgid "Next Tab"
+msgstr "下一个标签页"
+
+msgid "Previous Tab"
+msgstr "上一个标签页"
+
+msgid "Move Tab Left"
+msgstr "向左移动标签页"
+
+msgid "Move Tab Right"
+msgstr "向右移动标签页"
+
+msgid "Go to Tab"
+msgstr "转到标签页"
 
 msgid "Play / Pause"
 msgstr "播放 / 暂停"
@@ -186,41 +207,17 @@ msgstr "复制所有识别的文字"
 msgid "Cancel Selection / Tool"
 msgstr "取消选择 / 工具"
 
-msgid "Open… (Ctrl+O)"
-msgstr "打开…（Ctrl+O）"
+msgid "Move to New Window"
+msgstr "移到新窗口"
 
-msgid "Main Menu"
-msgstr "主菜单"
+msgid "Open in Split View"
+msgstr "在分屏视图中打开"
 
-msgid "Inspector (Ctrl+I)"
-msgstr "检查器（Ctrl+I）"
+msgid "Move to Other Side"
+msgstr "移到另一侧"
 
-msgid "Drop a PDF, image, video, text file or spreadsheet here"
-msgstr "将 PDF、图片、视频、文本文件或电子表格拖放到此处"
-
-msgid "Or open a file to get started."
-msgstr "或者打开一个文件开始使用。"
-
-msgid "Recent"
-msgstr "最近使用"
-
-msgid "Could not open this file"
-msgstr "无法打开此文件"
-
-msgid "Open Another File…"
-msgstr "打开其他文件…"
-
-msgid "Discard Changes?"
-msgstr "放弃更改？"
-
-msgid "This document has unsaved changes that will be lost if you close it."
-msgstr "此文档有未保存的更改，关闭后这些更改将丢失。"
-
-msgid "Cancel"
-msgstr "取消"
-
-msgid "Discard"
-msgstr "放弃"
+msgid "Close Other Tabs"
+msgstr "关闭其他标签页"
 
 msgid "Open Recent"
 msgstr "打开最近的文件"
@@ -300,6 +297,9 @@ msgstr "没有可导出的图片"
 
 msgid "Export as PDF"
 msgstr "导出为 PDF"
+
+msgid "Cancel"
+msgstr "取消"
 
 msgid "Export"
 msgstr "导出"
@@ -939,11 +939,8 @@ msgstr "为文字加下划线"
 msgid "Strike Through Text"
 msgstr "为文字加删除线"
 
-msgid "Sketch (shapes are recognised)"
-msgstr "草图（自动识别形状）"
-
-msgid "Draw (ink)"
-msgstr "绘制（墨迹）"
+msgid "Draw — hold still at the end to make a shape"
+msgstr "绘制（在结尾停住不动可变成形状）"
 
 msgid "Shapes"
 msgstr "形状"
@@ -1083,6 +1080,35 @@ msgstr "无法安装文字识别"
 msgid "Cancelling…"
 msgstr "正在取消…"
 
+msgid "Just now"
+msgstr "刚刚"
+
+#, python-brace-format
+msgid "{n} minute ago"
+msgid_plural "{n} minutes ago"
+msgstr[0] "{n} 分钟前"
+
+#, python-brace-format
+msgid "{n} hour ago"
+msgid_plural "{n} hours ago"
+msgstr[0] "{n} 小时前"
+
+msgid "Delete Note"
+msgstr "删除注释"
+
+#, python-brace-format
+msgid "{author} (reply)"
+msgstr "{author}（回复）"
+
+msgid "Edited"
+msgstr "已编辑"
+
+msgid "Empty note"
+msgstr "空注释"
+
+msgid "You"
+msgstr "我"
+
 msgid "Search document"
 msgstr "搜索文档"
 
@@ -1207,6 +1233,13 @@ msgstr "输入密码以打开“{name}”。"
 msgid "Unlock"
 msgstr "解锁"
 
+#, python-brace-format
+msgid "“{name}” changed on disk"
+msgstr "“{name}”已在磁盘上更改"
+
+msgid "Reload"
+msgstr "重新载入"
+
 msgid " — Edited"
 msgstr " — 已编辑"
 
@@ -1301,6 +1334,13 @@ msgstr ""
 
 msgid "Overwrite"
 msgstr "覆盖"
+
+msgid "Don’t ask again"
+msgstr "不再询问"
+
+#, python-brace-format
+msgid "Could not change the setting: {error}"
+msgstr "无法更改设置：{error}"
 
 msgid "Can only save to local files"
 msgstr "只能保存到本地文件"
@@ -1558,10 +1598,6 @@ msgstr "右键单击所选图片；如果没有该菜单项，请重启“文件
 msgid "Installed for all users by the View package"
 msgstr "已由 View 软件包为所有用户安装"
 
-#, python-brace-format
-msgid "Could not change the setting: {error}"
-msgstr "无法更改设置：{error}"
-
 msgid "Screenshots"
 msgstr "截图"
 
@@ -1574,6 +1610,23 @@ msgid ""
 msgstr ""
 "按下 Print Screen 后，截图会在 View 中打开以便快速标记；点击“完成”即可保存并"
 "复制到剪贴板"
+
+msgid "Windows"
+msgstr "窗口"
+
+msgid "Open files in new tabs"
+msgstr "在新标签页中打开文件"
+
+msgid ""
+"Otherwise each file opens in a window of its own. Right-click a tab to move "
+"it to a new window"
+msgstr "关闭后每个文件在单独的窗口中打开。右键单击标签页可将其移到新窗口"
+
+msgid "Ask before overwriting PDFs"
+msgstr "覆盖 PDF 前询问"
+
+msgid "Confirm before Save writes changes into the original file"
+msgstr "保存时，在将更改写入原文件前进行确认"
 
 msgid "Background"
 msgstr "后台运行"
@@ -1799,6 +1852,9 @@ msgstr "放弃更改？"
 
 msgid "The screenshot and the clipboard keep the original."
 msgstr "截图和剪贴板将保留原始内容。"
+
+msgid "Discard"
+msgstr "放弃"
 
 msgid "Black"
 msgstr "黑色"
@@ -2385,11 +2441,38 @@ msgstr "Excel 工作簿"
 msgid "Exported “{v}”"
 msgstr "已导出“{v}”"
 
+msgid "Open… (Ctrl+O)"
+msgstr "打开…（Ctrl+O）"
+
+msgid "Main Menu"
+msgstr "主菜单"
+
+msgid "Inspector (Ctrl+I)"
+msgstr "检查器（Ctrl+I）"
+
+msgid "Could not open this file"
+msgstr "无法打开此文件"
+
+msgid "Open Another File…"
+msgstr "打开其他文件…"
+
+msgid "Drop a PDF, image, video, text file or spreadsheet here"
+msgstr "将 PDF、图片、视频、文本文件或电子表格拖放到此处"
+
+msgid "Or open a file to get started."
+msgstr "或者打开一个文件开始使用。"
+
+msgid "Recent"
+msgstr "最近使用"
+
+msgid "Discard Changes?"
+msgstr "放弃更改？"
+
+msgid "This document has unsaved changes that will be lost if you close it."
+msgstr "此文档有未保存的更改，关闭后这些更改将丢失。"
+
 msgid "Find in file"
 msgstr "在文件中查找"
-
-msgid "Sync Scrolling"
-msgstr "同步滚动"
 
 msgid "Wrap Lines"
 msgstr "自动换行"
@@ -2505,6 +2588,9 @@ msgstr "预览"
 
 msgid "Rendered Markdown"
 msgstr "渲染后的 Markdown"
+
+msgid "Sync Scrolling"
+msgstr "同步滚动"
 
 msgid "English"
 msgstr "英语"
@@ -2970,50 +3056,11 @@ msgstr "将当前帧保存为 PNG"
 msgid "Could not save the frame"
 msgstr "无法保存当前帧"
 
-msgid "Move to New Window"
-msgstr "移到新窗口"
+#~ msgid "Close Window"
+#~ msgstr "关闭窗口"
 
-msgid "Open in Split View"
-msgstr "在分屏视图中打开"
-
-msgid "Move to Other Side"
-msgstr "移到另一侧"
-
-msgid "Close Other Tabs"
-msgstr "关闭其他标签页"
-
-msgid "Close Tab"
-msgstr "关闭标签页"
-
-msgid "New Tab"
-msgstr "新建标签页"
-
-msgid "Tabs"
-msgstr "标签页"
-
-msgid "Next Tab"
-msgstr "下一个标签页"
-
-msgid "Previous Tab"
-msgstr "上一个标签页"
-
-msgid "Move Tab Left"
-msgstr "向左移动标签页"
-
-msgid "Move Tab Right"
-msgstr "向右移动标签页"
-
-msgid "Go to Tab"
-msgstr "转到标签页"
-
-msgid "Windows"
-msgstr "窗口"
-
-msgid "Open files in new tabs"
-msgstr "在新标签页中打开文件"
-
-msgid "Otherwise each file opens in a window of its own. Right-click a tab to move it to a new window"
-msgstr "关闭后每个文件在单独的窗口中打开。右键单击标签页可将其移到新窗口"
+#~ msgid "Sketch (shapes are recognised)"
+#~ msgstr "草图（自动识别形状）"
 
 #~ msgid "Crop to Selection"
 #~ msgstr "裁剪到选区"

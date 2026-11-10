@@ -29,9 +29,31 @@ from . import markup, pdf_ops
 from .i18n import _, N_, ngettext
 from .markup import Item, MarkupController, MarkupToolbar, TEXTMARK_KINDS
 from .pdf_canvas import MARGIN, PageCanvas
+from .pdf_notes import NotesPanel
 from .pdf_ops import PageRef, Source, poppler_open, rotate_point
 from .pdf_render import TILE, TILE_ABOVE, Job, RenderWorker, TexCache
-from .viewer_base import Viewer, file_info_section, kind_of
+from .viewer_base import Viewer, file_info_section, kind_of, surface_origin
+
+
+def confirm_overwrite() -> bool:
+    """Preferences: ask before Save writes a PDF over its original file
+    (default on; the dialog's "Don't ask again" turns it off)."""
+    from . import i18n
+    v = i18n._read().get("confirm_overwrite")
+    return v if isinstance(v, bool) else True
+
+
+def set_confirm_overwrite(on: bool):
+    import json
+    from . import i18n
+    data = i18n._read()
+    data["confirm_overwrite"] = bool(on)
+    path = i18n.settings_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+    os.replace(tmp, path)
 
 try:
     from . import signature as _sig
@@ -365,7 +387,14 @@ class PdfViewer(Viewer):
         side = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         side.append(self.side_toggle)
         side.append(self.side_stack)
-        self.split = Adw.OverlaySplitView(content=self.scroller, sidebar=side,
+        # sticky-note cards right of the pages (pdf_notes)
+        self.notes_panel = NotesPanel(self)
+        for sig in ("selection-changed", "tool-changed"):
+            self.mk.connect(sig, lambda *_: self.notes_panel.queue_update())
+        content = Gtk.Box()
+        content.append(self.scroller)
+        content.append(self.notes_panel)
+        self.split = Adw.OverlaySplitView(content=content, sidebar=side,
                                           min_sidebar_width=150, max_sidebar_width=200,
                                           sidebar_width_fraction=0.18, show_sidebar=False,
                                           vexpand=True)
@@ -708,6 +737,23 @@ class PdfViewer(Viewer):
         self.tworker.set_sources(self.sources)
         return sid
 
+    def _fresh_pages(self, sid, n):
+        """PageRefs for a newly opened source. Its sticky notes become note
+        items (Poppler no longer paints them): they can be opened, edited,
+        moved and deleted like View's own, and saving updates them in place."""
+        refs = [PageRef(sid, i) for i in range(n)]
+        try:
+            reader = self._reader(sid)
+        except Exception:
+            return refs
+        for ref in refs:
+            try:
+                ref.items = pdf_ops.read_notes(reader, ref.index)
+            except Exception:
+                continue
+            ref.notes = tuple(it.meta for it in ref.items)
+        return refs
+
     def _add_document(self, src, pdoc, gfile, sizes=None):
         if not self.sources:
             self._gen += 1
@@ -718,7 +764,7 @@ class PdfViewer(Viewer):
             self._base[(sid, i)] = sz
         d = Doc(src.name, sid, src.path, gfile or (Gio.File.new_for_path(src.path)
                                                    if src.path else None))
-        d.pages = [PageRef(sid, i) for i in range(pdoc.get_n_pages())]
+        d.pages = self._fresh_pages(sid, pdoc.get_n_pages())
         d.clean_key = d.key()
         self.docs.append(d)
         self._watch(d)
@@ -887,7 +933,7 @@ class PdfViewer(Viewer):
         for i, sz in enumerate(sizes):
             self._base[(sid, i)] = sz
         d.src, d.stamp = sid, stamp
-        d.pages = [PageRef(sid, i) for i in range(len(sizes))]
+        d.pages = self._fresh_pages(sid, len(sizes))
         d.clean_key = d.key()
         # undo can't bring back the pages of a file that is gone
         di = self.docs.index(d)
@@ -978,12 +1024,14 @@ class PdfViewer(Viewer):
             return (0.21, 0.52, 0.89)
 
     def paint(self, c: PageCanvas, s: Gtk.Snapshot):
+        self.notes_panel.queue_update()     # note cards follow scroll, zoom, drags
         if not self._loaded or not c.rects:
             return
         z = c.zoom
         ds = c.device_scale()
         skey = round(z * ds * 1000)
         hv, vv = c.hv(), c.vv()
+        so = surface_origin(c)
         s.save()
         pt = Graphene.Point()
         pt.init(-hv, -vv)
@@ -1048,7 +1096,11 @@ class PdfViewer(Viewer):
             if need_mk:
                 ix0, iy0 = max(x, hv), max(y, vv)
                 ix1, iy1 = min(x + w, hv + c.view_w), min(y + h, vv + c.view_h)
-                if ix1 > ix0 and iy1 > iy0:
+                if ix1 > ix0 and iy1 > iy0 and self.mk.snapshot_ink(
+                        s, pos, x, y, z, (ix0, iy0, ix1 - ix0, iy1 - iy0), ds,
+                        (so[0] - hv, so[1] - vv), acc):
+                    pass
+                elif ix1 > ix0 and iy1 > iy0:
                     pad = 24
                     cr = s.append_cairo(R(ix0 - pad, iy0 - pad, ix1 - ix0 + 2 * pad,
                                           iy1 - iy0 + 2 * pad))
@@ -1172,6 +1224,7 @@ class PdfViewer(Viewer):
 
     # ======================================================== scroll state ====
     def on_scrolled(self):
+        self.notes_panel.queue_update()
         c = self.canvas
         if not c.rects or c.layout_mode == "single":
             self._queue_renders()
@@ -1278,6 +1331,9 @@ class PdfViewer(Viewer):
 
     def mk_widget(self):
         return self.canvas
+
+    def mk_edit_note(self, key, it, new=False):
+        return self.notes_panel.focus_note(key, it.id)
 
     def mk_set_popover(self, pop, old=None):
         if pop is not None:
@@ -2278,6 +2334,7 @@ class PdfViewer(Viewer):
                         d = self.docs[box._row[0]]
                         box._hl.set_label(f"{d.name}{' •' if d.dirty() else ''}  ({len(d.pages)})")
         self._refresh_annots()
+        self.notes_panel.queue_update()
         self.canvas.queue_draw()
         self._update_actions()
         self.refresh_title()
@@ -2426,7 +2483,7 @@ class PdfViewer(Viewer):
                                   else f"“{name}”: {e.message}")
                     continue
                 sid = self._add_source(res, pdoc)
-                new_refs += [PageRef(sid, i) for i in range(pdoc.get_n_pages())]
+                new_refs += self._fresh_pages(sid, pdoc.get_n_pages())
             if new_refs:
                 pos = max(0, min(at, len(self.docs[di].pages)))
                 self.push_undo()
@@ -2522,6 +2579,9 @@ class PdfViewer(Viewer):
         if not d.dirty():
             self.toast(_("No changes to save"))
             return
+        if not confirm_overwrite():
+            self._write_doc(self.active, d.path)
+            return
         dlg = Adw.AlertDialog(
             heading=_("Overwrite “{name}”?").format(name=d.name),
             body=_("Your changes, including any signatures, will be written into the "
@@ -2531,9 +2591,16 @@ class PdfViewer(Viewer):
         dlg.add_response("save-as", _("Save As…"))
         dlg.add_response("save", _("Overwrite"))
         dlg.set_response_appearance("save", Adw.ResponseAppearance.DESTRUCTIVE)
+        dont_ask = Gtk.CheckButton(label=_("Don’t ask again"), halign=Gtk.Align.CENTER)
+        dlg.set_extra_child(dont_ask)
 
         def done(_d, response):
             if response == "save":
+                if dont_ask.get_active():
+                    try:
+                        set_confirm_overwrite(False)
+                    except OSError as e:
+                        self.toast(_("Could not change the setting: {error}").format(error=e))
                 self._write_doc(self.active, d.path)
             elif response == "save-as":
                 self.save_as()
@@ -2668,7 +2735,7 @@ class PdfViewer(Viewer):
             sid = self._add_source(src, pdoc)
             d.src, d.path, d.name = sid, path, name
             d.gfile = Gio.File.new_for_path(path)
-            d.pages = [PageRef(sid, i) for i in range(pdoc.get_n_pages())]
+            d.pages = self._fresh_pages(sid, pdoc.get_n_pages())
             d.clean_key = d.key()
             self._watch(d)              # after our own write: its stamp is the new one
             self._undo.clear()
@@ -3005,10 +3072,10 @@ class PdfViewer(Viewer):
             if ref.forms:
                 orig = {}
                 pdf_ops.apply_forms(page, ref.forms, orig)
-                page.render_for_printing(cr)
+                pdf_ops.render_page(page, cr, True)
                 pdf_ops.apply_forms(page, orig)
             else:
-                page.render_for_printing(cr)
+                pdf_ops.render_page(page, cr, True)
             cr.restore()
             markup.render_items(cr, ref.items)
 
@@ -3114,7 +3181,7 @@ class PdfViewer(Viewer):
                     a = m.annot
                     t = a.get_annot_type()
                     if t in (Poppler.AnnotType.LINK, Poppler.AnnotType.WIDGET,
-                             Poppler.AnnotType.POPUP):
+                             Poppler.AnnotType.POPUP, Poppler.AnnotType.TEXT):
                         continue
                     n += 1
                     label = _(t.value_nick.replace("-", " ").title())

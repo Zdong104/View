@@ -9,6 +9,14 @@
 
 ![A PDF translated side by side into Chinese, offline](docs/screenshots/translate-pdf.png)
 
+## What's new in 0.2.8
+
+- **PDF notes open again.** Notes saved in a PDF, whether by View or another app, used to show only as an icon that couldn't be opened. View now loads them, so you can read, edit, move and delete them, and saving keeps the author and the note's ID.
+- **Notes in a side panel.** The page shows only a small note icon. Each note's text appears on a card to the right, level with its icon, with the author and time, like comments in a document editor. Click a card to edit it (Ctrl+Enter or clicking away keeps the edit, Escape cancels). Clicking an icon highlights its card.
+- **No more duplicate tabs.** Opening a file that's already open switches to its tab and brings its window to the front, instead of opening a second copy.
+- **"Don't ask again" when overwriting a PDF.** Tick it in the Overwrite dialog to save straight to the file from then on. Turn the question back on with **Ask before overwriting PDFs** in Preferences.
+- **One Draw tool.** Draw and Sketch are now a single tool: draw freely, or hold still at the end of a stroke to turn it into a shape.
+
 ## What's new in 0.2.7
 
 - **Ctrl+S saves text and Markdown files again.** Since files opened as tabs (0.2.5), Ctrl+S in a text or Markdown file did nothing and the changes stayed unsaved. Fixed, together with the other keyboard shortcuts inside a tab.
@@ -110,22 +118,22 @@ Earlier changes are listed on the [Releases](https://github.com/Zdong104/View/re
 
 ### Ubuntu / Debian (.deb)
 
-Download [`view_0.2.7_all.deb`](https://github.com/Zdong104/View/releases/download/v0.2.7/view_0.2.7_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
+Download [`view_0.2.8_all.deb`](https://github.com/Zdong104/View/releases/download/v0.2.8/view_0.2.8_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
 
 ```bash
-sudo apt install ./view_0.2.7_all.deb
+sudo apt install ./view_0.2.8_all.deb
 ```
 
 Or in one go:
 
 ```bash
-wget https://github.com/Zdong104/View/releases/download/v0.2.7/view_0.2.7_all.deb && sudo apt install ./view_0.2.7_all.deb
+wget https://github.com/Zdong104/View/releases/download/v0.2.8/view_0.2.8_all.deb && sudo apt install ./view_0.2.8_all.deb
 ```
 
 `apt` is recommended because it also installs the dependencies. If you prefer `dpkg`:
 
 ```bash
-sudo dpkg -i view_0.2.7_all.deb && sudo apt -f install
+sudo dpkg -i view_0.2.8_all.deb && sudo apt -f install
 ```
 
 ### Snap (edge channel)
@@ -146,9 +154,9 @@ The .deb installs that menu item for you when `python3-nautilus` is present (`ap
 
 ### Windows (**experimental**)
 
-Download [`View-Setup-0.2.7.exe`](https://github.com/Zdong104/View/releases/download/v0.2.7/View-Setup-0.2.7.exe) (installer) or [`View-0.2.7-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.2.7/View-0.2.7-windows-portable.zip) (no install). It is tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: click the box or press **Space** and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
+Download [`View-Setup-0.2.8.exe`](https://github.com/Zdong104/View/releases/download/v0.2.8/View-Setup-0.2.8.exe) (installer) or [`View-0.2.8-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.2.8/View-0.2.8-windows-portable.zip) (no install). It is tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: click the box or press **Space** and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
 
-**Updating from 0.1.6–0.1.9:** in those versions the background screenshot watcher kept View's files open, so Setup could stop without a message. The 0.2.0 installer stops the watcher itself, also when an older View starts the update. If an update still doesn't go through, end the background **View** process in Task Manager (or run `taskkill /F /IM View.exe`), then run `View-Setup-0.2.7.exe` again.
+**Updating from 0.1.6–0.1.9:** in those versions the background screenshot watcher kept View's files open, so Setup could stop without a message. The 0.2.0 installer stops the watcher itself, also when an older View starts the update. If an update still doesn't go through, end the background **View** process in Task Manager (or run `taskkill /F /IM View.exe`), then run `View-Setup-0.2.8.exe` again.
 
 The **first start after installing** can take 20 seconds or more while Windows checks each new file (the build isn't code-signed yet, see below). Later starts take about a second.
 
@@ -160,7 +168,7 @@ Text recognition (OCR) and translation each run in a small helper program, `ocr\
 
 View is also supported in Chrome as an extension.
 
-1. Download [`view-chrome-0.2.7.zip`](https://github.com/Zdong104/View/releases/download/v0.2.7/view-chrome-0.2.7.zip) and unzip it.
+1. Download [`view-chrome-0.2.8.zip`](https://github.com/Zdong104/View/releases/download/v0.2.8/view-chrome-0.2.8.zip) and unzip it.
 2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and choose the unzipped folder.
 3. To open local files, click **Details** on View and turn on **Allow access to file URLs**.
 

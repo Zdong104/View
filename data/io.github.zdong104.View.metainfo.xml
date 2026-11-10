@@ -79,6 +79,18 @@
     <keyword>STL</keyword>
   </keywords>
   <releases>
+    <release version="0.2.8" date="2026-11-10">
+      <description>
+        <p>PDF notes open again and are shown in a side panel.</p>
+        <ul>
+          <li>Notes saved in a PDF, by View or another app, can be opened, edited, moved and deleted again; before, only their icon showed.</li>
+          <li>Notes in a side panel: the page shows a small note icon, and each note's text appears on a card to the right with its author and time. Click a card to edit it.</li>
+          <li>Opening a file that is already open switches to its tab instead of opening a second copy.</li>
+          <li>The Overwrite dialog has a "Don't ask again" option; turn the question back on in Preferences.</li>
+          <li>Draw and Sketch are one tool: draw freely, or hold still at the end of a stroke to make a shape.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.7" date="2026-11-09">
       <description>
         <p>Ctrl+S saves again, and two files can be shown side by side.</p>

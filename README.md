@@ -1,6 +1,6 @@
 # View
 
-**A macOS-Preview-style viewer for Linux (GNOME) and Windows, also available as a Chrome extension.** View, annotate and sign PDFs, images, CAD drawings, 3D models, Markdown, tables and video in one fast GTK4 + libadwaita app, sign with your laptop touchpad, and translate documents offline.
+**A Preview app for Ubuntu, Windows, Chrome extension.** View, annotate and sign PDFs, images, CAD drawings, 3D models, Markdown, tables and video in one fast GTK4 + libadwaita app, sign with your laptop touchpad, and translate documents offline.
 
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Zdong104/View?include_prereleases)](https://github.com/Zdong104/View/releases)
@@ -9,6 +9,13 @@
 
 ![A PDF translated side by side into Chinese, offline](docs/screenshots/translate-pdf.png)
 
+
+### Snap
+
+```bash
+sudo snap install view --edge && sudo snap connect view:raw-input
+```
+
 ## What's new in 0.2.8
 
 - **PDF notes open again.** Notes saved in a PDF, whether by View or another app, used to show only as an icon that couldn't be opened. View now loads them, so you can read, edit, move and delete them, and saving keeps the author and the note's ID.
@@ -16,20 +23,6 @@
 - **No more duplicate tabs.** Opening a file that's already open switches to its tab and brings its window to the front, instead of opening a second copy.
 - **"Don't ask again" when overwriting a PDF.** Tick it in the Overwrite dialog to save straight to the file from then on. Turn the question back on with **Ask before overwriting PDFs** in Preferences.
 - **One Draw tool.** Draw and Sketch are now a single tool: draw freely, or hold still at the end of a stroke to turn it into a shape.
-
-## What's new in 0.2.7
-
-- **Ctrl+S saves text and Markdown files again.** Since files opened as tabs (0.2.5), Ctrl+S in a text or Markdown file did nothing and the changes stayed unsaved. Fixed, together with the other keyboard shortcuts inside a tab.
-- **Two files side by side.** Right-click a tab and choose **Open in Split View**: the tab moves into a pane on the right, next to the one you were reading, each side with its own tabs and toolbar. **Move to Other Side** moves a tab across; when one side runs out of tabs the window goes back to a single pane.
-- **Sync Scrolling for Markdown Split view**, in the ⋮ menu. When ticked, scrolling the source or the preview keeps the other side on the same heading or paragraph; untick it to scroll each side on its own. On by default, and your choice is remembered.
-
-## What's new in 0.2.5
-
-0.2.6 brings the same to the Snap Store (the 0.2.5 snap didn't build).
-
-- **Files open as tabs.** Opening files adds a tab to the current window instead of a new window each time; the tab bar appears only with two or more tabs. Right-click a tab for **Move to New Window**, Close Tab and Close Other Tabs, or drag a tab out of the window. Ctrl+W closes the tab, Ctrl+T opens a new one, Ctrl+Tab switches. To go back to a window per file, turn off **Open files in new tabs** in Preferences.
-- **Fill in PDF forms in place.** Text fields are typed into right on the page; Tab / Shift+Tab move to the next / previous field.
-- **PDFs reload when the file changes on disk.**
 
 Earlier changes are listed on the [Releases](https://github.com/Zdong104/View/releases) page.
 
@@ -136,7 +129,7 @@ wget https://github.com/Zdong104/View/releases/download/v0.2.8/view_0.2.8_all.de
 sudo dpkg -i view_0.2.8_all.deb && sudo apt -f install
 ```
 
-### Snap (edge channel)
+### Snap
 
 ```bash
 sudo snap install view --edge && sudo snap connect view:raw-input
@@ -164,7 +157,7 @@ The **first start after installing** can take 20 seconds or more while Windows c
 
 Text recognition (OCR) and translation each run in a small helper program, `ocr\view-ocr.exe` and `translate\view-translate.exe`, which View starts in the background. Translation language packs are downloaded the first time a language pair is used; the high-quality model downloads llama.cpp's own Windows build (Vulkan, with the CPU fallback) next to it and runs it the same way.
 
-### Chrome extension
+### Chrome extension (Developer mode only)
 
 View is also supported in Chrome as an extension.
 
@@ -207,13 +200,11 @@ On Windows it works out of the box with a Precision Touchpad: open **New Signatu
 
 | System | Status |
 | --- | --- |
-| Ubuntu 26.04 | ✅ Tested daily |
-| Ubuntu 25.10, Debian 13 | Installs and passes the self-test in a container|
-| Ubuntu 24.04 | Tested on the snap install |
+| Ubuntu 26.04 | ✅  |
 | Fedora, Arch, other distros | ❓ Untested |
-| Windows | ✅ Tested, feedback wanted |
-| Chrome extension | ✅ Tested |
-| macOS | Use Mac Preview 🙂 |
+| Windows | ✅ |
+| Chrome extension | ✅ Tested, limited feature |
+| macOS | No Support |
 
 ## 🙏 Feedback wanted
 

@@ -374,6 +374,13 @@ class ScrollSync:
                 pass
         self._ids = []
 
+    def lead_with(self, view):
+        """A program is about to scroll `view` (find, go to line): it leads, so
+        the other side follows it rather than pulling it back."""
+        for s in self.sides:
+            if s.view is view:
+                self.lead = s
+
     def _moved(self, _adj, side):
         if self._busy or side is not self.lead:
             return

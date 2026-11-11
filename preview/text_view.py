@@ -1099,6 +1099,7 @@ class TextViewer(Viewer):
         sa, sb = buf.get_iter_at_offset(a), buf.get_iter_at_offset(b)
         buf.apply_tag(self.tag_current, sa, sb)
         if scroll:
+            self._source_leads()
             buf.select_range(sa, sb)
             self.view.scroll_to_iter(sa, 0.1, True, 0.0, 0.4)
         total = f"{len(self._matches):,}" + ("+" if self._match_capped else "")
@@ -1148,9 +1149,17 @@ class TextViewer(Viewer):
             it = self.buf.get_end_iter()
         if col > 1:
             it.forward_chars(min(col - 1, it.get_chars_in_line() - 1))
+        self._source_leads()
         self.buf.place_cursor(it)
         self.view.scroll_to_iter(it, 0.1, True, 0.0, 0.4)
         self.view.grab_focus()
+
+    def _source_leads(self):
+        # Split + Sync Scrolling: the pane the pointer last entered leads, and
+        # the Find bar's buttons sit over the preview, so without this the
+        # preview would pull the source back after each jump.
+        if self._md_sync is not None:
+            self._md_sync.lead_with(self.view)
 
     # ===================================================================
     # Saving

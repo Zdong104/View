@@ -79,6 +79,16 @@
     <keyword>STL</keyword>
   </keywords>
   <releases>
+    <release version="0.2.9" date="2026-11-22">
+      <description>
+        <p>PDF highlights stay on their line, and OCR text selection is exact.</p>
+        <ul>
+          <li>In PDFs from some apps, such as ONLYOFFICE, highlights, underlines and strike-throughs were about two lines tall and covered the line above; they now stay on their line.</li>
+          <li>Selecting recognized (OCR) text ends between characters, never halfway through one, and is exactly what gets copied, in images and scanned PDFs.</li>
+          <li>Find in Markdown Split no longer snaps back: with Sync Scrolling on, jumping to the next match pulled the view back.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.8" date="2026-11-10">
       <description>
         <p>PDF notes open again and are shown in a side panel.</p>

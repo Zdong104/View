@@ -14,14 +14,18 @@ executable explicitly (any platform; used by tests).
 
 Public API (kept stable, other viewers integrate it):
 
-    OcrLine(box, text, confidence)       box = 4 (x, y) corners in image pixels,
-                                         clockwise from top-left
+    OcrLine(box, text, confidence[, cuts])
+                                         box = 4 (x, y) corners in image pixels,
+                                         clockwise from top-left; cuts = where
+                                         each character boundary falls (or None)
     is_available() -> bool
     recognize(image) -> list[OcrLine]    PIL.Image | path | bytes; blocking
     recognize_async(image, callback, cancellable=None)
                                          callback(lines, error) on the GTK main loop
     lines_to_text(lines) -> str          reading order
     TextOverlay                          selectable-text layer for any host widget
+    char_bounds(text, cuts) -> [float]   character boundaries along a line (0..1)
+    nearest_bound(bounds, t) -> int      the boundary nearest a position on it
     release()                            stop running work, free the engine
 
 Paths / bytes are decoded with EXIF orientation applied (what a viewer shows);
@@ -74,6 +78,12 @@ class OcrLine:
     box: list  # [(x, y)] * 4, clockwise from top-left, source-image pixels
     text: str
     confidence: float
+    # where each character boundary falls: len(text)+1 fractions along the
+    # box's midline (0 at the box[0]-box[3] edge, 1 at box[1]-box[2]);
+    # cuts[0] is before the first character, cuts[-1] after the last.  From
+    # where the recognizer read each character, put in the blank between
+    # glyphs.  None when unknown (char_bounds() estimates them then).
+    cuts: list | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -115,8 +125,9 @@ class _Helper:
     """Client for preview.ocr_helper over the child's stdin/stdout.
 
     Request:  one JSON line {"w", "h"} followed by w*h*3 bytes of RGB.
-    Response: one JSON line {"lines": [[box, text, confidence], ...]}
-              or {"error": "..."}.
+    Response: one JSON line {"lines": [[box, text, confidence, cuts], ...]}
+              or {"error": "..."}  (cuts: see recognize_raw; a helper from
+              before they existed sends three items per line).
     The child starts on first use and stays up; it is restarted once if it
     dies.  Calls are serialized by the caller (_run_lock)."""
 
@@ -220,6 +231,7 @@ def _get_engine():
             params["Global.model_root_dir"] = CACHE_DIR
         engine = RapidOCR(params=params)
         _make_abortable()
+        _track_characters(engine)
         if gen != _gen:               # release() came while it loaded: not kept
             return engine
         _engine = engine
@@ -250,6 +262,314 @@ def _make_abortable():
         cls._view_abortable = True
     except Exception:  # noqa: BLE001
         pass            # another rapidocr layout: running work just finishes
+
+
+def _track_characters(engine):
+    """Have RapidOCR report where each character of a line sits (OcrLine.cuts).
+
+    Recognition is CTC: the model reads the line crop in narrow columns and
+    emits each character at one of them.  Asked for word boxes, RapidOCR
+    keeps those columns (WordInfo) and turns them into rough boxes; here that
+    last step is replaced by _line_cuts, which places every character
+    boundary in the blank between the glyphs around it.  The text-direction
+    classifier may have turned a crop upside down before recognition: such
+    crops are noted so their columns can be read from the other end.
+    Another rapidocr layout: nothing is hooked and lines carry no cuts."""
+    try:
+        import inspect
+        cls_and_rotate = engine.cls_and_rotate
+        calc_word_boxes = engine.calc_word_boxes
+        if "return_word_box" not in inspect.signature(engine.__call__).parameters:
+            return
+        flipped = {}
+
+        def classify(imgs, *a, **kw):
+            before = list(imgs)
+            out, res = cls_and_rotate(imgs, *a, **kw)    # (copies every crop)
+            flipped.clear()
+            try:
+                import numpy as np
+                for o, b in zip(out, before):
+                    if not (o.shape == b.shape and np.array_equal(o, b)):
+                        flipped[id(o)] = (o, True if np.array_equal(o, b[::-1, ::-1]) else None)
+            except Exception:  # noqa: BLE001
+                flipped[None] = True                     # (unknown: no cuts this time)
+            return out, res
+
+        def word_boxes(*args, **kw):
+            try:
+                _crops, boxes, rec_res = args
+                out = []
+                for k, box in enumerate(boxes):
+                    cuts = None
+                    try:
+                        img = rec_res.imgs[k]
+                        turned = flipped[id(img)][1] if id(img) in flipped else False
+                        if (None not in flipped and turned is not None
+                                and not _is_vertical_crop(box)):
+                            xs = _line_cuts(rec_res.txts[k], rec_res.word_results[k], img)
+                            if xs is not None:
+                                cuts = _crop_to_box(xs, img.shape[1], box, turned)
+                    except Exception:  # noqa: BLE001
+                        cuts = None
+                    out.append((cuts,))       # (non-empty: RapidOCR keeps it per line)
+                return tuple(out)
+            except Exception:  # noqa: BLE001  (another layout: its own boxes, no cuts)
+                return calc_word_boxes(*args, **kw)
+            finally:
+                flipped.clear()
+
+        engine.cls_and_rotate = classify
+        engine.calc_word_boxes = word_boxes
+        engine._view_cuts = True
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _is_vertical_crop(box):
+    """RapidOCR turns tall crops a quarter turn (get_rotate_crop_image):
+    their columns run down the box, not along box[0] -> box[1]."""
+    def d(a, b):
+        return math.hypot(float(a[0]) - float(b[0]), float(a[1]) - float(b[1]))
+    w = int(max(d(box[0], box[1]), d(box[2], box[3])))
+    h = int(max(d(box[0], box[3]), d(box[1], box[2])))
+    return w <= 0 or h / w >= 1.5
+
+
+def _line_cuts(text, info, img):
+    """Character boundaries of a recognized line crop, as x positions in it
+    (pixels): len(text)+1 values, or None if they can't be placed.
+
+    `info` is RapidOCR's WordInfo: the CTC column at which each non-space
+    character was read (word_cols) and how many columns the line spans
+    (line_txt_len).  Those readings say roughly where each character is;
+    the boundaries themselves go in the blanks between glyphs, matched to
+    the readings by _place_gaps (in the middle of a blank, or split evenly
+    among the spaces it holds).  The first and last boundaries hug the ink,
+    not the detector's padded box."""
+    import numpy as np
+
+    cols = [c for wc in (getattr(info, "word_cols", None) or []) for c in wc]
+    chars = [c for w in (getattr(info, "words", None) or []) for c in w]
+    span = float(getattr(info, "line_txt_len", 0) or 0)
+    idx = [i for i, ch in enumerate(text) if not ch.isspace()]
+    if (not idx or span <= 0 or len(cols) != len(idx)
+            or chars != [text[i] for i in idx]
+            or any(b <= a for a, b in zip(cols, cols[1:]))):
+        return None
+    a = np.asarray(img)
+    if a.ndim == 3:
+        a = a.mean(axis=2)
+    a = a.astype(np.float32)
+    H, W = a.shape[:2]
+    if W < 2 or H < 2:
+        return None
+    # ink: what differs from the background (dark on light or light on dark).
+    # Rows: the line's own, grown from its densest row across gaps no taller
+    # than an underscore's, so the next line's ascenders/descenders reaching
+    # into the padded box (past a wider blank) are left out.
+    diff = np.abs(a - np.median(a))
+    thr = max(20.0, 0.4 * float(np.percentile(diff, 99)))
+    rows = (diff > thr).sum(axis=1) >= 1 + 0.002 * W
+    q = H // 4
+    seed = q + int(np.argmax((diff > thr)[q:H - q].sum(axis=1))) if H - q > q else H // 2
+    gap = max(2, int(0.12 * H))
+    top = bot = seed
+    for step, edge in ((-1, -1), (1, H)):
+        blank, r = 0, seed + step
+        while r != edge and blank <= gap:
+            if rows[r]:
+                blank = 0
+                top, bot = min(top, r), max(bot, r)
+            else:
+                blank += 1
+            r += step
+    prof = (diff[top:bot + 1] > thr).sum(axis=0).astype(np.float32)
+    pmax = float(prof.max())
+    if pmax <= 0:
+        return None
+    tol = 0.02 * pmax
+    xs = [(c + 0.5) / span * W for c in cols]       # where each character was read
+    # the text's ink: from the first to the last inked column near the first
+    # and last readings (a glyph is never much wider than the line is high)
+    ink = np.nonzero(prof > tol)[0]
+    ink = ink[(ink >= xs[0] - H) & (ink < xs[-1] + H)]
+    if not len(ink):
+        return None
+    left, right = int(ink[0]), int(ink[-1]) + 1
+    cuts = [0.0] * (len(text) + 1)
+    if len(idx) > 1:
+        _place_gaps(prof[:right], tol, pmax, text, idx, xs, H, left, cuts)
+    # outer edges: just outside the ink (not the detector's padded box)
+    margin = 0.06 * H
+    left, right = max(0.0, left - margin), min(float(W), right + margin)
+    for k in range(idx[0] + 1):                     # (leading spaces: before the ink)
+        cuts[k] = left * k / idx[0] if idx[0] else left
+    n = len(text) - idx[-1]
+    for k in range(idx[-1] + 1, len(text) + 1):     # (trailing spaces: after it)
+        cuts[k] = right + (W - right) * (k - idx[-1] - 1) / max(1, n - 1)
+    out, prev = [], 0.0
+    for c in cuts:
+        prev = max(prev, min(float(W), c))
+        out.append(prev)
+    return out
+
+
+def _rel_width(ch: str) -> float:
+    """Typical advance of a character in a proportional font, in em."""
+    if _is_wide(ch):
+        return 1.0
+    if ch in "ijl.,:;!'|`":
+        return 0.28
+    if ch == " ":
+        return 0.3
+    if ch in "frtI()[]{}/\\-\"":
+        return 0.38
+    if ch in "mwMW%@":
+        return 0.85
+    if "A" <= ch <= "Z":
+        return 0.68
+    return 0.55
+
+
+def _place_gaps(prof, tol, pmax, text, idx, xs, H, start, cuts):
+    """Set cuts[ia+1 .. ib] for each pair of neighbouring non-space characters
+    text[ia], text[ib] read at xs (crop pixels), from the column ink profile
+    (the text's ink runs from column `start` to the end of `prof`).
+
+    A reading lies somewhere in or near its glyph, about one reading column
+    either way, which for narrow glyphs can be the neighbour's.  So rather
+    than pick each gap on its own, the gaps are matched to the boundaries
+    all at once, in order (a small dynamic program): every blank run within
+    the text should part two characters, each boundary should get one, close
+    to the midpoint of its two readings, and each character should be about
+    as wide as its kind usually is.  Where glyphs touch, the thinnest spot
+    (a local ink minimum) stands in for a blank."""
+    W = len(prof)
+    lo_x, hi_x = start, W - 1
+    # candidates: (start, end, ink 0..1, blank?) over the text's own stretch
+    cands = []
+    x = lo_x
+    while x <= hi_x:
+        if prof[x] <= tol:
+            j = x
+            while j + 1 <= hi_x and prof[j + 1] <= tol:
+                j += 1
+            cands.append((x, j + 1, 0.0, True))
+            x = j + 1
+            continue
+        j = x
+        while j + 1 <= hi_x and prof[j + 1] == prof[x]:
+            j += 1
+        left = prof[x - 1] if x > 0 else float("inf")
+        right = prof[j + 1] if j + 1 < W else float("inf")
+        if left > prof[x] and right > prof[x]:
+            cands.append((x, j + 1, float(prof[x]) / pmax, False))
+        x = j + 1
+    # boundaries: one per pair of neighbouring readings (a run of spaces
+    # between them is one boundary, split later)
+    bounds = []
+    for (ia, xa), (ib, xb) in zip(zip(idx, xs), zip(idx[1:], xs[1:])):
+        bounds.append((ia, ib - ia - 1, (xa + xb) / 2))
+    steps = sorted(b - a for (a, b), (ia, ib) in zip(zip(xs, xs[1:]), zip(idx, idx[1:]))
+                   if ib == ia + 1) or [xs[-1] - xs[0]]
+    pitch = max(2.0, steps[len(steps) // 2])
+    # each boundary also gets a fallback at its own expected place
+    pts = [(c[0], c[1], c[2], c[3], None) for c in cands]
+    pts += [(e, e, 1.0, False, j) for j, (_ia, _m, e) in enumerate(bounds)]
+    pts.sort(key=lambda c: (c[0] + c[1]) / 2)
+    K = len(pts)
+    skip = [1.0 if c[3] else 0.0 for c in pts]       # leaving a blank unused
+    pre = [0.0]
+    for v in skip:
+        pre.append(pre[-1] + v)
+
+    def cost(j, k):
+        ia, m, e = bounds[j]
+        s0, s1, ink, _blank, own = pts[k]
+        if own is not None:
+            return 3.0 if own == j else None
+        c = (s0 + s1) / 2
+        d = abs(c - e) / pitch
+        if d > 1.6:
+            return None
+        v = d * d + 3.0 * ink
+        if m:                                       # spaces: want a wide blank
+            v -= min(1.0, (s1 - s0) / max(1.0, 0.3 * H))
+        return v
+
+    # ... and a character's width should be about what its kind is
+    rel = [_rel_width(text[i]) for i in idx]
+    sp = _rel_width(" ")
+    em = (xs[-1] - xs[0]) / max(1e-6, sum(rel[1:-1]) + (rel[0] + rel[-1]) / 2
+                                + sp * sum(m for _ia, m, _e in bounds))
+
+    def width_cost(j, k0, k):
+        want = em * (rel[j] + sp * (bounds[j - 1][1] + bounds[j][1]) / 2)
+        got = (pts[k][0] + pts[k][1] - pts[k0][0] - pts[k0][1]) / 2
+        r = math.log(max(got, 0.5) / max(want, 0.5))
+        return r * r
+
+    INF = float("inf")
+    prev = {}                                       # k -> (cost, path)
+    for k in range(K):
+        c = cost(0, k)
+        if c is not None:
+            prev[k] = (c + pre[k], (k,))
+    for j in range(1, len(bounds)):
+        cur = {}
+        opts = [(k, cost(j, k)) for k in range(K)]
+        for k, c in opts:
+            if c is None:
+                continue
+            best = (INF, None)
+            for k0, (c0, path) in prev.items():
+                if k0 < k:
+                    t = c0 + (pre[k] - pre[k0 + 1]) + c + width_cost(j, k0, k)
+                    if t < best[0]:
+                        best = (t, path)
+            if best[1] is not None:
+                cur[k] = (best[0], best[1] + (k,))
+        prev = cur
+        if not prev:
+            break
+    if prev and len(next(iter(prev.values()))[1]) == len(bounds):
+        path = min(prev.values(), key=lambda v: v[0] + (pre[K] - pre[v[1][-1] + 1]))[1]
+    else:
+        path = None
+    for j, (ia, m, e) in enumerate(bounds):
+        g0, g1 = (pts[path[j]][0], pts[path[j]][1]) if path else (e, e)
+        for k in range(m + 1):
+            cuts[ia + 1 + k] = g0 + (g1 - g0) * (2 * k + 1) / (2 * (m + 1))
+
+
+def _crop_to_box(xs, width, box, turned=False):
+    """Positions across a line crop -> fractions along the box's midline
+    (from the middle of box[0]-box[3] to the middle of box[1]-box[2]).
+
+    The crop is a perspective warp of the box: where its top and bottom
+    edges differ in length, equal steps across the crop are not equal steps
+    along the box (a few pixels off mid-line), so each position is carried
+    back through that warp.  `turned`: the crop was turned upside down."""
+    import numpy as np
+    import cv2
+
+    b = np.asarray(box, dtype=np.float32).reshape(4, 2)
+    w = float(max(np.linalg.norm(b[0] - b[1]), np.linalg.norm(b[2] - b[3])))
+    h = float(max(np.linalg.norm(b[0] - b[3]), np.linalg.norm(b[1] - b[2])))
+    if w < 1 or h < 1 or width <= 0:
+        return None
+    dst = np.array([[0, 0], [w, 0], [w, h], [0, h]], dtype=np.float32)
+    inv = cv2.getPerspectiveTransform(dst, b)
+    k = w / float(width)
+    pts = np.array([[[(width - x if turned else x) * k, h / 2] for x in xs]], dtype=np.float32)
+    img = cv2.perspectiveTransform(pts, inv)[0]
+    ml, mr = (b[0] + b[3]) / 2, (b[1] + b[2]) / 2
+    axis = mr - ml
+    d2 = float(axis @ axis)
+    if d2 <= 0:
+        return None
+    return [min(1.0, max(0.0, float((p - ml) @ axis) / d2)) for p in img]
 
 
 def release():
@@ -317,18 +637,27 @@ def _rgb_to_bgr_array(im):
 
 
 def recognize_raw(arr):
-    """Run the in-process engine on a BGR array: [(box, text, confidence)]
-    with raw corner order (also what the helper process sends back)."""
+    """Run the in-process engine on a BGR array: [(box, text, confidence,
+    cuts)] with raw corner order, cuts along the box's midline (from the
+    box[0]-box[3] edge) or None (also
+    what the helper process sends back)."""
     engine = _get_engine()
+    tracked = getattr(engine, "_view_cuts", False)
     with _run_lock:
-        res = engine(arr)
+        res = engine(arr, return_word_box=True) if tracked else engine(arr)
     boxes = getattr(res, "boxes", None)
     txts = getattr(res, "txts", None)
     scores = getattr(res, "scores", None)
     if boxes is None or txts is None:
         return []
-    return [([(float(p[0]), float(p[1])) for p in b], t or "", float(s))
-            for b, t, s in zip(boxes, txts, scores)]
+    words = getattr(res, "word_results", None) if tracked else None
+    if not isinstance(words, (tuple, list)) or len(words) != len(txts):
+        words = [None] * len(txts)
+    out = []
+    for b, t, s, w in zip(boxes, txts, scores, words):
+        cuts = w[0] if isinstance(w, tuple) and len(w) == 1 and isinstance(w[0], list) else None
+        out.append(([(float(p[0]), float(p[1])) for p in b], t or "", float(s), cuts))
+    return out
 
 
 def recognize(image) -> list[OcrLine]:
@@ -345,13 +674,37 @@ def recognize(image) -> list[OcrLine]:
     else:
         raw = recognize_raw(_rgb_to_bgr_array(im))
     out = []
-    for b, t, s in raw:
-        t = (t or "").strip()
+    for item in raw:
+        b, t0, s = item[:3]
+        t0 = t0 or ""
+        t = t0.strip()
         if not t:
             continue
         pts = [(float(p[0]), float(p[1])) for p in b]
-        out.append(OcrLine(_order_corners(pts), t, float(s)))
+        box = _order_corners(pts)
+        cuts = item[3] if len(item) > 3 else None    # (an older helper sends none)
+        if cuts is not None:
+            cuts = _box_cuts(cuts, t0, pts, box)
+        out.append(OcrLine(box, t, float(s), cuts))
     return out
+
+
+def _box_cuts(cuts, raw_text, pts, box):
+    """Cuts given from the pts[0]-pts[3] edge for raw_text, as OcrLine.cuts:
+    from the ordered box's box[0]-box[3] edge, for the stripped text.  None if the box
+    turned a quarter (the cuts would run across the line)."""
+    try:
+        cuts = [float(c) for c in cuts]
+    except (TypeError, ValueError):
+        return None
+    if len(cuts) != len(raw_text) + 1 or len(pts) != 4:
+        return None
+    lead = len(raw_text) - len(raw_text.lstrip())
+    cuts = cuts[lead:lead + len(raw_text.strip()) + 1]
+    shift = next((k for k in range(4) if box == pts[k:] + pts[:k]), None)
+    if shift == 2:                     # same box, read from the other end
+        return [1.0 - c for c in cuts]
+    return cuts if shift == 0 else None
 
 
 def _order_corners(pts):
@@ -504,10 +857,11 @@ def lines_to_text(lines) -> str:
 class _Item:
     line: OcrLine
     sep: str
-    cum: list = field(default_factory=list)  # cumulative width fraction at each char boundary (len = n+1)
+    cum: list = field(default_factory=list)  # char_bounds(): fraction along the line at each char boundary (len = n+1)
 
 
 def _char_cum(text: str):
+    """Boundaries estimated from typical character widths (no alignment)."""
     ws = [1.0 if _is_wide(c) else (0.35 if c in " .,;:!'|il" else 0.6) for c in text]
     total = sum(ws) or 1.0
     cum = [0.0]
@@ -516,8 +870,40 @@ def _char_cum(text: str):
     return cum
 
 
+def char_bounds(text: str, cuts=None):
+    """The len(text)+1 character boundaries of a line, as fractions along it
+    (its midline, from the box[0]-box[3] edge): the recognizer's `cuts` when they fit the text, else
+    an estimate from typical character widths.  Selection highlights, hit
+    tests and copied text all go by these, so they always agree."""
+    if cuts is not None:
+        try:
+            cum = [min(1.0, max(0.0, float(c))) for c in cuts]
+        except (TypeError, ValueError):
+            cum = None
+        if cum and len(cum) == len(text) + 1 and (
+                all(b >= a for a, b in zip(cum, cum[1:]))
+                or all(b <= a for a, b in zip(cum, cum[1:]))):
+            return cum
+    return _char_cum(text)
+
+
+def nearest_bound(bounds, t: float) -> int:
+    """Index of the boundary nearest fraction t (a caret position)."""
+    return min(range(len(bounds)), key=lambda k: abs(bounds[k] - t)) if bounds else 0
+
+
 def _lerp(a, b, t):
     return (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
+
+
+def _along(box, x, y) -> float:
+    """Where (x, y) falls along a line box, 0..1 on its midline (the axis
+    char_bounds() measure on)."""
+    ml, mr = _lerp(box[0], box[3], 0.5), _lerp(box[1], box[2], 0.5)
+    ax, ay = mr[0] - ml[0], mr[1] - ml[1]
+    d2 = ax * ax + ay * ay
+    t = 0.0 if d2 == 0 else ((x - ml[0]) * ax + (y - ml[1]) * ay) / d2
+    return max(0.0, min(1.0, t))
 
 
 def _in_poly(x, y, poly):
@@ -561,7 +947,7 @@ class TextOverlay:
         self.show_boxes = False  # faint outlines (e.g. while hovering the image)
         self._items = [_Item(self.lines[i], sep) for i, sep in _reading_order(self.lines)]
         for it in self._items:
-            it.cum = _char_cum(it.line.text)
+            it.cum = char_bounds(it.line.text, getattr(it.line, "cuts", None))
         self._anchor = None  # (item_index, char_index)
         self._focus = None
         self._dragging = False
@@ -614,15 +1000,7 @@ class TextOverlay:
             if d < best_d:
                 best, best_d = idx, d
         it = self._items[best]
-        b = it.line.box
-        ax, ay = b[1][0] - b[0][0], b[1][1] - b[0][1]
-        d2 = ax * ax + ay * ay
-        t = 0.0 if d2 == 0 else ((x - b[0][0]) * ax + (y - b[0][1]) * ay) / d2
-        t = max(0.0, min(1.0, t))
-        cum = it.cum
-        # nearest char boundary
-        ci = min(range(len(cum)), key=lambda k: abs(cum[k] - t))
-        return best, ci
+        return best, nearest_bound(it.cum, _along(it.line.box, x, y))
 
     # -- selection ------------------------------------------------------------------
     def begin_select(self, x, y):

@@ -1657,34 +1657,38 @@ class PdfViewer(Viewer):
         return text, rects
 
     def _select_ocr(self, ref, a, b):
+        from . import ocr
         lines = self.ocr_lines[(ref.src, ref.index)]
         (ax, ay), (bx, by) = a, b
         if (ay, ax) > (by, bx):
             (ax, ay), (bx, by) = (bx, by), (ax, ay)
         texts, rects = [], []
-        for poly, text in lines:
+        for poly, text, *cuts in lines:
             xs, ys = [p[0] for p in poly], [p[1] for p in poly]
             lx0, ly0, lx1, ly1 = min(xs), min(ys), max(xs), max(ys)
             cy = (ly0 + ly1) / 2
             if ly1 < ay or ly0 > by or not text:
                 continue
-            s0, s1 = 0.0, 1.0
+            # character boundaries (the same the image viewer goes by): x at
+            # each, along the line's midline
+            bounds = ocr.char_bounds(text, cuts[0] if cuts else None)
+            mx0 = (poly[0][0] + poly[3][0]) / 2
+            mx1 = (poly[1][0] + poly[2][0]) / 2
+            bx_at = [mx0 + (mx1 - mx0) * t for t in bounds]
+            i0, i1 = 0, len(text)
             if ly0 <= ay <= ly1 or (cy < ay):
-                s0 = (ax - lx0) / max(lx1 - lx0, 1e-6)
+                i0 = min(range(len(bx_at)), key=lambda k: abs(bx_at[k] - ax))
             if ly0 <= by <= ly1 or (cy > by):
-                s1 = (bx - lx0) / max(lx1 - lx0, 1e-6)
+                i1 = min(range(len(bx_at)), key=lambda k: abs(bx_at[k] - bx))
             if ay > ly1 or by < ly0:
                 continue
-            s0, s1 = max(0.0, min(1.0, s0)), max(0.0, min(1.0, s1))
             if ly0 <= ay <= ly1 and ly0 <= by <= ly1:
-                s0, s1 = min(s0, s1), max(s0, s1)
-            n = len(text)
-            i0, i1 = int(round(s0 * n)), int(round(s1 * n))
+                i0, i1 = min(i0, i1), max(i0, i1)
             if i1 <= i0:
                 continue
             texts.append(text[i0:i1])
-            rects.append(self._from_poppler_rect(ref, lx0 + (lx1 - lx0) * i0 / n, ly0,
-                                                 (lx1 - lx0) * (i1 - i0) / n, ly1 - ly0))
+            x0, x1 = sorted((bx_at[i0], bx_at[i1]))
+            rects.append(self._from_poppler_rect(ref, x0, ly0, x1 - x0, ly1 - ly0))
         return "\n".join(texts), rects
 
     def _select_all_text(self):
@@ -3471,14 +3475,17 @@ def _ocr_page(sources, docs, src, index, ocr, dpi=200):
         surf.get_height(), surf.get_stride() // 4, 4)[:, :surf.get_width(), :]
     im = Image.fromarray(a[..., [2, 1, 0]].copy(), "RGB")
     lines = ocr.recognize(im)
-    return [([(px / s, py / s) for px, py in ln.box], ln.text) for ln in lines if ln.text]
+    # (poly, text, cuts): cuts = where each character boundary falls along
+    # the line (OcrLine.cuts), or None
+    return [([(px / s, py / s) for px, py in ln.box], ln.text, getattr(ln, "cuts", None))
+            for ln in lines if ln.text]
 
 
 def _ocr_to_display(lines, ref, base_size):
     pw, ph = base_size
     turns = ref.rotation // 90
     return [([rotate_point(x, y, pw, ph, turns)[:2] for x, y in poly], text)
-            for poly, text in lines]
+            for poly, text, *_cuts in lines]
 
 
 def _find_on_page(sources, docs, ref, text, ocr_lines, base_size):
@@ -3492,15 +3499,21 @@ def _find_on_page(sources, docs, ref, text, ocr_lines, base_size):
     out = []
     k = (ref.src, ref.index)
     if k in ocr_lines:
+        from . import ocr
         t = text.lower()
-        for poly, line in ocr_lines[k]:
+        for poly, line, *cuts in ocr_lines[k]:
             low = line.lower()
-            xs, ys = [p[0] for p in poly], [p[1] for p in poly]
-            x0, y0, x1, y1 = min(xs), min(ys), max(xs), max(ys)
+            ys = [p[1] for p in poly]
+            y0, y1 = min(ys), max(ys)
             i = low.find(t)
-            while i >= 0 and line:
-                a = x0 + (x1 - x0) * i / len(line)
-                b = x0 + (x1 - x0) * (i + len(t)) / len(line)
+            if i < 0:
+                continue
+            bounds = ocr.char_bounds(low, cuts[0] if cuts else None)
+            mx0 = (poly[0][0] + poly[3][0]) / 2
+            mx1 = (poly[1][0] + poly[2][0]) / 2
+            while i >= 0:
+                a, b = sorted((mx0 + (mx1 - mx0) * bounds[i],
+                               mx0 + (mx1 - mx0) * bounds[i + len(t)]))
                 out.append((a, y0, b, y1))
                 i = low.find(t, i + 1)
     else:

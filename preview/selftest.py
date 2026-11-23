@@ -767,7 +767,91 @@ def _ocr_run(paths, d):
     text = ocr.lines_to_text(lines)
     if "Preview" not in text:
         raise RuntimeError(f"recognized {text!r}")
+    # where the characters are: each boundary in the blank between glyphs
+    # (word gaps for sure; glyphs of this font may touch elsewhere)
+    import numpy as np
+    ln = next(ln for ln in lines if "Preview" in ln.text)
+    if ln.cuts is None:
+        raise RuntimeError("no character positions from the recognizer")
+    ink = (np.asarray(im.convert("L")) < 128).any(axis=0)
+    b = ln.box
+    m0, m1 = (b[0][0] + b[3][0]) / 2, (b[1][0] + b[2][0]) / 2
+    hit = [k for k in range(1, len(ln.text)) if ink[int(m0 + (m1 - m0) * ln.cuts[k])]]
+    sp = ln.text.find(" ")
+    if len(hit) > 2 or (sp > 0 and {sp, sp + 1} & set(hit)):
+        raise RuntimeError(f"character boundaries inside glyphs at {hit} of {ln.text!r}")
     return repr(text)
+
+
+def _ocr_char_bounds():
+    """Selecting recognized text: the highlight's edges fall in the blanks
+    between glyphs and match the copied text.  No engine needed: the CTC
+    readings (where the recognizer read each character) are simulated,
+    anywhere from the left to the right part of each glyph."""
+    import numpy as np
+    from types import SimpleNamespace
+    from PIL import Image, ImageDraw, ImageFont
+    from . import ocr
+    text = "select * from proj_paid.ww_pcsd_contracted_sales_paiddata"
+    try:
+        font = ImageFont.truetype("DejaVuSansMono.ttf", 24)
+    except OSError:
+        try:
+            font = ImageFont.load_default(size=24)
+        except TypeError:
+            return "skipped (no scalable font)"
+    W, H = int(font.getlength(text)) + 24, 40
+
+    def draw(s):
+        im = Image.new("L", (W, H), 255)
+        ImageDraw.Draw(im).text((12, 6), s, font=font, fill=0)
+        return np.asarray(im).astype(int)
+    page = draw(text)
+    glyphs, cols, prev = [], [], draw("")
+    for i, ch in enumerate(text):
+        cur = draw(text[:i + 1])
+        if not ch.isspace():
+            xs = np.nonzero(((prev - cur) > 60).any(axis=0))[0]
+            glyphs.append((i, int(xs[0]), int(xs[-1]) + 1))
+            x = xs[0] + (xs[-1] - xs[0]) * (0.15, 0.5, 0.85)[i % 3]
+            cols.append(max(int(x / 4), cols[-1] + 1 if cols else 0))  # 4 px columns
+        prev = cur
+    info = SimpleNamespace(words=[[text[g[0]]] for g in glyphs], word_cols=[[c] for c in cols],
+                           line_txt_len=W / 4)
+    xs = ocr._line_cuts(text, info, page.astype(np.uint8))
+    if xs is None:
+        raise RuntimeError("no boundaries placed")
+    ink = (page < 128).any(axis=0)
+    touch = {i for (_i, _a, l_end), (i, r_start, _b) in zip(glyphs, glyphs[1:])
+             if ink[l_end - 1:r_start + 2].all()}    # (no blank between these two)
+    bad = [i for (_i, l_start, l_end), (i, r_start, r_end) in zip(glyphs, glyphs[1:])
+           if not (l_start + l_end) / 2 < xs[i] < (r_start + r_end) / 2
+           or (i not in touch and ink[int(xs[i])])]
+    if bad or not xs[0] <= glyphs[0][1] or not xs[-1] >= glyphs[-1][2]:
+        raise RuntimeError(f"boundaries inside glyphs before characters {bad}")
+    # drag to anywhere across a glyph: the highlight ends exactly where the
+    # copied text does, never inside a glyph
+    ov = ocr.TextOverlay([ocr.OcrLine([(0, 0), (W, 0), (W, H), (0, H)], text, 1.0,
+                                      [x / W for x in xs])], (W, H))
+    for i, a, b in glyphs[1:]:
+        for f in (0.2, 0.5, 0.8):
+            ov.begin_select(1, H / 2)
+            ov.update_select(a + (b - a) * f, H / 2)
+            ov.end_select()
+            got = ov.selected_text()
+            edge = ov._slice_quad(ov._items[0], 0, len(got))[1][0]
+            if (got not in (text[:i], text[:i + 1]) or abs(edge - xs[len(got)]) > 1e-6
+                    or (len(got) not in touch and ink[min(W - 1, int(edge))])):
+                raise RuntimeError(f"dragging to {f:.0%} of {text[i]!r} (#{i}): copies "
+                                   f"{got[-4:]!r}, highlight ends at x={edge:.1f}")
+    ov.select_all()
+    if ov.selected_text() != text:
+        raise RuntimeError("select all")
+    # without positions (an older helper): estimated, one per boundary
+    if len(ocr.char_bounds(text, None)) != len(text) + 1 or \
+            ocr.char_bounds(text, [0.0, 1.0]) != ocr.char_bounds(text, None):
+        raise RuntimeError("fallback boundaries")
+    return f"{len(text) - 1} boundaries between glyphs"
 
 
 def _translate_text():
@@ -1436,6 +1520,7 @@ def main(argv=()):
         ocr_ok = res.check("text recognition (OCR)", _ocr, required=runtime.OCR_BUNDLED)
         if ocr_ok and run_ocr:
             res.check("OCR recognize", lambda: _ocr_run(paths, d))
+        res.check("OCR text selection (character boundaries)", _ocr_char_bounds)
         res.check("translation (detection, sentences)", _translate_text)
         res.check("translation (Markdown structure, side-by-side)", _translate_markdown)
         res.check("translation (mixed languages, code, tables)", _translate_mixed)

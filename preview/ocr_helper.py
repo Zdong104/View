@@ -8,7 +8,7 @@ stdin/stdout:
     -> {"ready": true, "version": "..."}             once, at start
     <- {"cmd": "load"}                               load the models now
     <- {"w": W, "h": H} + W*H*3 bytes of RGB         recognize
-    -> {"lines": [[box, text, confidence], ...]}     or {"error": "..."}
+    -> {"lines": [[box, text, confidence, cuts], ...]}  or {"error": "..."}
 
 Self-test:  view-ocr.exe --test IMAGE EXPECTED  (exit 0 if EXPECTED is found)
 """

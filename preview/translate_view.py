@@ -978,7 +978,7 @@ class PdfAdapter(_Adapter):
             return pdf_paragraphs(v._ppage(ref))
         if k in v.ocr_lines:
             from . import ocr
-            return ocr_paragraphs([ocr.OcrLine(list(poly), t, 1.0) for poly, t in v.ocr_lines[k]])
+            return ocr_paragraphs([ocr.OcrLine(list(poly), t, 1.0) for poly, t, *_ in v.ocr_lines[k]])
         return None
 
     def page_changed(self):

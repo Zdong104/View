@@ -349,14 +349,17 @@ test("drag thumbnails to reorder; rotate; Save As writes order and rotation", as
   await page.close();
 });
 
-test("Ctrl+S with pages selected saves only those as a new PDF", async () => {
+test("Ctrl+S with pages selected saves the whole document; the menu saves only those", async () => {
   const page = await openPdf("/five.pdf", 5);
   await clickThumb(page, 1);
   await clickThumb(page, 3, "Shift");
   await page.waitForFunction(() => document.querySelectorAll(".pdf-thumb.selected").length === 3);
-  assert.match(await page.$eval(".pdf-thumbs-footer", (e) => e.textContent), /3 pages selected/);
+  assert.match(await page.$eval(".pdf-thumbs-footer", (e) => e.textContent), /3 pages selected · right-click/);
   await press(page, "Control", "s");
-  const { bytes, suggested } = await savedFile(page, 1);
+  const whole = await savedFile(page, 1);
+  assert.deepEqual(order(await PDFDocument.load(whole.bytes)), [1, 2, 3, 4, 5]);
+  await menu(page, "Save Selected Pages as New PDF…");
+  const { bytes, suggested } = await savedFile(page, 2);
   assert.deepEqual(order(await PDFDocument.load(bytes)), [2, 3, 4]);
   assert.equal(suggested, "five-pages-2-4.pdf");
   // the document itself is unchanged

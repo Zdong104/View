@@ -16,11 +16,9 @@
 sudo snap install view --edge && sudo snap connect view:raw-input
 ```
 
-## What's new in 0.2.9
+## What's new in 0.3.0
 
-- **Highlights in PDFs stay on their line.** In PDFs from some apps, such as ONLYOFFICE, highlight, underline and strike-through boxes came out about two lines tall and covered the line above. They now cover only the line you selected.
-- **Selecting recognized (OCR) text is exact.** The selection ends between characters, never halfway through one, and what's highlighted is exactly what gets copied, in images and in scanned PDFs.
-- **Find in Markdown Split no longer snaps back.** With Sync Scrolling on, jumping to the next match pulled the view back. It now stays on the match.
+- **Links in PDFs now work.** Clicking a link in a PDF used to start a text selection instead. Web and email links now open in your default browser or mail app, and links inside the document jump to their page. The pointer changes over a link and hovering shows where it goes. For safety, links that would open local files or programs are not followed.
 
 Earlier changes are listed on the [Releases](https://github.com/Zdong104/View/releases) page.
 
@@ -109,22 +107,22 @@ Earlier changes are listed on the [Releases](https://github.com/Zdong104/View/re
 
 ### Ubuntu / Debian (.deb)
 
-Download [`view_0.2.9_all.deb`](https://github.com/Zdong104/View/releases/download/v0.2.9/view_0.2.9_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
+Download [`view_0.3.0_all.deb`](https://github.com/Zdong104/View/releases/download/v0.3.0/view_0.3.0_all.deb) (or grab it from the [Releases page](https://github.com/Zdong104/View/releases)), then:
 
 ```bash
-sudo apt install ./view_0.2.9_all.deb
+sudo apt install ./view_0.3.0_all.deb
 ```
 
 Or in one go:
 
 ```bash
-wget https://github.com/Zdong104/View/releases/download/v0.2.9/view_0.2.9_all.deb && sudo apt install ./view_0.2.9_all.deb
+wget https://github.com/Zdong104/View/releases/download/v0.3.0/view_0.3.0_all.deb && sudo apt install ./view_0.3.0_all.deb
 ```
 
 `apt` is recommended because it also installs the dependencies. If you prefer `dpkg`:
 
 ```bash
-sudo dpkg -i view_0.2.9_all.deb && sudo apt -f install
+sudo dpkg -i view_0.3.0_all.deb && sudo apt -f install
 ```
 
 ### Snap
@@ -145,9 +143,9 @@ The .deb installs that menu item for you when `python3-nautilus` is present (`ap
 
 ### Windows (**experimental**)
 
-Download [`View-Setup-0.2.9.exe`](https://github.com/Zdong104/View/releases/download/v0.2.9/View-Setup-0.2.9.exe) (installer) or [`View-0.2.9-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.2.9/View-0.2.9-windows-portable.zip) (no install). It is tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: click the box or press **Space** and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
+Download [`View-Setup-0.3.0.exe`](https://github.com/Zdong104/View/releases/download/v0.3.0/View-Setup-0.3.0.exe) (installer) or [`View-0.3.0-windows-portable.zip`](https://github.com/Zdong104/View/releases/download/v0.3.0/View-0.3.0-windows-portable.zip) (no install). It is tested on a real Windows 11 laptop, but feedback is still very welcome. Touchpad signing works like on Linux: click the box or press **Space** and sign with one finger, no clicking. It needs a Precision Touchpad (most laptops since 2016); otherwise draw with the mouse or a pen.
 
-**Updating from 0.1.6–0.1.9:** in those versions the background screenshot watcher kept View's files open, so Setup could stop without a message. The 0.2.0 installer stops the watcher itself, also when an older View starts the update. If an update still doesn't go through, end the background **View** process in Task Manager (or run `taskkill /F /IM View.exe`), then run `View-Setup-0.2.9.exe` again.
+**Updating from 0.1.6–0.1.9:** in those versions the background screenshot watcher kept View's files open, so Setup could stop without a message. The 0.2.0 installer stops the watcher itself, also when an older View starts the update. If an update still doesn't go through, end the background **View** process in Task Manager (or run `taskkill /F /IM View.exe`), then run `View-Setup-0.3.0.exe` again.
 
 The **first start after installing** can take 20 seconds or more while Windows checks each new file (the build isn't code-signed yet, see below). Later starts take about a second.
 
@@ -159,7 +157,7 @@ Text recognition (OCR) and translation each run in a small helper program, `ocr\
 
 View is also supported in Chrome as an extension.
 
-1. Download [`view-chrome-0.2.9.zip`](https://github.com/Zdong104/View/releases/download/v0.2.9/view-chrome-0.2.9.zip) and unzip it.
+1. Download [`view-chrome-0.3.0.zip`](https://github.com/Zdong104/View/releases/download/v0.3.0/view-chrome-0.3.0.zip) and unzip it.
 2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and choose the unzipped folder.
 3. To open local files, click **Details** on View and turn on **Allow access to file URLs**.
 

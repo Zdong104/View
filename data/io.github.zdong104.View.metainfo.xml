@@ -79,6 +79,15 @@
     <keyword>STL</keyword>
   </keywords>
   <releases>
+    <release version="0.3.0" date="2026-11-22">
+      <description>
+        <p>Links in PDFs now work.</p>
+        <ul>
+          <li>Clicking a link in a PDF started a text selection; web and email links now open in the default browser or mail app, and links inside the document jump to their page.</li>
+          <li>The pointer changes over a link and a tooltip shows its address. Links that would open local files or programs are not followed.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.9" date="2026-11-22">
       <description>
         <p>PDF highlights stay on their line, and OCR text selection is exact.</p>

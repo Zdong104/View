@@ -79,6 +79,16 @@
     <keyword>STL</keyword>
   </keywords>
   <releases>
+    <release version="0.3.1" date="2026-11-23">
+      <description>
+        <p>Copy and paste markup in images, and undo survives saving.</p>
+        <ul>
+          <li>Text boxes, shapes and other annotations in the image viewer can be copied, cut and pasted with Ctrl+C, Ctrl+X and Ctrl+V; the paste lands slightly offset and is selected.</li>
+          <li>Ctrl+S and the Save button always save the whole PDF, even with pages selected in the sidebar. Use "Save Selected Pages as New PDF" to save only some pages.</li>
+          <li>Undo and redo keep working after saving a PDF or image, until the file is closed.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.3.0" date="2026-11-22">
       <description>
         <p>Links in PDFs now work.</p>

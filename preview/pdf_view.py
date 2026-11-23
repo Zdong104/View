@@ -320,6 +320,8 @@ class PdfViewer(Viewer):
         self.text_sel = None            # {"pos", "p0", "p1", "rects", "text"}
         self._press = None
         self._fields = {}               # (src, index) -> [field dicts]
+        self._links = {}                # (src, index) -> [link dicts]
+        self._link_press = None         # (link, x, y) while a click on a link is pending
         self._fedit = None              # the text field being typed into, in place
         self._fedit_css = None
         self._has_text = {}             # (src, index) -> bool
@@ -374,6 +376,7 @@ class PdfViewer(Viewer):
         self._readers.clear()
         self._end_field_edit(False)
         self._fields.clear()
+        self._links.clear()
         self.ocr_lines.clear()
         self._loaded = False
         self.canvas.queue_draw()
@@ -1482,12 +1485,20 @@ class PdfViewer(Viewer):
         if cur:
             return cur
         hit = self.canvas.page_hit(x, y)
-        if hit and self._field_at(*hit):
+        if hit and (self._field_at(*hit) or self._link_at(*hit)):
             return "pointer"
         return "text" if hit else None
 
+    def canvas_tooltip(self, x, y):
+        if not self._loaded or self.mk.tool != "select":
+            return None
+        hit = self.canvas.page_hit(x, y)
+        link = self._link_at(*hit) if hit else None
+        return link["uri"] if link and link["kind"] == "uri" else None
+
     def canvas_press(self, x, y, state):
         self._press = None
+        self._link_press = None
         self._end_field_edit(True)
         if not self._loaded:
             return False
@@ -1510,6 +1521,9 @@ class PdfViewer(Viewer):
                 self._press = "form"
                 self._activate_field(pos, f)
                 return True
+        link = self._link_at(pos, px, py)
+        if link is not None:
+            self._link_press = (link, x, y)
         self.text_sel = {"pos": pos, "p0": (px, py), "p1": (px, py), "rects": [], "text": ""}
         self._press = "text"
         self.canvas.queue_draw()
@@ -1519,6 +1533,11 @@ class PdfViewer(Viewer):
         if self._press == "mk":
             self.mk.on_drag(x, y, state)
         elif self._press == "text" and self.text_sel:
+            if self._link_press is not None:
+                _, x0, y0 = self._link_press
+                if abs(x - x0) + abs(y - y0) <= 4:
+                    return      # still a click on the link, not a selection
+                self._link_press = None
             ts = self.text_sel
             px, py = self.mk_to_page(ts["pos"], x, y)
             ts["p1"] = (px, py)
@@ -1526,8 +1545,15 @@ class PdfViewer(Viewer):
             self.canvas.queue_draw()
 
     def canvas_release(self, x, y):
+        link, self._link_press = (self._link_press or (None,))[0], None
         if self._press == "mk":
             self.mk.on_release(x, y)
+        elif self._press == "text" and link is not None:
+            self.text_sel = None
+            self._press = None
+            self.canvas.queue_draw()
+            self._follow_link(link)
+            return
         elif self._press == "text" and self.text_sel:
             ts = self.text_sel
             if not ts["rects"]:
@@ -1874,6 +1900,97 @@ class PdfViewer(Viewer):
             if rx <= x <= rx + rw and ry <= y <= ry + rh:
                 return f
         return None
+
+    # ============================================================== links ====
+    def _links_for(self, ref):
+        k = (ref.src, ref.index)
+        if k in self._links:
+            return self._links[k]
+        out = []
+        try:
+            pdoc = self._pdocs[ref.src]
+            # keep the list and each action referenced while reading them: the
+            # boxed copies are freed with the list and their strings go stale
+            maps = self._ppage(ref).get_link_mapping()
+            _, ph = self._base_size(ref.src, ref.index)
+            for m in maps:
+                act = m.action
+                if act is None:
+                    continue
+                info = None
+                if act.type == Poppler.ActionType.URI:
+                    u = act.uri
+                    uri = (u.uri or "").strip()
+                    if uri:
+                        info = {"kind": "uri", "uri": uri}
+                elif act.type == Poppler.ActionType.GOTO_DEST:
+                    g = act.goto_dest
+                    dest = g.dest
+                    if dest is not None and dest.type == Poppler.DestType.NAMED:
+                        dest = pdoc.find_dest(dest.named_dest)
+                    if dest is not None and dest.page_num > 0:
+                        info = {"kind": "page", "page": dest.page_num - 1}
+                elif act.type == Poppler.ActionType.NAMED:
+                    n = act.named
+                    if n.named_dest in ("NextPage", "PrevPage", "FirstPage", "LastPage"):
+                        info = {"kind": "named", "name": n.named_dest}
+                if info is None:
+                    continue
+                a = m.area      # rotated page frame, origin bottom-left
+                info["rect"] = (min(a.x1, a.x2), ph - max(a.y1, a.y2),
+                                abs(a.x2 - a.x1), abs(a.y2 - a.y1))
+                out.append(info)
+        except Exception:
+            pass
+        self._links[k] = out
+        return out
+
+    def _link_at(self, pos, x, y):
+        ref = self.pages[pos]
+        for link in self._links_for(ref):
+            rx, ry, rw, rh = self._from_poppler_rect(ref, *link["rect"])
+            if rx <= x <= rx + rw and ry <= y <= ry + rh:
+                return link
+        return None
+
+    def _follow_link(self, link):
+        kind = link["kind"]
+        if kind == "uri":
+            self._open_link_uri(link["uri"])
+        elif kind == "page":
+            src = self.pages[self.current].src if self.pages else None
+            for pos, r in enumerate(self.pages):
+                if r.src == src and r.index == link["page"]:
+                    self.goto_page(pos)
+                    return
+        elif kind == "named":
+            n = link["name"]
+            self.goto_page({"NextPage": self.current + 1, "PrevPage": self.current - 1,
+                            "FirstPage": 0, "LastPage": len(self.pages) - 1}[n])
+
+    def _open_link_uri(self, uri):
+        scheme = GLib.Uri.peek_scheme(uri)
+        if scheme is None and uri.lower().startswith("www."):
+            uri, scheme = "http://" + uri, "http"
+        elif scheme is None and "@" in uri and " " not in uri:
+            uri, scheme = "mailto:" + uri, "mailto"
+        # only hand web/mail links to the desktop: a PDF must not launch files or apps
+        if scheme not in ("http", "https", "mailto", "ftp", "tel"):
+            self.toast(_("Link not opened: {uri}").format(uri=uri))
+            return
+        root = self.get_root()
+        try:
+            Gtk.UriLauncher.new(uri).launch(root if isinstance(root, Gtk.Window) else None,
+                                            None, self._on_link_launched, uri)
+        except Exception:
+            self.toast(_("Could not open {uri}").format(uri=uri))
+
+    def _on_link_launched(self, launcher, result, uri):
+        try:
+            launcher.launch_finish(result)
+        except GLib.Error as e:
+            if not e.matches(Gtk.dialog_error_quark(), Gtk.DialogError.DISMISSED):
+                self.toast(_("Could not open {uri}").format(uri=uri))
 
     def _activate_field(self, pos, f):
         ref = self.pages[pos]

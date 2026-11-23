@@ -459,6 +459,9 @@ class PageCanvas(Gtk.Widget, Gtk.Scrollable):
     def _on_motion(self, ctrl, x, y):
         self._pointer = (x, y)
         self.set_cursor_from_name(self.v.canvas_cursor(x, y))
+        tip = self.v.canvas_tooltip(x, y)
+        if tip != self.get_tooltip_text():
+            self.set_tooltip_text(tip)
 
     def _on_click(self, gesture, n_press, x, y):
         if n_press >= 2:

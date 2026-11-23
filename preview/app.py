@@ -800,6 +800,8 @@ class MainWindow(Adw.ApplicationWindow):
     def _paste_shortcut(self, *_):
         if self.viewer is not None and not hasattr(self.viewer, "add_untitled"):
             return False
+        if self.viewer is not None and self.viewer.paste_markup():
+            return True
         self.get_application().new_from_clipboard(self)
         return True
 

@@ -636,6 +636,27 @@ _INK_STATS = _InkStats() if os.environ.get("VIEW_DEBUG_INK") else None
 # ============================================================ clipboard ===
 
 _CLIPBOARD: list = []
+# What copying an item put on the system clipboard (its text, else a private type).
+# A viewer whose Ctrl+V also pastes images pastes the item only while this is still
+# the clipboard's content, so copying anything later (here or elsewhere) wins.
+_CLIP_PROVIDER = None
+_CLIP_MIME = "application/x-view-markup"
+
+
+def _claim_clipboard(widget):
+    global _CLIP_PROVIDER
+    if widget is None or not _CLIPBOARD:
+        return
+    text = _CLIPBOARD[0].text
+    _CLIP_PROVIDER = (Gdk.ContentProvider.new_for_value(text) if text else
+                      Gdk.ContentProvider.new_for_bytes(_CLIP_MIME, GLib.Bytes.new(b"")))
+    widget.get_clipboard().set_content(_CLIP_PROVIDER)
+
+
+def clipboard_has_markup(widget) -> bool:
+    """True if Ctrl+V in `widget` should paste the copied markup item."""
+    return bool(_CLIPBOARD) and _CLIP_PROVIDER is not None and \
+        widget.get_clipboard().get_content() == _CLIP_PROVIDER
 
 
 # =========================================================== controller ===
@@ -1042,6 +1063,7 @@ class MarkupController(GObject.Object):
         if it is None:
             return False
         _CLIPBOARD[:] = [it.copy()]
+        _claim_clipboard(self.host.mk_widget())
         return True
 
     def cut_selected(self) -> bool:

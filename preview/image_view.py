@@ -1253,7 +1253,7 @@ class ImageViewer(Viewer):
         ("<Control><Shift>c", "adjust-color"), ("<Control>z", "undo"),
         ("<Control><Shift>z|<Control>y", "redo"), ("<Control>p", "print"),
         ("F5", "slideshow"), ("<Control><Shift>a", "markup"),
-        ("<Control><Shift>t", "copy-text"),
+        ("<Control><Shift>t", "copy-text"), ("<Control>x", "cut"),
     ]
 
     def _build_actions(self):
@@ -1275,6 +1275,7 @@ class ImageViewer(Viewer):
         add("zoom-actual", lambda: self.canvas.zoom_to(1.0))
         add("zoom-toggle", self._zoom_toggle)
         add("copy", self._copy)
+        add("cut", lambda: self.mk is not None and self.mk.cut_selected())
         add("save", self.save_changes)
         add("save-as", self._save_as)
         add("export-as", self._export_as)
@@ -1321,6 +1322,11 @@ class ImageViewer(Viewer):
             for trig, act in keys:
                 ctl.add_shortcut(Gtk.Shortcut.new(Gtk.ShortcutTrigger.parse_string(trig),
                                                   Gtk.NamedAction.new(f"img.{act}")))
+        # Ctrl+V pastes a copied markup item; otherwise it declines so the window's
+        # "New from Clipboard" still gets it
+        self._edit_ctl.add_shortcut(Gtk.Shortcut.new(
+            Gtk.ShortcutTrigger.parse_string("<Control>v"),
+            Gtk.CallbackAction.new(lambda *_: self.paste_markup())))
         self._attached_host = None
         self._attach_host()
         self._update_actions()
@@ -2687,6 +2693,21 @@ class ImageViewer(Viewer):
         # so other apps would see an empty clipboard
         self.get_clipboard().set_content(
             Gdk.ContentProvider.new_for_value(GObject.Value(Gdk.Texture, texture)))
+
+    def paste_markup(self) -> bool:
+        """Paste the copied markup item onto this image, if it is still what the
+        clipboard holds (copying an image or text afterwards takes precedence)."""
+        if self.compact or self.current is None or self.current.rendered is None:
+            return False
+        try:
+            from .markup import clipboard_has_markup
+        except Exception:  # noqa: BLE001
+            return False
+        if not clipboard_has_markup(self) or not self._ensure_markup():
+            return False
+        if not self.markup_rev.get_reveal_child():
+            self._toggle_markup(True)
+        return self.mk.paste("img")
 
     def _copy(self):
         t = self.canvas.text

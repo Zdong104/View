@@ -127,6 +127,9 @@ class ImageItem(GObject.Object):
         self.markup = []             # markup.Item list (rendered-image coords)
         self.base = base             # upright PIL image (only while shown / untitled)
         self.keep_base = base is not None
+        # (base, exif, icc) of an earlier saved version that undo went back to, which
+        # `ops` apply to instead of the file at `path`; None = the file itself
+        self.origin = None
         self.exif = self.icc = None
         self.orig_size = base.size if base is not None else None
         self.rendered = None         # full-resolution result of ops
@@ -138,7 +141,8 @@ class ImageItem(GObject.Object):
         self.update_dirty()
 
     def update_dirty(self):
-        self.dirty = bool(self.ops or self.overlay or self.markup or self.path is None)
+        self.dirty = bool(self.ops or self.overlay or self.markup or self.path is None
+                          or self.origin is not None)
 
     def final_ops(self):
         return (self.ops + ([_sig_op(self.overlay)] if self.overlay else []) +
@@ -148,8 +152,12 @@ class ImageItem(GObject.Object):
         """Full-resolution result with all edits (call from a worker thread)."""
         base, exif, icc = self.base, self.exif, self.icc
         if base is None:
-            base, exif, icc = load_base(self.path)
+            base, exif, icc = self.origin or load_base(self.path)
         return apply_ops(base, self.final_ops()), exif, icc
+
+    def needs_write(self):
+        """Saving must write pixels (it differs from the file at `path`)."""
+        return bool(self.final_ops()) or self.origin is not None
 
 
 # --------------------------------------------------------------- canvas ---
@@ -1376,7 +1384,8 @@ class ImageViewer(Viewer):
             "crop-apply": ready and self.canvas.tool == "crop" and self.canvas.sel is not None,
             "undo": bool(it and (it.history or it.overlay)),
             "redo": bool(it and it.future),
-            "revert": bool(it and (it.ops or it.overlay or it.markup) and it.path),
+            "revert": bool(it and (it.ops or it.overlay or it.markup or it.origin is not None)
+                           and it.path),
             "discard-overlay": bool(it and it.overlay),
             "remove": len(items) > 1,
             "prev": len(items) > 1 or len(self._siblings) > 1,
@@ -1607,7 +1616,7 @@ class ImageViewer(Viewer):
         """Thumbnail in the background (cache → JPEG draft → pixbuf); geometry
         edits are applied so rotated items show rotated."""
         item.thumb_requested = True
-        if item.path is None:
+        if item.path is None or item.origin is not None:
             if item.display is not None or item.base is not None:
                 item.thumb = pil_to_texture(_thumb_of(item.display or item.base))
             return
@@ -1689,6 +1698,7 @@ class ImageViewer(Viewer):
         self._render_gen += 1
         gen = self._render_gen
         path = item.path
+        origin = item.origin
 
         def stale():
             return gen != self._render_gen or self.current is not item
@@ -1696,7 +1706,7 @@ class ImageViewer(Viewer):
         def work():
             if stale():
                 return
-            if not item.ops:
+            if not item.ops and origin is None:
                 # big JPEG: show a DCT-scaled preview while the full image decodes
                 pre = quick_preview(path, DISPLAY_MAX)
                 if pre is not None and not stale():
@@ -1705,7 +1715,7 @@ class ImageViewer(Viewer):
                 if stale():
                     return
             try:
-                base, exif, icc = load_base(path)
+                base, exif, icc = origin or load_base(path)
                 if stale():
                     return
                 rendered = apply_ops(base, item.ops)
@@ -1783,11 +1793,11 @@ class ImageViewer(Viewer):
         self.canvas.set_content(tex, rendered.size[0], rendered.size[1], overlay=item.overlay,
                                 keep_view=keep_view)
         self.canvas._schedule_detail()
-        if item.ops or item.path is None:
+        if item.ops or item.path is None or item.origin is not None:
             item.thumb = pil_to_texture(_thumb_of(display))
         elif item.thumb is None or getattr(item, "_thumb_edited", False):
             item.thumb = pil_to_texture(_thumb_of(display))
-        item._thumb_edited = bool(item.ops)
+        item._thumb_edited = bool(item.ops) or item.origin is not None
         self._schedule_ocr(item)
         self._schedule_animation(item)
         self.refresh_title()
@@ -1810,7 +1820,7 @@ class ImageViewer(Viewer):
         after each (re)render; the edited first frame is already on screen, the
         animation replaces it when its frames are ready. Newer edits stale it out."""
         self._stop_animation()
-        if (item.path is None or self._color is not None or
+        if (item.path is None or item.origin is not None or self._color is not None or
                 Path(item.path).suffix.lower() not in self.ANIM_EXTS):
             return
         gen = self._anim_gen
@@ -2074,11 +2084,25 @@ class ImageViewer(Viewer):
     # ---- edits / history -----------------------------------------------------------------
     @staticmethod
     def _snap(it):
-        return (list(it.ops), [m.to_dict() for m in it.markup])
+        return (list(it.ops), [m.to_dict() for m in it.markup], it.origin)
+
+    def _set_origin(self, it, origin):
+        """Switch the version `ops` apply to (see ImageItem.origin)."""
+        if origin is it.origin:
+            return False
+        it.origin = origin
+        if origin is not None:
+            it.base, it.exif, it.icc = origin
+            it.keep_base = True
+        else:
+            it.base = None              # reloaded from the file
+            it.keep_base = it.path is None
+        return True
 
     def _restore(self, it, snap):
-        ops, mk = snap
+        ops, mk, origin = snap
         changed = ops != it.ops
+        changed = self._set_origin(it, origin) or changed
         it.ops = list(ops)
         if mk or it.markup:
             from .markup import Item as MkItem
@@ -2103,6 +2127,9 @@ class ImageViewer(Viewer):
                 self._clear_text()
                 if it.base is not None:
                     self._render(it)
+                else:                       # back on the saved file: load it again
+                    it.rendered = it.display = it.texture = None
+                    self._show_item(it)
             self.canvas.queue_draw()
         elif render and all(o[0] in ("rotate", "flip") for o in it.ops):
             self._request_thumb(it)
@@ -2166,7 +2193,7 @@ class ImageViewer(Viewer):
 
     def _revert(self):
         it = self.current
-        if it is None or not (it.ops or it.overlay or it.markup):
+        if it is None or not (it.ops or it.overlay or it.markup or it.origin is not None):
             return
         it.overlay = None
         self.canvas.overlay = None
@@ -2176,6 +2203,7 @@ class ImageViewer(Viewer):
         if self.canvas.markup is not None:
             self.canvas.markup.select(None)
         changed = bool(it.ops)
+        changed = self._set_origin(it, None) or changed
         it.ops = []
         self._after_edit(it, render=changed)
         self.toast(_("Reverted to the saved version"), _("Undo"), self._undo)
@@ -2771,7 +2799,7 @@ class ImageViewer(Viewer):
         one, streaming frame by frame at full resolution. Returns "anim", "still", or
         "flat" (an animation written as its first frame only)."""
         ext = Path(dest).suffix.lower()
-        info = anim_probe(it.path) if it.path else None
+        info = anim_probe(it.path) if it.path and it.origin is None else None
         if info and anim_dest_ok("" if export else Path(it.path).suffix, ext):
             if info["n"] >= 12:
                 GLib.idle_add(lambda: (self.toast(_("Saving {v}-frame animation…").format(v=info['n'])),
@@ -2810,7 +2838,7 @@ class ImageViewer(Viewer):
     def save_changes(self, on_done=None):
         """Save every edited image (formats that can't hold the edits become PNG).
         Untitled images go through Save As. on_done(ok) when finished."""
-        dirty = [i for i in self._items() if i.final_ops() and i.path]
+        dirty = [i for i in self._items() if i.needs_write() and i.path]
         untitled = [i for i in self._items() if i.path is None]
 
         def after_files(ok):
@@ -2824,9 +2852,12 @@ class ImageViewer(Viewer):
             after_files(True)
             return
 
+        priors = {}
+
         def job():
             out = []
             for it in dirty:
+                priors[id(it)] = self._prior_version(it)
                 dest = self._dest_for(it)
                 out.append((it, dest, self._write_item(it, dest)))
             return out
@@ -2838,7 +2869,7 @@ class ImageViewer(Viewer):
                 return
             moved = [d for it, d, _k in res if d != it.path]
             for it, dest, _k in res:
-                self._reset_item(it, dest)
+                self._reset_item(it, dest, priors.get(id(it)))
             if moved:
                 self.toast(_("Saved as {v} (the original format can't keep these edits)").format(v=os.path.basename(moved[0])))
             else:
@@ -2861,12 +2892,35 @@ class ImageViewer(Viewer):
         self._save_item_as(it, lambda ok: self._save_untitled(items[1:], on_done) if ok
                            else (on_done(False) if on_done else None))
 
-    def _reset_item(self, it, dest=None):
+    @staticmethod
+    def _on_file(it):
+        """Undo/redo steps that apply to the file at `path` (origin None)."""
+        return any(src is None for _o, _m, src in it.history + it.future)
+
+    @classmethod
+    def _prior_version(cls, it):
+        """(base, exif, icc) of the file as it is before this save, captured in the
+        save worker before it is overwritten, for the undo/redo steps that apply to it.
+        (While undo is on an earlier version, `base` is that version, not the file.)"""
+        if not cls._on_file(it):
+            return None
+        if it.origin is None and it.base is not None:
+            return (it.base, it.exif, it.icc)
+        return load_base(it.path) if it.path else None
+
+    def _reset_item(self, it, dest=None, prior=None):
+        """After saving: the file now holds every edit. Undo/redo stay (until the
+        image is closed); their steps refer to the version before this save."""
         if dest and dest != it.path:
             it.gfile = Gio.File.new_for_path(dest)
             it.path = dest
             it.name = os.path.basename(dest)
-        it.ops, it.history, it.future, it.overlay = [], [], [], None
+        if prior is None and self._on_file(it):
+            it.history, it.future = [], []      # the old file is gone: can't go back
+        elif prior is not None:
+            for steps in (it.history, it.future):
+                steps[:] = [(o, m, src if src is not None else prior) for o, m, src in steps]
+        it.ops, it.overlay, it.origin = [], None, None
         it.markup.clear()
         it.keep_base = False
         it.base = it.rendered = it.display = it.texture = None
@@ -2925,7 +2979,10 @@ class ImageViewer(Viewer):
             if Path(path).suffix.lower() not in WRITABLE and Path(path).suffix.lower() not in PIXBUF_SAVE:
                 path += ".png"
 
+            prior = []
+
             def job():
+                prior.append(self._prior_version(it))
                 return path, self._write_item(it, path)
 
             def done(res, err):
@@ -2937,7 +2994,7 @@ class ImageViewer(Viewer):
                 res, kind = res
                 it.gfile = Gio.File.new_for_path(res)
                 it.path, it.name = res, os.path.basename(res)
-                self._reset_item(it)
+                self._reset_item(it, prior=prior[0] if prior else None)
                 self.toast(_("Saved {name}").format(name=it.name) +
                            (_(" (first frame only; this format can't animate)")
                             if kind == "flat" else ""))
@@ -3131,7 +3188,7 @@ class ImageViewer(Viewer):
         paths, tmp = [], None
         try:
             for it in items:
-                if it.final_ops() or it.path is None:
+                if it.needs_write() or it.path is None:
                     if tmp is None:
                         tmp = tempfile.mkdtemp(prefix="preview-pdf-")
                     im, _e, _i = it.final_image()

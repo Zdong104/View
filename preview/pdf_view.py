@@ -2263,23 +2263,7 @@ class PdfViewer(Viewer):
     def _sync_save_label(self):
         if not hasattr(self, "save_btn"):
             return
-        mode = self._save_mode()
-        if mode == "selected":
-            n = len(self._selected_rows())
-            self.save_btn.set_label(ngettext("Save {n} Page…", "Save {n} Pages…", n).format(n=n))
-            self.save_btn.set_tooltip_text(_("Save the selected pages as a new PDF (Ctrl+S)"))
-        else:
-            self.save_btn.set_label(_("Save"))
-            self.save_btn.set_tooltip_text(_("Save (Ctrl+S)"))
         self.save_btn.set_visible(not self.compact)
-
-    def _save_mode(self):
-        rows = self._selected_rows() if self._explicit_sel else []
-        if rows:
-            total = sum(len(self.docs[di].pages) for di in {r[0] for r in rows})
-            if len(rows) < total:
-                return "selected"
-        return "document"
 
     def _target_rows(self):
         """Pages a page command acts on: sidebar selection, else current page."""
@@ -2803,9 +2787,8 @@ class PdfViewer(Viewer):
         self._end_field_edit(True)
         if not self._loaded or self._busy or self.compact:
             return
-        if self._save_mode() == "selected":
-            self.save_selected()
-            return
+        # always the whole document: saving only the selected pages is the explicit
+        # "Save Selected Pages as New PDF…" (document and page menus)
         d = self.doc
         if d.path is None:
             self.save_as()
@@ -2925,10 +2908,13 @@ class PdfViewer(Viewer):
         d = self.docs[di]
         sources = list(self.sources)
         refs = [r.copy() for r in d.pages]
-        # pages elsewhere that still come from the file we overwrite: keep its bytes
+        # pages elsewhere, or in undo/redo, that still come from the file we overwrite:
+        # keep its bytes, so undo after saving still shows (and can save) the old pages
+        history = [r for pages, _a in self._undo + self._redo for p in pages for r in p]
         for sid, s in enumerate(self.sources):
             if s.path and os.path.abspath(s.path) == os.path.abspath(path):
-                used = any(r.src == sid for o in self.docs if o is not d for r in o.pages)
+                used = any(r.src == sid for o in self.docs if o is not d for r in o.pages) \
+                    or any(r.src == sid for r in history)
                 if used and s.data is None:
                     try:
                         with open(s.path, "rb") as fh:
@@ -2972,8 +2958,8 @@ class PdfViewer(Viewer):
             d.pages = self._fresh_pages(sid, pdoc.get_n_pages())
             d.clean_key = d.key()
             self._watch(d)              # after our own write: its stamp is the new one
-            self._undo.clear()
-            self._redo.clear()
+            # undo/redo survive saving (until the file is closed): their snapshots keep
+            # referring to the old source, whose bytes were kept above if overwritten
             if di == self.active:
                 self.current = min(keep, len(d.pages) - 1)
             self._changed()

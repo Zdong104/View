@@ -1169,7 +1169,8 @@ class PdfViewer implements Viewer {
     const edited = defaultName(this.src.name, signed ? "-signed" : "-edited");
     if (req.mode === "export") return this.exportAs(req.format ?? "images");
     const sel = this.thumbs.explicitSelection();
-    if (req.mode === "save" && (req.selectionOnly || (sel.length && sel.length < all.length))) {
+    // Ctrl+S always saves the whole document; only the explicit menu item saves a subset
+    if (req.mode === "save" && req.selectionOnly) {
       const refs = sel.length ? sel : [all[this.canvas.current]!];
       const nums = refs.map((r) => all.indexOf(r) + 1);
       return pdf((await this.build(refs)).bytes, defaultName(this.src.name, `-page${nums.length > 1 ? "s" : ""}-${pageRanges(nums)}`), false);

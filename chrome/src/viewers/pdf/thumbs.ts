@@ -341,7 +341,7 @@ export class Thumbnails {
     this.footer.hidden = n === 0;
     if (n) {
       this.footer.textContent = n < total
-        ? `${n} page${n > 1 ? "s" : ""} selected · Ctrl+S saves ${n > 1 ? "them" : "it"} as a new PDF`
+        ? `${n} page${n > 1 ? "s" : ""} selected · right-click to save ${n > 1 ? "them" : "it"} as a new PDF`
         : `All ${n} pages selected`;
     }
   }

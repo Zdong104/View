@@ -184,6 +184,64 @@ def _pdf(paths):
     return f"Poppler {Poppler.get_version()}, {int(w)}×{int(h)} pt, pypdf pages={n}"
 
 
+def _pdf_text_marks(d):
+    """A font whose FontDescriptor overstates its ascent (as ONLYOFFICE
+    writes Georgia) makes Poppler's line boxes ~2 lines tall: a highlight on
+    one line must still stay on that line."""
+    import cairo
+    import gi
+    gi.require_version("Poppler", "0.18")
+    from gi.repository import Poppler, Gio
+    from pypdf import PdfReader, PdfWriter
+    from pypdf.generic import NameObject, NumberObject
+    from .pdf_view import _tight_region, _word_boxes
+    plain, tall = os.path.join(d, "lines.pdf"), os.path.join(d, "lines-tall.pdf")
+    surf = cairo.PDFSurface(plain, 300, 100)
+    cr = cairo.Context(surf)
+    cr.select_font_face("Serif")
+    cr.set_font_size(10)
+    for i, t in enumerate(("first line of text", "second line of text", "third line")):
+        cr.move_to(20, 30 + 12 * i)              # baselines 12 pt apart
+        cr.show_text(t)
+    surf.finish()
+    w = PdfWriter(clone_from=PdfReader(plain))
+    for f in w.pages[0]["/Resources"]["/Font"].values():
+        f = f.get_object()
+        for fd in [f.get("/FontDescriptor")] + \
+                [x.get_object().get("/FontDescriptor") for x in f.get("/DescendantFonts", [])]:
+            if fd is not None:
+                fd = fd.get_object()
+                fd[NameObject("/Ascent")] = NumberObject(1549)
+                fd[NameObject("/Descent")] = NumberObject(-444)
+    w.write(tall)
+
+    def page(p):
+        return Poppler.Document.new_from_gfile(Gio.File.new_for_path(p), None, None).get_page(0)
+
+    if _word_boxes(page(plain)) is not None:
+        raise RuntimeError("ordinary font metrics taken for bogus ones")
+    pg = page(tall)
+    boxes = _word_boxes(pg)
+    if not boxes:
+        raise RuntimeError("bogus font metrics not detected")
+    sel = Poppler.Rectangle()
+    sel.x1, sel.y1, sel.x2, sel.y2 = 30, 40, 100, 40      # inside "second line"
+    rects = _tight_region(pg, Poppler.SelectionStyle.GLYPH, sel, boxes)
+    if not rects or len(rects) != 1:
+        raise RuntimeError(f"one line selected, got {rects}")
+    _x, y, _w, h = rects[0]
+    # the line's glyphs span about 34.5-44.5; the lines around it end at
+    # ~32.5 and start at ~46.5
+    if not (y >= 32 and y + h <= 47 and y <= 35 and y + h >= 44):
+        raise RuntimeError(f"highlight {y:.1f}-{y + h:.1f} does not fit its line")
+    sel.x1, sel.y1, sel.x2, sel.y2 = 30, 28, 60, 52            # all three lines
+    rects = _tight_region(pg, Poppler.SelectionStyle.GLYPH, sel, boxes)
+    if len(rects) != 3 or any(a[1] + a[3] > b[1] + 0.01 for a, b in zip(rects, rects[1:])):
+        raise RuntimeError(f"three lines selected, got {rects}")
+    return "line boxes cut to the text: %s" % ", ".join("%.1f-%.1f" % (r[1], r[1] + r[3])
+                                                       for r in rects)
+
+
 def _png(paths):
     import gi
     gi.require_version("GdkPixbuf", "2.0")
@@ -1357,6 +1415,7 @@ def main(argv=()):
             return 1
         res.check("imports", _import_all)
         res.check("pdf render (Poppler + pypdf)", lambda: _pdf(paths))
+        res.check("PDF text highlight on bogus font metrics", lambda: _pdf_text_marks(d))
         res.check("image decode (PNG/JPEG)", lambda: _png(paths))
         res.check("image crop (still + animated)", lambda: _image_crop(d))
         res.check("3D model parse (STL)", lambda: _stl(paths))

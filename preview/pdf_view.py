@@ -166,6 +166,103 @@ def _ocr_offerable():
         return False
 
 
+# Poppler sizes a word box from its font's Ascent/Descent, and some producers
+# write those wrong (ONLYOFFICE puts Georgia's Ascent at 1549/1000 em), which
+# makes every box ~2 font sizes tall: a highlight on one line then covers the
+# line above.  Boxes taller than this many font sizes get cut down.
+_TALL_BOX = 1.5
+
+
+def _word_boxes(page):
+    """The page's text as runs of characters sharing a word box,
+    [(y1, y2, x1, x2, ny1, ny2)] sorted by y1 (Poppler frame), ny1..ny2 being
+    the box cut to one font size when it is implausibly tall (the excess taken
+    4:1 off the top: bad metrics inflate the ascent most).  None when no box
+    on the page is that tall, so ordinary PDFs keep Poppler's selection."""
+    ok, rects = page.get_text_layout()
+    if not ok or not rects:
+        return None
+    text = page.get_text() or ""
+    sizes = [0.0] * len(rects)
+    for a in page.get_text_attributes() or ():
+        for i in range(max(a.start_index, 0), min(a.end_index + 1, len(sizes))):
+            sizes[i] = a.font_size
+    runs, tall, prev = [], False, None
+    for i, q in enumerate(rects):
+        if i < len(text) and text[i].isspace():
+            prev = None
+            continue
+        key = (q.y1, q.y2, sizes[i])
+        if key == prev:
+            run = runs[-1]
+            run[2], run[3] = min(run[2], q.x1), max(run[3], q.x2)
+            continue
+        prev = key
+        h, fs = q.y2 - q.y1, sizes[i]
+        if fs > 0 and h > _TALL_BOX * fs:
+            ex = h - fs
+            ny1, ny2, tall = q.y1 + 0.8 * ex, q.y2 - 0.2 * ex, True
+        else:
+            ny1, ny2 = q.y1, q.y2
+        runs.append([q.y1, q.y2, min(q.x1, q.x2), max(q.x1, q.x2), ny1, ny2])
+    if not tall:
+        return None
+    runs.sort()
+    return [tuple(r) for r in runs]
+
+
+def _tight_region(page, style, sel, boxes):
+    """The selection's rects [(x, y, w, h)] (Poppler frame, not overlapping)
+    like page.get_selected_region(4.0, ...), each line's rect fitted to its
+    _word_boxes; None if Poppler can't list the lines."""
+    import bisect
+    import math
+    import warnings
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            # one rect per line, at 4x, before the union that merges lines
+            lines = page.get_selection_region(4.0, style, sel)
+    except Exception:
+        return None
+    ys = [b[0] for b in boxes]
+    out = []
+    for q in lines or ():
+        x1, y1, x2, y2 = min(q.x1, q.x2), min(q.y1, q.y2), max(q.x1, q.x2), max(q.y1, q.y2)
+        bx1, by1, bx2, by2 = x1 / 4, y1 / 4, x2 / 4, y2 / 4
+        lo = hi = None
+        cut = False
+        for b in boxes[bisect.bisect_left(ys, by1 - 0.5):bisect.bisect_right(ys, by2 + 0.5)]:
+            if b[1] <= by2 + 0.5 and b[3] > bx1 and b[2] < bx2:
+                lo = b[4] if lo is None else min(lo, b[4])
+                hi = b[5] if hi is None else max(hi, b[5])
+                cut = cut or b[4] != b[0] or b[5] != b[1]
+        if cut:
+            m = (hi - lo) / 8                    # Poppler's own line margin
+            y1 = max(y1, math.floor((lo - m) * 4))
+            y2 = min(y2, math.ceil((hi + m) * 4))
+        if x2 > x1 and y2 > y1:
+            out.append([int(x1), int(y1), int(x2), int(y2)])
+    # lines that still touch meet halfway: one rect per line, which highlight
+    # (multiplied) and underline (per rect) both need
+    def over(a, b):
+        return a is not b and a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
+    for a in out:
+        for b in out:
+            if over(a, b) and a[1] < b[1] < a[3] \
+                    and 2 * (a[3] - b[1]) < min(a[3] - a[1], b[3] - b[1]):
+                a[3] = b[1] = (a[3] + b[1]) // 2
+    if any(over(a, b) for a in out for b in out):
+        import cairo
+        reg = cairo.Region([cairo.RectangleInt(x1, y1, x2 - x1, y2 - y1)
+                            for x1, y1, x2, y2 in out])
+        out = []
+        for i in range(reg.num_rectangles()):
+            q = reg.get_rectangle(i)
+            out.append([q.x, q.y, q.x + q.width, q.y + q.height])
+    return [(x1 / 4, y1 / 4, (x2 - x1) / 4, (y2 - y1) / 4) for x1, y1, x2, y2 in out]
+
+
 class Doc:
     """One opened PDF inside the viewer."""
 
@@ -226,6 +323,7 @@ class PdfViewer(Viewer):
         self._fedit = None              # the text field being typed into, in place
         self._fedit_css = None
         self._has_text = {}             # (src, index) -> bool
+        self._tboxes = {}               # (src, index) -> _word_boxes() result
         self.ocr_lines = {}             # (src, index) -> [(poly, text)] Poppler frame
         self._ocr_running = set()
         self._explicit_sel = False
@@ -960,7 +1058,7 @@ class PdfViewer(Viewer):
         fh = getattr(self._readers.pop(sid, None), "_preview_fh", None)
         if fh is not None:
             fh.close()
-        for m in (self._base, self._fields, self._has_text, self.ocr_lines):
+        for m in (self._base, self._fields, self._has_text, self._tboxes, self.ocr_lines):
             for k in [k for k in m if k[0] == sid]:
                 del m[k]
         self.cache.drop_src(sid)
@@ -1519,6 +1617,17 @@ class PdfViewer(Viewer):
         b = rotate_point(x + w, y + h, pw, ph, turns)
         return (min(a[0], b[0]), min(a[1], b[1]), abs(a[0] - b[0]), abs(a[1] - b[1]))
 
+    def _text_boxes(self, ref):
+        """The page's word boxes when some of them are implausibly tall (see
+        _word_boxes), else None; cached per page."""
+        k = (ref.src, ref.index)
+        if k not in self._tboxes:
+            try:
+                self._tboxes[k] = _word_boxes(self._ppage(ref))
+            except Exception:
+                self._tboxes[k] = None
+        return self._tboxes[k]
+
     def _select_text(self, pos, x0, y0, x1, y1, style=Poppler.SelectionStyle.GLYPH):
         """Text between two display-frame points -> (text, rects)."""
         ref = self.pages[pos]
@@ -1533,6 +1642,10 @@ class PdfViewer(Viewer):
         r.x1, r.y1, r.x2, r.y2 = a[0], a[1], b[0], b[1]
         try:
             text = page.get_selected_text(style, r) or ""
+            boxes = self._text_boxes(ref)
+            tight = _tight_region(page, style, r, boxes) if boxes else None
+            if tight is not None:
+                return text, [self._from_poppler_rect(ref, *q) for q in tight]
             reg = page.get_selected_region(4.0, style, r)
         except Exception:
             return "", []
